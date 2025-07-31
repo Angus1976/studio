@@ -158,26 +158,24 @@ export default function Home() {
                                 <button type="button" onClick={() => { setPreviewImage(null); setImageDataUri(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 text-xs">&times;</button>
                             </div>
                         )}
-                      <Textarea
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="例如: 我想找一个送给科幻迷的礼物..."
-                        className="w-full resize-none pr-16 pl-12 py-3 text-base"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage(e);
-                          }
-                        }}
-                        rows={1}
-                      />
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
+                      <div className="flex items-center gap-2">
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden"/>
                         <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-primary">
                           <ImageIcon className="w-5 h-5" />
                         </Button>
-                      </div>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <Textarea
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          placeholder="例如: 我想找一个送给科幻迷的礼物..."
+                          className="w-full resize-none py-2 text-base"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendMessage(e);
+                            }
+                          }}
+                          rows={1}
+                        />
                         <Button type="submit" size="icon" disabled={isLoading}>
                           <Send className="w-5 h-5" />
                           <span className="sr-only">发送</span>
