@@ -261,6 +261,11 @@ export default function SuppliersPage() {
                           </FormItem>
                         )}
                       />
+                       <FormField control={supplierForm.control} name="region" render={({ field }) => ( <FormItem><FormLabel>所在区域</FormLabel><FormControl><Input placeholder="例如：广东省深圳市" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="address" render={({ field }) => ( <FormItem><FormLabel>详细地址</FormLabel><FormControl><Input placeholder="例如：南山区科技园" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="establishmentDate" render={({ field }) => ( <FormItem><FormLabel>成立日期</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="registeredCapital" render={({ field }) => ( <FormItem><FormLabel>注册资本</FormLabel><FormControl><Input placeholder="例如：1000万元" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="creditCode" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>统一社会信用代码</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </div>
                      <FormField
                         control={supplierForm.control}
@@ -319,7 +324,8 @@ export default function SuppliersPage() {
                        <FormField control={supplierForm.control} name="contactPerson" render={({ field }) => ( <FormItem><FormLabel>联系人</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                        <FormField control={supplierForm.control} name="contactTitle" render={({ field }) => ( <FormItem><FormLabel>职务</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                        <FormField control={supplierForm.control} name="contactMobile" render={({ field }) => ( <FormItem><FormLabel>手机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="contactPhone" render={({ field }) => ( <FormItem><FormLabel>座机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </div>
                   </div>
 
