@@ -14,7 +14,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon, Settings, Database, Library, Wand2, Briefcase, Users } from "lucide-react";
+import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon, Settings, Database, Library, Wand2, Briefcase, Users, UserCog } from "lucide-react";
 import { useAuth, User } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -30,6 +30,7 @@ const navLabels = {
   creatorWorkbench: "创意者工作台",
   demandPool: "需求池",
   designers: "创意设计师",
+  permissions: "权限管理",
   login: "请先登录",
   account: "我的账户",
   logout: "退出登录",
@@ -46,9 +47,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/creator-workbench", label: navLabels.creatorWorkbench, icon: Wand2, roles: ['creator'] },
     { href: "/search", label: navLabels.search, icon: Search, roles: ['admin', 'user', 'supplier', 'creator'] },
     { href: "/suppliers", label: navLabels.suppliers, icon: UploadCloud, roles: ['admin', 'supplier'] },
-    { href: "/prompts", label: navLabels.prompts, icon: Settings, roles: ['admin'] },
     { href: "/knowledge-base", label: navLabels.knowledgeBase, icon: Database, roles: ['admin'] },
     { href: "/public-resources", label: navLabels.publicResources, icon: Library, roles: ['admin'] },
+    { href: "/prompts", label: navLabels.prompts, icon: Settings, roles: ['admin'] },
+    { href: "/permissions", label: navLabels.permissions, icon: UserCog, roles: ['admin'] },
   ];
 
   const menuItems = user ? allMenuItems.filter(item => item.roles.includes(user.role)) : [];
