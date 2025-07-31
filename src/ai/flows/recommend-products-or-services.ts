@@ -49,7 +49,7 @@ const recommendProductsOrServicesPrompt = ai.definePrompt({
   Public Resources: {{{publicResources}}}
   Supplier Databases: {{{supplierDatabases}}}
 
-  Provide a list of recommended products or services, along with a clear explanation of why each recommendation is suitable for the user.
+  Provide a list of 3 to 5 recommended products or services, along with a clear explanation of why each recommendation is suitable for the user.
 
   Format your response as a JSON object with 'recommendations' (an array of product/service names) and 'reasoning' (an explanation for each recommendation).
   `, // Ensure valid JSON format
