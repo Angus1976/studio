@@ -4,23 +4,15 @@
  * @fileOverview A flow to guide users in articulating their needs for AI-driven workflows.
  *
  * - aiRequirementsNavigator - A function that guides the user and extracts key requirements.
+ * @fileOverview A flow to guide users in articulating their needs for AI-driven workflows.
+ *
+ * - aiRequirementsNavigator - A function that guides the user and extracts key requirements.
  * - AIRequirementsNavigatorInput - The input type for the aiRequirementsNavigator function.
  * - AIRequirementsNavigatorOutput - The return type for the aiRequirementsNavigator function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import Handlebars from 'handlebars';
-
-Handlebars.registerHelper('ifeq', function (a, b, options) {
-  if (a === b) {
-    // @ts-ignore
-    return options.fn(this);
-  }
-  // @ts-ignore
-  return options.inverse(this);
-});
-
 
 const AIRequirementsNavigatorInputSchema = z.object({
   userInput: z.string().describe('The user input for the current turn.'),
@@ -77,11 +69,11 @@ Follow these steps:
 
 Conversation History:
 {{#each conversationHistory}}
-  {{#ifeq this.role 'user'}}
+  {{#if isUser}}
     User: {{{this.content}}}
   {{else}}
     Assistant: {{{this.content}}}
-  {{/ifeq}}
+  {{/if}}
 {{/each}}
 
 User input:
@@ -95,7 +87,16 @@ const aiRequirementsNavigatorFlow = ai.defineFlow(
     outputSchema: AIRequirementsNavigatorOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    // Pre-process history to add a boolean for Handlebars `if` helper
+    const processedHistory = input.conversationHistory?.map(message => ({
+        ...message,
+        isUser: message.role === 'user'
+    }));
+
+    const {output} = await prompt({
+        ...input,
+        conversationHistory: processedHistory
+    });
     return output!;
   }
 );
