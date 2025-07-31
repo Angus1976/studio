@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -42,7 +43,6 @@ const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
   input: {schema: GenerateUserProfileInputSchema},
   output: {schema: GenerateUserProfileOutputSchema},
-  model: 'gemini-1.5-flash-latest',
   prompt: `You are an AI assistant that generates user profiles based on user input.
 
   Your primary goal is to analyze the user's request, which can be text, an image, or both, to understand their needs and generate an accurate profile summary and a list of relevant tags.
