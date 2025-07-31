@@ -8,7 +8,7 @@ import { getAiResponse } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2, ExternalLink, Eye } from "lucide-react";
