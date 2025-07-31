@@ -91,7 +91,7 @@ export default function CreatorWorkbenchPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>我的创意提交</CardTitle>
-                            <CardDescription>您提交的所有创意作品将在这里展示和管理。</CardDescription>
+                            <CardDescription>您提交的创意作品将进入供应商产品库，并在此处进行管理。</CardDescription>
                         </CardHeader>
                         <CardContent>
                            <div className="text-center py-20 text-muted-foreground">
