@@ -202,34 +202,36 @@ export default function Home() {
                     </Button>
                  )}
                 <Card className="bg-accent/20 border-accent/30">
-                    <CardHeader className="text-center p-4">
+                    <CardHeader className="text-center p-4 pb-2">
                         <div className="inline-block p-2 bg-primary/10 rounded-full mb-2 mx-auto border-2 border-primary/20">
-                          <Diamond className="w-6 h-6 text-primary" />
+                          <Diamond className="w-5 h-5 text-primary" />
                         </div>
-                        <CardTitle className="font-headline text-xl text-primary-foreground/90">高端定制服务</CardTitle>
+                        <CardTitle className="font-headline text-lg text-primary-foreground/90">高端定制服务</CardTitle>
                         <CardDescription className="text-xs max-w-xs mx-auto pt-1">
                             将您的构想变为现实。我们的顶尖设计师将与您合作,打造专属艺术品。
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="px-4 pb-2">
-                        <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    <CardContent className="px-4 pb-1">
+                        <ul className="space-y-1 text-xs text-muted-foreground">
                             <li className="flex items-start">
-                                <ArrowRight className="w-3 h-3 mr-2 mt-0.5 text-primary shrink-0" />
+                                <ArrowRight className="w-3 h-3 mr-1.5 mt-0.5 text-primary shrink-0" />
                                 <span>与专业3D艺术家深度沟通</span>
                             </li>
                              <li className="flex items-start">
-                                <ArrowRight className="w-3 h-3 mr-2 mt-0.5 text-primary shrink-0" />
+                                <ArrowRight className="w-3 h-3 mr-1.5 mt-0.5 text-primary shrink-0" />
                                 <span>从草图到模型的全程跟进</span>
                             </li>
                              <li className="flex items-start">
-                                <ArrowRight className="w-3 h-3 mr-2 mt-0.5 text-primary shrink-0" />
+                                <ArrowRight className="w-3 h-3 mr-1.5 mt-0.5 text-primary shrink-0" />
                                 <span>使用顶级材质和工艺制作</span>
                             </li>
                         </ul>
                     </CardContent>
                     <div className="p-4 pt-2">
-                        <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground" size="sm">
+                        <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground" size="sm" asChild>
+                           <Link href="/designers">
                             预约设计师 (付费) <ArrowRight className="ml-2 w-4 h-4" />
+                           </Link>
                         </Button>
                     </div>
                 </Card>
