@@ -4,9 +4,6 @@
  * @fileOverview A flow to guide users in articulating their needs for AI-driven workflows.
  *
  * - aiRequirementsNavigator - A function that guides the user and extracts key requirements.
- * @fileOverview A flow to guide users in articulating their needs for AI-driven workflows.
- *
- * - aiRequirementsNavigator - A function that guides the user and extracts key requirements.
  * - AIRequirementsNavigatorInput - The input type for the aiRequirementsNavigator function.
  * - AIRequirementsNavigatorOutput - The return type for the aiRequirementsNavigator function.
  */
@@ -14,8 +11,14 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+type ConversationMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
 const AIRequirementsNavigatorInputSchema = z.object({
   userInput: z.string().describe('The user input for the current turn.'),
+  // We keep the history for the function input, but will format it before sending to the prompt
   conversationHistory: z
     .array(z.object({role: z.enum(['user', 'assistant']), content: z.string()}))
     .optional()
@@ -49,9 +52,16 @@ export async function aiRequirementsNavigator(
   return aiRequirementsNavigatorFlow(input);
 }
 
+// Define a schema for the prompt that includes the pre-formatted history string
+const PromptInputSchema = z.object({
+    userInput: z.string(),
+    formattedHistory: z.string(),
+});
+
+
 const prompt = ai.definePrompt({
   name: 'aiRequirementsNavigatorPrompt',
-  input: {schema: AIRequirementsNavigatorInputSchema},
+  input: {schema: PromptInputSchema},
   output: {schema: AIRequirementsNavigatorOutputSchema},
   prompt: `You are an AI assistant designed to guide users in articulating their needs for AI-driven workflows by collecting a detailed user profile. Analyze their input and extract key requirements effectively. 
 
@@ -68,13 +78,7 @@ Follow these steps:
 6.  Mention that a fee evaluation can be performed once the requirements are finalized.
 
 Conversation History:
-{{#each conversationHistory}}
-  {{#if isUser}}
-    User: {{{this.content}}}
-  {{else}}
-    Assistant: {{{this.content}}}
-  {{/if}}
-{{/each}}
+{{{formattedHistory}}}
 
 User input:
 {{{userInput}}}`,
@@ -86,17 +90,24 @@ const aiRequirementsNavigatorFlow = ai.defineFlow(
     inputSchema: AIRequirementsNavigatorInputSchema,
     outputSchema: AIRequirementsNavigatorOutputSchema,
   },
-  async (input) => {
-    // Pre-process history to add a boolean for Handlebars `if` helper
-    const processedHistory = input.conversationHistory?.map(message => ({
-        ...message,
-        isUser: message.role === 'user'
-    }));
+  async ({ userInput, conversationHistory }) => {
+    
+    // Pre-format the conversation history into a single string here
+    const formattedHistory = (conversationHistory || [])
+      .map((message: ConversationMessage) => {
+        if (message.role === 'user') {
+          return `User: ${message.content}`;
+        }
+        return `Assistant: ${message.content}`;
+      })
+      .join('\n');
 
+    // Call the prompt with the pre-formatted history
     const {output} = await prompt({
-        ...input,
-        conversationHistory: processedHistory
+        userInput,
+        formattedHistory,
     });
+
     return output!;
   }
 );
