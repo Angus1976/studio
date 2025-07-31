@@ -3,12 +3,11 @@ import {googleAI} from '@genkit-ai/googleai';
 
 export const ai = genkit({
   plugins: [
-    googleAI({
-      // The Gemini 1.5 Flash model is a good default for most use cases.
-      // It is fast and versatile.
-      model: 'googleai/gemini-1.5-flash-latest',
-    }),
+    googleAI(),
   ],
+  // The Gemini 1.5 Flash model is a good default for most use cases.
+  // It is fast and versatile.
+  defaultModel: 'googleai/gemini-1.5-flash-latest',
   // Log all errors to the console.
   logLevel: 'error',
   // OTel is the standard for observability in modern cloud-native apps.

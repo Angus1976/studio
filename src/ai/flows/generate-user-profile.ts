@@ -68,16 +68,10 @@ const generateUserProfileFlow = ai.defineFlow(
     outputSchema: GenerateUserProfileOutputSchema,
   },
   async input => {
-    try {
-      const {output} = await prompt(input);
-      if (!output) {
-        throw new Error("AI failed to generate a valid profile.");
-      }
-      return output;
-    } catch (error) {
-      console.error("Error in generateUserProfileFlow:", error);
-      // Re-throw a more user-friendly error or a structured error
-      throw new Error(`Failed to process user profile request. Please check API key and try again. Original error: ${error instanceof Error ? error.message : 'Unknown'}`);
+    const {output} = await prompt(input);
+    if (!output) {
+      throw new Error("AI failed to generate a valid profile.");
     }
+    return output;
   }
 );
