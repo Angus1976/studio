@@ -58,7 +58,6 @@ const productServiceSchema = z.object({
     description: z.string().optional(),
     price: z.string().optional(),
     purchaseLink: z.string().url("请输入有效的链接").optional().or(z.literal("")),
-    media: z.any().optional(),
     customFields: z.array(customFieldSchema).optional(),
   }))
 });
@@ -106,9 +105,12 @@ export default function SuppliersPage() {
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", media: undefined, customFields: [] }]
+      products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] }]
     }
   });
+
+  // Independent state for product media files, keyed by the field array's item id
+  const [productMedia, setProductMedia] = useState<Record<string, File | null>>({});
   
   const { fields: supplierCustomFields, append: appendSupplierCustomField, remove: removeSupplierCustomField } = useFieldArray({
     control: supplierForm.control,
@@ -120,13 +122,24 @@ export default function SuppliersPage() {
     name: "products",
   });
 
+  const handleRemoveProduct = (index: number, id: string) => {
+    remove(index);
+    setProductMedia(prev => {
+        const newMedia = {...prev};
+        delete newMedia[id];
+        return newMedia;
+    });
+  };
+
   const onSupplierSubmit = (data: SupplierInfoForm) => {
     console.log("基本信息提交:", data);
     toast({ title: "操作成功", description: "供应商基本信息已保存。" });
   };
 
   const onProductSubmit = (data: ProductServiceForm) => {
+    // Here you would handle both the form data and the productMedia state
     console.log("商品服务信息提交:", data);
+    console.log("关联的媒体文件:", productMedia);
     toast({ title: "操作成功", description: "商品/服务信息已保存。" });
   };
 
@@ -484,14 +497,24 @@ export default function SuppliersPage() {
                 <form onSubmit={productServiceForm.handleSubmit(onProductSubmit)} className="space-y-6">
                   <div className="space-y-4">
                     {fields.map((item, index) => (
-                       <ProductServiceItem key={item.id} form={productServiceForm} index={index} remove={remove} />
+                       <ProductServiceItem 
+                            key={item.id} 
+                            formControl={productServiceForm.control}
+                            index={index} 
+                            item={item}
+                            remove={() => handleRemoveProduct(index, item.id)}
+                            mediaFile={productMedia[item.id] || null}
+                            onMediaChange={(file) => {
+                                setProductMedia(prev => ({...prev, [item.id]: file}));
+                            }}
+                        />
                     ))}
                   </div>
                   <div className="flex justify-between items-center">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", media: undefined, customFields: [] })}
+                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       增加一项
@@ -606,28 +629,24 @@ export default function SuppliersPage() {
   );
 }
 
-// Extracted component for product/service item to use its own useFieldArray
-function ProductServiceItem({ form, index, remove }: { form: any, index: number, remove: (index: number) => void }) {
+// Extracted component for product/service item
+function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMediaChange }: {
+    formControl: any,
+    index: number,
+    item: any,
+    remove: () => void,
+    mediaFile: File | null,
+    onMediaChange: (file: File | null) => void
+}) {
     const { fields: customFields, append: appendCustomField, remove: removeCustomField } = useFieldArray({
-        control: form.control,
+        control: formControl,
         name: `products.${index}.customFields`
     });
-    
-    const [file, setFile] = useState<File | null>(null);
 
     const handleMediaChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (selectedFile) {
-            setFile(selectedFile);
-            // You might want to upload the file here and set a URL to the form,
-            // instead of the file object itself. For now, we'll just update the form value.
-            form.setValue(`products.${index}.media`, selectedFile);
-        } else {
-            setFile(null);
-            form.setValue(`products.${index}.media`, undefined);
-        }
+        const file = e.target.files?.[0] || null;
+        onMediaChange(file);
     };
-
 
     return (
         <Card className="p-4 relative bg-background/50">
@@ -636,14 +655,14 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                 variant="destructive"
                 size="icon"
                 className="absolute top-2 right-2 w-7 h-7"
-                onClick={() => remove(index)}
+                onClick={remove}
             >
                 <Trash2 className="h-4 w-4" />
                 <span className="sr-only">移除此项</span>
             </Button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
-                    control={form.control}
+                    control={formControl}
                     name={`products.${index}.name`}
                     render={({ field }) => (
                         <FormItem>
@@ -654,7 +673,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     )}
                 />
                 <FormField
-                    control={form.control}
+                    control={formControl}
                     name={`products.${index}.price`}
                     render={({ field }) => (
                         <FormItem>
@@ -665,7 +684,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     )}
                 />
                  <FormField
-                    control={form.control}
+                    control={formControl}
                     name={`products.${index}.purchaseLink`}
                     render={({ field }) => (
                         <FormItem>
@@ -681,7 +700,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     )}
                 />
                 <FormField
-                    control={form.control}
+                    control={formControl}
                     name={`products.${index}.category`}
                     render={({ field }) => (
                         <FormItem>
@@ -692,7 +711,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     )}
                 />
                 <FormField
-                    control={form.control}
+                    control={formControl}
                     name={`products.${index}.sku`}
                     render={({ field }) => (
                         <FormItem>
@@ -704,7 +723,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                 />
             </div>
             <FormField
-                control={form.control}
+                control={formControl}
                 name={`products.${index}.description`}
                 render={({ field }) => (
                     <FormItem className="mt-6">
@@ -717,21 +736,20 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
             <FormItem className="mt-6">
                 <FormLabel>相关媒体</FormLabel>
                 <div className="flex items-center gap-2">
-                    <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={handleMediaChange} className="hidden" />
-                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
-                    {file && <span className="text-sm text-muted-foreground">{file.name}</span>}
+                    <Input id={`media-upload-${item.id}`} type="file" accept="image/*,video/*" onChange={handleMediaChange} className="hidden" />
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${item.id}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
+                    {mediaFile && <span className="text-sm text-muted-foreground">{mediaFile.name}</span>}
                     <ImageIcon className="text-muted-foreground" />
                     <Video className="text-muted-foreground" />
                 </div>
-                <FormMessage />
             </FormItem>
             
             <div className="space-y-4 mt-6">
                 <h4 className="font-headline text-md font-semibold">补充内容</h4>
-                {customFields.map((item, k) => (
-                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                {customFields.map((customField, k) => (
+                  <div key={customField.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
                     <FormField
-                      control={form.control}
+                      control={formControl}
                       name={`products.${index}.customFields.${k}.fieldName`}
                       render={({ field }) => (
                         <FormItem>
@@ -742,7 +760,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                       )}
                     />
                      <FormField
-                      control={form.control}
+                      control={formControl}
                       name={`products.${index}.customFields.${k}.fieldValue`}
                       render={({ field }) => (
                         <FormItem>
@@ -766,3 +784,6 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
+
+
+    
