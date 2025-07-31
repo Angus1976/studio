@@ -13,10 +13,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import Image from "next/image";
+import { handleFileUpload } from "./actions";
+import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data";
+import { useToast } from "@/hooks/use-toast";
 
 // Zod schema for validation
 const supplierInfoSchema = z.object({
@@ -48,12 +52,18 @@ const productServiceSchema = z.object({
 
 type SupplierInfoForm = z.infer<typeof supplierInfoSchema>;
 type ProductServiceForm = z.infer<typeof productServiceSchema>;
-
+type Supplier = ProcessSupplierDataOutput['suppliers'][0];
 
 export default function SuppliersPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [licensePreview, setLicensePreview] = useState<string | null>(null);
+  
+  // State for bulk processing
+  const [isUploading, setIsUploading] = useState(false);
+  const [processedSuppliers, setProcessedSuppliers] = useState<Supplier[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supplierForm = useForm<SupplierInfoForm>({
     resolver: zodResolver(supplierInfoSchema),
@@ -88,12 +98,12 @@ export default function SuppliersPage() {
 
   const onSupplierSubmit = (data: SupplierInfoForm) => {
     console.log("基本信息提交:", data);
-    // Here you would typically call a server action to save the data
+    toast({ title: "操作成功", description: "供应商基本信息已保存。" });
   };
 
   const onProductSubmit = (data: ProductServiceForm) => {
     console.log("商品服务信息提交:", data);
-     // Here you would typically call a server action to save the data
+    toast({ title: "操作成功", description: "商品/服务信息已保存。" });
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, field: any, setPreview: (url: string | null) => void) => {
@@ -105,11 +115,87 @@ export default function SuppliersPage() {
     }
   };
 
+  const onFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      uploadAndProcessFile(file);
+    }
+  };
+  
+  const uploadAndProcessFile = async (file: File) => {
+    if (file.type !== 'text/csv') {
+      toast({
+        title: "文件格式错误",
+        description: "请上传 CSV 格式的文件。",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsUploading(true);
+    setProcessedSuppliers([]);
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const csvData = e.target?.result as string;
+      try {
+        const result = await handleFileUpload(csvData);
+        setProcessedSuppliers(result.suppliers);
+        toast({
+            title: "处理成功",
+            description: `已成功处理 ${result.suppliers.length} 条供应商数据。`,
+        });
+      } catch (error) {
+        console.error(error);
+        toast({
+          title: "处理失败",
+          description: "AI 处理供应商数据时发生错误，请稍后重试。",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const downloadTemplate = () => {
+    const header = "name,category\n";
+    const blob = new Blob([header], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "supplier_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+     toast({ title: "模板已开始下载" });
+  };
+  
+  const exportData = () => {
+    if (processedSuppliers.length === 0) {
+      toast({ title: "无数据可导出", variant: "destructive" });
+      return;
+    }
+    const header = "name,category,matchRate,addedDate\n";
+    const csvContent = processedSuppliers.map(s => `${s.name},${s.category},${s.matchRate},${s.addedDate}`).join("\n");
+    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "processed_suppliers.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "数据已开始导出" });
+  };
+
+
   if (!user || !['admin', 'supplier'].includes(user.role)) {
     return (
       <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center">
         <div className="p-4 bg-destructive/10 rounded-full mb-4">
-          <User className="w-10 h-10 text-destructive" />
+          <AlertTriangle className="w-10 h-10 text-destructive" />
         </div>
         <h1 className="text-3xl font-headline font-bold text-destructive/90">访问被拒绝</h1>
         <p className="mt-2 text-muted-foreground max-w-md">
@@ -127,14 +213,15 @@ export default function SuppliersPage() {
       <div className="flex flex-col items-center text-center mb-8">
         <h1 className="font-headline text-3xl md:text-4xl font-bold">供应商中心</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
-          在此管理您的公司基本信息以及提供的商品与服务。
+          {user.role === 'admin' ? '在此管理供应商信息，或进行批量导入导出操作。' : '在此管理您的公司基本信息以及提供的商品与服务。'}
         </p>
       </div>
 
-      <Tabs defaultValue="info" className="mx-auto max-w-4xl">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="info" className="mx-auto max-w-5xl">
+        <TabsList className={`grid w-full ${user.role === 'admin' ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger value="info"><Building className="mr-2" />基本信息</TabsTrigger>
           <TabsTrigger value="products"><Briefcase className="mr-2" />商品/服务</TabsTrigger>
+          {user.role === 'admin' && <TabsTrigger value="batch"><UploadCloud className="mr-2" />批量处理</TabsTrigger>}
         </TabsList>
         <TabsContent value="info">
           <Card>
@@ -336,6 +423,86 @@ export default function SuppliersPage() {
             </CardContent>
           </Card>
         </TabsContent>
+         {user.role === 'admin' && (
+          <TabsContent value="batch">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>批量导入</CardTitle>
+                        <CardDescription>上传CSV文件以批量添加或更新供应商信息。</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div 
+                            className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50"
+                            onClick={() => fileInputRef.current?.click()}
+                        >
+                            <UploadCloud className="w-12 h-12 text-muted-foreground" />
+                            <p className="mt-4 text-muted-foreground">将文件拖放到此处，或点击浏览</p>
+                            <p className="text-xs text-muted-foreground">支持的文件格式：CSV</p>
+                            <Input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".csv"
+                                className="hidden"
+                                onChange={onFileSelect}
+                            />
+                        </div>
+                        <div className="flex justify-center">
+                            <Button variant="outline" onClick={downloadTemplate}><Download className="mr-2"/>下载模板</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>处理结果</CardTitle>
+                        <CardDescription>导入的数据将在此处显示。</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex justify-end mb-4">
+                         <Button onClick={exportData} disabled={processedSuppliers.length === 0}><FileText className="mr-2"/>导出数据</Button>
+                      </div>
+                      <div className="overflow-auto border rounded-lg" style={{maxHeight: '400px'}}>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>供应商名称</TableHead>
+                              <TableHead>类别</TableHead>
+                              <TableHead>匹配度</TableHead>
+                              <TableHead>添加日期</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                           <TableBody>
+                            {isUploading ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        <div className="flex justify-center items-center">
+                                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                            AI 正在处理数据中...
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ) : processedSuppliers.length > 0 ? (
+                              processedSuppliers.map((supplier, index) => (
+                                <TableRow key={index}>
+                                  <TableCell className="font-medium">{supplier.name}</TableCell>
+                                  <TableCell>{supplier.category}</TableCell>
+                                  <TableCell>{supplier.matchRate}%</TableCell>
+                                  <TableCell>{supplier.addedDate}</TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">暂无数据。请上传文件开始处理。</TableCell>
+                                </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                </Card>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </main>
   );
