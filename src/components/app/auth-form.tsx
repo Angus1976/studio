@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,6 +46,7 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
     defaultValues: {
       email: "",
       password: "",
+      role: undefined,
     },
   });
 
@@ -95,7 +97,7 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
                             <SelectLabel>{groupName === 'platform' ? '平台方' : '用户方'}</SelectLabel>
                             {groupRoles.map(role => (
                                 <SelectItem key={role.value} value={role.value}>
-                                    {role.label}
+                                    {role.label.split(' - ')[1]}
                                 </SelectItem>
                             ))}
                         </SelectGroup>

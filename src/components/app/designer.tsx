@@ -35,18 +35,18 @@ const sampleScenarios: Scenario[] = [
     },
     { 
         id: 'marketing-guru', 
-        title: '客户支持机器人', 
-        description: '7x24小时回答常见问题，并能将复杂问题转给人工座席。', 
-        industry: '客户服务', 
-        task: '支持',
+        title: '营销内容生成器', 
+        description: '根据产品信息和市场趋势，自动生成吸引人的社交媒体帖子。', 
+        industry: '市场营销', 
+        task: '内容创作',
         prompt: 'You are a marketing guru. Generate three creative and engaging social media posts based on the following product description.',
     },
     { 
         id: 'code-optimizer', 
-        title: '代码优化器提示', 
-        description: '根据产品信息和市场趋势，自动生成吸引人的社交媒体帖子。', 
-        industry: '市场营销', 
-        task: '内容创作',
+        title: '代码优化机器人', 
+        description: '审查代码片段并提供提高其性能和可读性的建议。', 
+        industry: '软件开发', 
+        task: '代码审查',
         prompt: 'You are a code optimization expert. Review the following code snippet and provide suggestions to improve its performance and readability.',
     },
 ];
@@ -54,7 +54,7 @@ const sampleScenarios: Scenario[] = [
 
 export function Designer() {
   const [scenarios, setScenarios] = useState(sampleScenarios);
-  const [newScenario, setNewScenario] = useState({ title: '', description: '', industry: '', task: '', prompt: '' });
+  const [newScenario, setNewScenario] = useState<Omit<Scenario, 'id'>>({ title: '', description: '', industry: '', task: '', prompt: '' });
   const [testContext, setTestContext] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [testResult, setTestResult] = useState('');
@@ -85,13 +85,14 @@ export function Designer() {
   }
 
   const handlePublishAndTest = async () => {
-    const useNewPrompt = !testPromptId;
-    
-    if (useNewPrompt && (!newScenario.title || !newScenario.prompt)) {
+    const usePromptId = !!testPromptId.trim();
+    const useNewPrompt = !usePromptId && !!newScenario.prompt.trim();
+
+    if (!usePromptId && !useNewPrompt) {
         toast({
             variant: 'destructive',
-            title: '缺少信息',
-            description: '请填写能力标题和核心提示词，或提供一个已有的提示ID。',
+            title: '缺少提示词',
+            description: '请填写新的核心提示词，或提供一个已有的提示ID进行测试。',
         });
         return;
     }
@@ -110,21 +111,24 @@ export function Designer() {
     setTestResult('');
     
     try {
-        if (useNewPrompt) {
+        const promptIdForCall = usePromptId ? testPromptId : `new-prompt-${Date.now()}`;
+        const promptContentForCall = useNewPrompt ? newScenario.prompt : undefined;
+        
+        if (usePromptId) {
             toast({
-                title: "正在测试新提示...",
-                description: `能力 "${newScenario.title}" 正在被测试。`,
+                title: "正在测试已有提示...",
+                description: `正在调用提示 ID: "${testPromptId}"。`,
             });
         } else {
              toast({
-                title: "正在测试已有提示...",
-                description: `正在调用提示 ID: "${testPromptId}"。`,
+                title: "正在测试新提示...",
+                description: `能力 "${newScenario.title || '新能力'}" 正在被测试。`,
             });
         }
 
         const result = await digitalEmployee({
-            promptId: useNewPrompt ? `new-prompt-${Date.now()}` : testPromptId,
-            promptContent: useNewPrompt ? newScenario.prompt : undefined,
+            promptId: promptIdForCall,
+            promptContent: promptContentForCall,
             userContext: testContext,
         });
 
@@ -147,7 +151,7 @@ export function Designer() {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full max-w-screen-2xl mx-auto">
       {/* Left Column: Library */}
       <div className="lg:col-span-7 h-full">
-        <Card className="h-full flex flex-col">
+        <Card className="h-full flex flex-col shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline flex items-center gap-2">
                 <Library className="h-6 w-6 text-accent"/>
@@ -180,7 +184,7 @@ export function Designer() {
 
       {/* Right Column: Designer */}
       <div className="lg:col-span-5 h-full">
-         <Card className="h-full flex flex-col">
+         <Card className="h-full flex flex-col shadow-lg">
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <Bot className="h-6 w-6 text-accent"/>
@@ -259,7 +263,7 @@ export function Designer() {
 
                 <div className="mt-auto pt-4 border-t">
                     <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePublishAndTest} disabled={isLoading}>
-                        <UploadCloud className="mr-2" />
+                        <UploadCloud className="mr-2 h-5 w-5" />
                         发布并测试
                     </Button>
                 </div>

@@ -9,7 +9,7 @@ import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { User, Shield, Briefcase, Building, Code } from "lucide-react";
+import { User, Shield, Code, Building, Briefcase } from "lucide-react";
 
 type DemoRole = {
   key: string;
@@ -38,8 +38,7 @@ export default function LoginPage() {
     // 例如: const response = await api.login(values);
     setTimeout(() => {
         // Find the full role name from the value
-        const allRoles = [...demoRoles];
-        const role = allRoles.find(r => r.key === values.role);
+        const role = demoRoles.find(r => r.key === values.role);
         
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', role ? role.name : values.role);
@@ -73,7 +72,7 @@ export default function LoginPage() {
       </div>
 
        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-4xl">
-            <Card className="mb-8">
+            <Card className="mb-8 shadow-lg border-accent/20">
                 <CardHeader>
                     <CardTitle className="text-lg text-center font-headline">一键登录演示账户</CardTitle>
                     <CardDescription className="text-center text-muted-foreground">以不同角色体验平台</CardDescription>
@@ -83,8 +82,8 @@ export default function LoginPage() {
                         <h3 className="text-center font-semibold mb-4 text-foreground">平台方</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {demoRoles.filter(r => r.group === 'platform').map((role) => (
-                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12">
-                                    <role.icon className="mr-2 h-5 w-5" />
+                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base">
+                                    <role.icon className="mr-2 h-5 w-5 text-accent" />
                                     <span>{role.name.split(' - ')[1]}</span>
                                 </Button>
                             ))}
@@ -94,8 +93,8 @@ export default function LoginPage() {
                         <h3 className="text-center font-semibold mb-4 text-foreground">用户方</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {demoRoles.filter(r => r.group === 'user').map((role) => (
-                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12">
-                                    <role.icon className="mr-2 h-5 w-5" />
+                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base">
+                                    <role.icon className="mr-2 h-5 w-5 text-accent" />
                                     <span>{role.name.split(' - ')[1]}</span>
                                 </Button>
                             ))}
