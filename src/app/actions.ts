@@ -13,9 +13,9 @@ export async function getAiResponse(
   });
 
   // Mock data for other recommendation inputs as they are not implemented yet.
-  const availableKnowledge = "General knowledge base about consumer electronics and home appliances.";
-  const publicResources = "Online reviews from tech websites and forums.";
-  const supplierDatabases = "Database of certified local and national suppliers for electronics.";
+  const availableKnowledge = "关于消费电子产品和家用电器的一般知识库。";
+  const publicResources = "来自科技网站和论坛的在线评论。";
+  const supplierDatabases = "包含经认证的本地和全国电子产品供应商的数据库。";
 
   const recommendations = await recommendProductsOrServices({
       userNeeds: textInput,

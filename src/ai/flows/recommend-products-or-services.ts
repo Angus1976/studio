@@ -40,6 +40,8 @@ const recommendProductsOrServicesPrompt = ai.definePrompt({
 
   Analyze the user's needs, user profile (if available), available knowledge, public resources, and supplier databases to identify the most suitable options.
 
+  Your response must be in Chinese.
+
   User Needs: {{{userNeeds}}}
   User Profile: {{{userProfile}}}
   Available Knowledge: {{{availableKnowledge}}}

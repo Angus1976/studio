@@ -47,6 +47,8 @@ const prompt = ai.definePrompt({
   Analyze the following user input and generate a profile summary and a list of tags associated with the user.
   The tags should reflect the user's interests, preferences, and needs.
 
+  Your response must be in Chinese.
+
   Input: {{{textInput}}}
   {{#if imageDataUri}}
   Image: {{media url=imageDataUri}}

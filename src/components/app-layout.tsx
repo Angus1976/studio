@@ -20,9 +20,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const menuItems = [
-    { href: "/", label: "SmartMatch", icon: Home },
-    { href: "/search", label: "Intelligent Search", icon: Search },
-    { href: "/suppliers", label: "Supplier Integration", icon: UploadCloud },
+    { href: "/", label: "智能匹配", icon: Home },
+    { href: "/search", label: "智能搜索", icon: Search },
+    { href: "/suppliers", label: "供应商整合", icon: UploadCloud },
   ];
 
   return (
@@ -34,7 +34,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Bot className="w-6 h-6 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="font-headline font-semibold text-lg">AI SmartMatch</span>
+              <span className="font-headline font-semibold text-lg">AI 智能匹配</span>
             </div>
           </div>
         </SidebarHeader>

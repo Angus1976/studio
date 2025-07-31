@@ -65,15 +65,15 @@ export default function Home() {
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: "Here's what I found for you:",
+        content: "这是我为您找到的结果：",
         aiContent: aiResult,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error(error);
       toast({
-        title: "An error occurred",
-        description: "Failed to get a response from the AI. Please try again.",
+        title: "发生错误",
+        description: "从 AI 获取回应失败。请再试一次。",
         variant: "destructive",
       });
       setMessages((prev) =>
@@ -95,9 +95,9 @@ export default function Home() {
              <div className="p-4 bg-primary/10 rounded-full mb-4">
                <Bot className="w-10 h-10 text-primary" />
              </div>
-            <h1 className="text-3xl font-headline font-bold text-primary-foreground/90">AI SmartMatch</h1>
+            <h1 className="text-3xl font-headline font-bold text-primary-foreground/90">AI 智能匹配</h1>
             <p className="mt-2 text-muted-foreground max-w-md">
-              Describe your needs, or even upload an image. I'll analyze your request and recommend the perfect products or services for you.
+              描述您的需求，甚至可以上传图片。我将分析您的请求，并为您推荐最合适的产品或服务。
             </p>
           </div>
         )}
@@ -110,14 +110,14 @@ export default function Home() {
         <form onSubmit={handleSendMessage} className="relative max-w-4xl mx-auto">
             {previewImage && (
                 <div className="absolute bottom-full mb-2 left-0 p-2 bg-card border rounded-lg shadow-sm">
-                    <Image src={previewImage} alt="Image preview" width={64} height={64} className="rounded-md object-cover"/>
+                    <Image src={previewImage} alt="图片预览" width={64} height={64} className="rounded-md object-cover"/>
                     <button type="button" onClick={() => { setPreviewImage(null); setImageDataUri(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 text-xs">&times;</button>
                 </div>
             )}
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Tell me about your project, needs, or preferences..."
+            placeholder="请告诉我您的项目、需求或偏好..."
             className="w-full resize-none pr-32 pl-12 py-3 text-base"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -135,14 +135,14 @@ export default function Home() {
           </div>
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
             <Button type="submit" size="sm" disabled={isLoading}>
-              {isLoading ? "Thinking..." : "Send"}
+              {isLoading ? "思考中..." : "发送"}
               <Send className="w-4 h-4 ml-2" />
             </Button>
           </div>
         </form>
          <p className="text-xs text-muted-foreground text-center mt-2">
             <CornerDownLeft className="inline w-3 h-3 mr-1" />
-            <span className="font-semibold">Shift + Enter</span> for new line.
+            <span className="font-semibold">Shift + Enter</span> 换行。
           </p>
       </div>
     </div>
@@ -161,7 +161,7 @@ function ChatMessage({ message }: { message: Message }) {
             <div className={`flex flex-col gap-2 max-w-2xl ${isAssistant ? '' : 'items-end'}`}>
                 <div className={`rounded-2xl p-4 ${isAssistant ? 'bg-card' : 'bg-primary text-primary-foreground'}`}>
                     {message.imageDataUri && (
-                        <Image src={message.imageDataUri} alt="User upload" width={200} height={200} className="rounded-lg mb-2"/>
+                        <Image src={message.imageDataUri} alt="用户上传" width={200} height={200} className="rounded-lg mb-2"/>
                     )}
                     {message.content && <p className="whitespace-pre-wrap">{message.content}</p>}
                     {message.aiContent?.userProfile && <UserProfileDisplay profile={message.aiContent.userProfile} />}
@@ -201,7 +201,7 @@ function UserProfileDisplay({ profile }: { profile: GenerateUserProfileOutput })
     return (
         <Card className="mt-4 bg-background/50 border-primary/20">
             <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-headline">Generated User Profile</CardTitle>
+                <CardTitle className="text-lg font-headline">生成的用户画像</CardTitle>
             </CardHeader>
             <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">{profile.profileSummary}</p>
@@ -218,7 +218,7 @@ function UserProfileDisplay({ profile }: { profile: GenerateUserProfileOutput })
 function RecommendationsDisplay({ recommendations }: { recommendations: RecommendProductsOrServicesOutput }) {
     return (
         <div className="mt-4">
-            <h3 className="font-headline text-lg font-semibold mb-2">Top Recommendations</h3>
+            <h3 className="font-headline text-lg font-semibold mb-2">首要推荐</h3>
             <div className="space-y-3">
                 {recommendations.recommendations.map((rec, index) => (
                     <Card key={index} className="bg-background/50 border-accent/20">
@@ -226,14 +226,14 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
                             <CardTitle className="text-base font-semibold font-headline flex items-center">
                                <Star className="w-4 h-4 mr-2 text-accent" /> {rec}
                             </CardTitle>
-                            <Button size="sm" variant="outline">View Details</Button>
+                            <Button size="sm" variant="outline">查看详情</Button>
                         </CardHeader>
                     </Card>
                 ))}
             </div>
              <Card className="mt-4 bg-background/50 border-dashed">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-headline">Reasoning</CardTitle>
+                    <CardTitle className="text-base font-headline">推荐理由</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-muted-foreground">{recommendations.reasoning}</p>
