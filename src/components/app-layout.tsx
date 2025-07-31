@@ -20,17 +20,29 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 
+const navLabels = {
+  main: "智能匹配",
+  search: "智能搜索",
+  suppliers: "供应商整合",
+  prompts: "提示词管理",
+  knowledgeBase: "知识库管理",
+  publicResources: "公共资源库",
+  login: "请先登录",
+  account: "我的账户",
+  logout: "退出登录",
+};
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
   const allMenuItems = [
-    { href: "/", label: "智能匹配", icon: Home, roles: ['admin', 'user'] },
-    { href: "/search", label: "智能搜索", icon: Search, roles: ['admin', 'user', 'supplier'] },
-    { href: "/suppliers", label: "供应商整合", icon: UploadCloud, roles: ['admin', 'supplier'] },
-    { href: "/prompts", label: "提示词管理", icon: Settings, roles: ['admin'] },
-    { href: "/knowledge-base", label: "知识库管理", icon: Database, roles: ['admin'] },
-    { href: "/public-resources", label: "公共资源库", icon: Library, roles: ['admin'] },
+    { href: "/", label: navLabels.main, icon: Home, roles: ['admin', 'user'] },
+    { href: "/search", label: navLabels.search, icon: Search, roles: ['admin', 'user', 'supplier'] },
+    { href: "/suppliers", label: navLabels.suppliers, icon: UploadCloud, roles: ['admin', 'supplier'] },
+    { href: "/prompts", label: navLabels.prompts, icon: Settings, roles: ['admin'] },
+    { href: "/knowledge-base", label: navLabels.knowledgeBase, icon: Database, roles: ['admin'] },
+    { href: "/public-resources", label: navLabels.publicResources, icon: Library, roles: ['admin'] },
   ];
 
   const menuItems = allMenuItems.filter(item => user?.role && item.roles.includes(user.role));
@@ -50,11 +62,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="end" className="w-56">
-        <DropdownMenuLabel>我的账户</DropdownMenuLabel>
+        <DropdownMenuLabel>{navLabels.account}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>退出登录</span>
+          <span>{navLabels.logout}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -70,7 +82,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Bot className="w-6 h-6 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="font-headline font-semibold text-lg">AI 智能匹配</span>
+              <span className="font-headline font-semibold text-lg">{navLabels.main}</span>
             </div>
           </div>
         </SidebarHeader>
@@ -92,7 +104,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <SidebarMenuButton>
                   <Link href="/login" className="flex items-center gap-2 w-full">
                     <UserIcon />
-                    <span>请先登录</span>
+                    <span>{navLabels.login}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -114,3 +126,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    

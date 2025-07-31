@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -46,6 +47,8 @@ const prompt = ai.definePrompt({
 
 请将“addedDate”统一设置为今天的日期：${new Date().toISOString().split('T')[0]}。
 
+你的回应必须是中文。
+
 CSV 数据:
 """
 {{{csvData}}}
@@ -65,3 +68,5 @@ const processSupplierDataFlow = ai.defineFlow(
     return output!;
   }
 );
+
+    
