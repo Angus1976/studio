@@ -14,6 +14,7 @@ import { ScenarioArchitectView } from "@/components/app/scenario-architect-view"
 import { WorkflowViewer } from "@/components/app/workflow-viewer";
 import { Designer } from "@/components/app/designer";
 import { AdminDashboard } from "@/components/app/admin-dashboard";
+import { TenantDashboard } from "@/components/app/tenant-dashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export default function Home() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员'].includes(userRole || '')) {
+    if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员', '用户方 - 企业租户'].includes(userRole || '')) {
         // Start with a welcome message from the assistant
         setConversationHistory([
         {
@@ -333,12 +334,18 @@ export default function Home() {
     <AdminDashboard />
   );
 
+  const renderTenantView = () => (
+    <TenantDashboard />
+  );
+
   const renderContent = () => {
     switch (userRole) {
         case '平台方 - 管理员':
             return renderAdminView();
         case '平台方 - 技术工程师':
             return renderEngineerView();
+        case '用户方 - 企业租户':
+            return renderTenantView();
         default:
             return renderUserView();
     }
