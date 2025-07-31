@@ -769,7 +769,3 @@ function ProductServiceItem({ control, index, remove }: {
         </Card>
     );
 }
-
-    
-
-    
