@@ -167,7 +167,7 @@ function TenantManagementDialog() {
   return (
     <Dialog>
         <DialogTrigger asChild>
-            <Button>管理企业租户</Button>
+            <Button>增、改、删企业注册租户</Button>
         </DialogTrigger>
         <DialogContent className="max-w-4xl">
             <DialogHeader>
@@ -352,7 +352,7 @@ function UserForm({ user, onSubmit }: { user?: IndividualUser | null, onSubmit: 
     );
 }
 
-function UserManagementDialog() {
+function UserManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
   const [users, setUsers] = useState<IndividualUser[]>(initialUsers);
   const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -396,12 +396,12 @@ function UserManagementDialog() {
   return (
     <Dialog>
         <DialogTrigger asChild>
-            <Button>管理个人用户</Button>
+            <Button>{buttonText}</Button>
         </DialogTrigger>
         <DialogContent className="max-w-4xl">
             <DialogHeader>
-                <DialogTitle>个人用户管理</DialogTitle>
-                <DialogDescription>管理平台上的所有个人用户账户，包括普通用户和技术工程师。</DialogDescription>
+                <DialogTitle>{title}</DialogTitle>
+                <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                 <div className="md:col-span-2">
@@ -587,7 +587,17 @@ export function AdminDashboard() {
                             {panel.id === 'tenants' ? (
                                 <TenantManagementDialog />
                             ) : panel.id === 'users' ? (
-                                <UserManagementDialog />
+                                <UserManagementDialog 
+                                    buttonText={panel.buttonText}
+                                    title={panel.title}
+                                    description={panel.description}
+                                />
+                            ) : panel.id === 'engineers' ? (
+                                <UserManagementDialog 
+                                    buttonText={panel.buttonText}
+                                    title={panel.title}
+                                    description={panel.description}
+                                />
                             ) : (
                                 <PlaceholderDialog
                                     triggerButtonText={panel.buttonText}
@@ -636,6 +646,8 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    
 
     
 
