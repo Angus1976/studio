@@ -1,6 +1,7 @@
+// @see https://github.com/shadcn-ui/ui/blob/main/apps/www/src/hooks/use-toast.ts
+// @see https://github.com/emilkowalski/sonner
 "use client"
 
-// Inspired by react-hot-toast library
 import * as React from "react"
 
 import type {
@@ -9,7 +10,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000 * 60 * 60 * 24 // 24 hours
 
 type ToasterToast = ToastProps & {
   id: string
@@ -135,9 +136,9 @@ let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
+  for (const listener of listeners) {
     listener(memoryState)
-  })
+  }
 }
 
 type Toast = Omit<ToasterToast, "id">
