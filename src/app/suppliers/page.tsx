@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle, PlusCircle } from "lucide-react";
+import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle, PlusCircle, Link as LinkIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import Image from "next/image";
@@ -55,6 +55,7 @@ const productServiceSchema = z.object({
     sku: z.string().optional(),
     description: z.string().optional(),
     price: z.string().optional(),
+    purchaseLink: z.string().url("请输入有效的链接").optional().or(z.literal("")),
     media: z.any().optional(),
     customFields: z.array(customFieldSchema).optional(),
   }))
@@ -99,7 +100,7 @@ export default function SuppliersPage() {
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ name: "", category: "", sku: "", description: "", price: "", customFields: [] }]
+      products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] }]
     }
   });
   
@@ -468,7 +469,7 @@ export default function SuppliersPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", customFields: [] })}
+                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       增加一项
@@ -597,6 +598,22 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                         </FormItem>
                     )}
                 />
+                 <FormField
+                    control={form.control}
+                    name={`products.${index}.purchaseLink`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>购买链接</FormLabel>
+                            <FormControl>
+                               <div className="relative">
+                                  <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                  <Input placeholder="https://item.jd.com/..." {...field} className="pl-10" />
+                                </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField
                     control={form.control}
                     name={`products.${index}.category`}
@@ -701,3 +718,6 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
     );
 }
 
+
+
+    
