@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { LoaderCircle } from "lucide-react";
 
 const formSchema = z.object({
@@ -91,13 +91,14 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
                 </FormControl>
                 <SelectContent>
                     {Object.entries(roles).map(([groupName, groupRoles]) => (
-                        <optgroup label={groupName === 'platform' ? '平台方' : '用户方'} key={groupName}>
+                        <SelectGroup key={groupName}>
+                            <SelectLabel>{groupName === 'platform' ? '平台方' : '用户方'}</SelectLabel>
                             {groupRoles.map(role => (
                                 <SelectItem key={role.value} value={role.value}>
                                     {role.label}
                                 </SelectItem>
                             ))}
-                        </optgroup>
+                        </SelectGroup>
                     ))}
                 </SelectContent>
               </Select>
