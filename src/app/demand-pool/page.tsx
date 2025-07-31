@@ -137,7 +137,7 @@ export default function DemandPoolPage() {
                     </div>
                     <h1 className="font-headline text-3xl md:text-4xl font-bold">需求池</h1>
                     <p className="mt-2 max-w-2xl text-muted-foreground">
-                        在这里发现机会。浏览、筛选并响应最适合您的需求，将潜在机会转化为商业成功。
+                        平台可用AI智能推送需求给供应商或创意者，供应商和创作者也可以在公共需求池中找需求，需求发布者决定与哪个供应商或创意者合作。
                     </p>
                 </div>
 
