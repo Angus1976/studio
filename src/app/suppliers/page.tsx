@@ -7,9 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { UploadCloud, FileSpreadsheet, LoaderCircle, AlertCircle } from "lucide-react";
+import { UploadCloud, FileSpreadsheet, LoaderCircle, AlertCircle, User } from "lucide-react";
 import { handleFileUpload } from "./actions";
 import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data";
+import { useAuth } from "@/lib/auth";
+import Link from "next/link";
 
 type Supplier = ProcessSupplierDataOutput['suppliers'][0];
 
@@ -18,6 +20,7 @@ export default function SuppliersPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -45,13 +48,29 @@ export default function SuppliersPage() {
     };
     reader.readAsText(file);
     
-    // Reset file input
     if(fileInputRef.current) {
         fileInputRef.current.value = "";
     }
   };
 
   const triggerFileSelect = () => fileInputRef.current?.click();
+
+  if (!user || !['admin', 'supplier'].includes(user.role)) {
+    return (
+      <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center">
+        <div className="p-4 bg-destructive/10 rounded-full mb-4">
+          <User className="w-10 h-10 text-destructive" />
+        </div>
+        <h1 className="text-3xl font-headline font-bold text-destructive/90">访问被拒绝</h1>
+        <p className="mt-2 text-muted-foreground max-w-md">
+          您没有权限访问此页面。请使用管理员或供应商账户登录。
+        </p>
+        <Button asChild className="mt-6">
+          <Link href="/login">前往登录</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <main className="p-4 md:p-6">
@@ -66,7 +85,7 @@ export default function SuppliersPage() {
         <Card>
           <CardHeader>
             <CardTitle className="font-headline">导入供应商数据</CardTitle>
-            <CardDescription>上传 CSV 或 Excel 文件以添加或更新供应商信息。</CardDescription>
+            <CardDescription>上传 CSV 文件以添加或更新供应商信息。</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border-2 border-dashed p-12 text-center">

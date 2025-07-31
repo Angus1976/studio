@@ -14,9 +14,12 @@ import { Bot, User, Image as ImageIcon, Send, CornerDownLeft, Star } from "lucid
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
+import { useAuth } from "@/lib/auth";
+import Link from "next/link";
 
 export default function Home() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -83,6 +86,23 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+  
+    if (!user) {
+    return (
+      <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center">
+        <div className="p-4 bg-primary/10 rounded-full mb-4">
+          <User className="w-10 h-10 text-primary" />
+        </div>
+        <h1 className="text-3xl font-headline font-bold text-primary-foreground/90">请先登录</h1>
+        <p className="mt-2 text-muted-foreground max-w-md">
+          您需要登录后才能使用智能匹配功能。
+        </p>
+        <Button asChild className="mt-6">
+          <Link href="/login">前往登录</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100svh-4rem)] w-full flex-col">

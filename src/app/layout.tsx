@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AppLayout } from '@/components/app-layout';
 import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/lib/auth';
 
 export const metadata: Metadata = {
   title: 'AI 智能匹配',
@@ -22,8 +23,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AppLayout>{children}</AppLayout>
-        <Toaster />
+        <AuthProvider>
+          <AppLayout>{children}</AppLayout>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

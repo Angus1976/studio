@@ -14,17 +14,49 @@ import {
   SidebarInset,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bot, Home, Search, UploadCloud } from "lucide-react";
+import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon } from "lucide-react";
+import { useAuth, User } from "@/lib/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
-  const menuItems = [
-    { href: "/", label: "智能匹配", icon: Home },
-    { href: "/search", label: "智能搜索", icon: Search },
-    { href: "/suppliers", label: "供应商整合", icon: UploadCloud },
+  const allMenuItems = [
+    { href: "/", label: "智能匹配", icon: Home, roles: ['admin', 'user'] },
+    { href: "/search", label: "智能搜索", icon: Search, roles: ['admin', 'user', 'supplier'] },
+    { href: "/suppliers", label: "供应商整合", icon: UploadCloud, roles: ['admin', 'supplier'] },
   ];
+
+  const menuItems = allMenuItems.filter(item => user?.role && item.roles.includes(user.role));
+
+  const UserMenu = ({ user }: { user: User }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="flex items-center justify-start gap-3 w-full h-auto p-2">
+           <Avatar className="w-9 h-9 border-2 border-muted">
+              <AvatarImage src={user.avatar} alt={user.name}/>
+              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col items-start text-left group-data-[collapsible=icon]:hidden">
+            <span className="font-semibold text-sm">{user.name}</span>
+            <span className="text-xs text-muted-foreground">{user.email}</span>
+          </div>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="end" className="w-56">
+        <DropdownMenuLabel>我的账户</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={logout}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>退出登录</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
 
   return (
     <SidebarProvider>
@@ -40,7 +72,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarHeader>
         <SidebarMenu>
-          {menuItems.map((item) => (
+          {user ? menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
@@ -53,10 +85,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          ))}
+          )) : (
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/login">
+                    <UserIcon />
+                    <span>请先登录</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+          )}
         </SidebarMenu>
         <SidebarFooter>
-         </SidebarFooter>
+         {user && <UserMenu user={user} />}
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-end md:justify-between h-16 px-4 border-b">
