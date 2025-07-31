@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -63,6 +64,25 @@ export function Designer() {
   const handleInputChange = (field: keyof typeof newScenario, value: string) => {
     setNewScenario(prev => ({ ...prev, [field]: value }));
   };
+  
+  const handleAddScenario = () => {
+    if (!newScenario.title || !newScenario.prompt) {
+         toast({
+            variant: 'destructive',
+            title: '缺少信息',
+            description: '请填写能力标题和核心提示词以添加新场景。',
+        });
+        return;
+    }
+    const newId = `custom-${newScenario.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    const scenarioToAdd = { ...newScenario, id: newId };
+    setScenarios(prev => [...prev, scenarioToAdd]);
+    setNewScenario({ title: '', description: '', industry: '', task: '', prompt: '' });
+    toast({
+        title: '场景已添加',
+        description: `能力 "${scenarioToAdd.title}" 已添加到场景库中。`,
+    });
+  }
 
   const handlePublishAndTest = async () => {
     const useNewPrompt = !testPromptId;
@@ -143,8 +163,14 @@ export function Designer() {
                     {scenarios.map(scenario => (
                         <ScenarioCard key={scenario.id} scenario={scenario} />
                     ))}
-                     <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg text-muted-foreground hover:bg-muted/50 cursor-pointer min-h-[220px]">
+                     <div 
+                        className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-muted-foreground hover:bg-muted/50 cursor-pointer min-h-[220px]"
+                        onClick={handleAddScenario}
+                        role="button"
+                        aria-label="添加新场景"
+                     >
                         <PlusCircle className="h-8 w-8" />
+                        <p className="mt-2 text-sm text-center">点击添加当前<br/>设计器中的场景</p>
                     </div>
                 </div>
             </ScrollArea>

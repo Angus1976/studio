@@ -7,7 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users, Bot, BrainCircuit, Blocks, Building2, Landmark, Plug } from "lucide-react";
+import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users, Bot, BrainCircuit, Blocks, Building2, Landmark, Plug, PlusCircle, Pencil, Trash2, Database, Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 
 type ActionPanelProps = {
   isScenarioReady: boolean;
@@ -31,6 +39,7 @@ function RoleManagement() {
 }
 
 function SystemCapabilities() {
+    const { toast } = useToast();
     const capabilities = [
         { name: "软件系统", icon: Blocks },
         { name: "LLM", icon: BrainCircuit },
@@ -39,12 +48,50 @@ function SystemCapabilities() {
         { name: "财务", icon: Landmark },
         { name: "通用接口", icon: Plug },
     ];
+    
+    const handleActionClick = (action: string) => {
+        toast({
+            title: "操作提示",
+            description: `已点击 "${action}" 按钮，功能待实现。`,
+        });
+    };
+
     return (
         <div>
-            <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                <ClipboardCheck className="h-4 w-4" />
-                平台能力库
-            </h4>
+             <div className="flex justify-between items-center mb-3">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                    <ClipboardCheck className="h-4 w-4" />
+                    平台能力库
+                </h4>
+                <TooltipProvider>
+                    <div className="flex items-center gap-1">
+                         <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleActionClick('新增')}>
+                                    <PlusCircle className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>新增能力</p></TooltipContent>
+                        </Tooltip>
+                         <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleActionClick('编辑')}>
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>编辑能力</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleActionClick('删除')}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>删除能力</p></TooltipContent>
+                        </Tooltip>
+                    </div>
+                </TooltipProvider>
+            </div>
             <div className="grid grid-cols-3 gap-3 text-center">
                 {capabilities.map(cap => (
                     <div key={cap.name} className="flex flex-col items-center justify-center gap-1 p-2 rounded-md bg-secondary/50">
@@ -53,6 +100,10 @@ function SystemCapabilities() {
                     </div>
                 ))}
             </div>
+             <Button variant="outline" size="sm" className="w-full mt-4 text-xs" onClick={() => handleActionClick('配置账号数据')}>
+                <Settings className="mr-2 h-3 w-3" />
+                配置账号/数据
+            </Button>
         </div>
     )
 }
