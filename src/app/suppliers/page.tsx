@@ -14,13 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle, PlusCircle, Link as LinkIcon } from "lucide-react";
+import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle, PlusCircle, Link as LinkIcon, Eye } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import Image from "next/image";
 import { handleFileUpload } from "./actions";
 import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data";
 import { useToast } from "@/hooks/use-toast";
+import { ItemDetailsDialog } from "@/components/item-details-dialog";
 
 const customFieldSchema = z.object({
   fieldName: z.string().min(1, "字段名不能为空"),
@@ -63,7 +64,8 @@ const productServiceSchema = z.object({
 
 type SupplierInfoForm = z.infer<typeof supplierInfoSchema>;
 type ProductServiceForm = z.infer<typeof productServiceSchema>;
-type Supplier = ProcessSupplierDataOutput['suppliers'][0];
+type Supplier = ProcessSupplierDataOutput['suppliers'][0] & { rawData?: string };
+
 
 export default function SuppliersPage() {
   const { user } = useAuth();
@@ -74,6 +76,8 @@ export default function SuppliersPage() {
   // State for bulk processing
   const [isUploading, setIsUploading] = useState(false);
   const [processedSuppliers, setProcessedSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const supplierForm = useForm<SupplierInfoForm>({
@@ -158,7 +162,13 @@ export default function SuppliersPage() {
       const csvData = e.target?.result as string;
       try {
         const result = await handleFileUpload(csvData);
-        setProcessedSuppliers(result.suppliers);
+        // Attach raw data for view details
+        const suppliersWithRawData = result.suppliers.map((supplier, index) => ({
+          ...supplier,
+          rawData: csvData.split('\n').slice(3)[index] || 'N/A' // Crude but works for demo
+        }));
+        setProcessedSuppliers(suppliersWithRawData);
+
         toast({
             title: "处理成功",
             description: `已成功处理 ${result.suppliers.length} 条供应商数据。`,
@@ -267,6 +277,19 @@ export default function SuppliersPage() {
     document.body.removeChild(link);
     toast({ title: "数据已开始导出" });
   };
+  
+  const formatSupplierForDialog = (supplier: Supplier | null) => {
+    if (!supplier) return null;
+    return {
+        title: supplier.name,
+        description: `匹配度: ${supplier.matchRate}%`,
+        details: {
+            "类别": supplier.category,
+            "添加日期": supplier.addedDate,
+            "原始导入数据": supplier.rawData || 'N/A'
+        }
+    };
+  };
 
 
   if (!user || !['admin', 'supplier'].includes(user.role)) {
@@ -287,6 +310,7 @@ export default function SuppliersPage() {
   }
 
   return (
+    <>
     <main className="p-4 md:p-6">
       <div className="flex flex-col items-center text-center mb-8">
         <h1 className="font-headline text-3xl md:text-4xl font-bold">供应商中心</h1>
@@ -526,7 +550,7 @@ export default function SuppliersPage() {
                               <TableHead>供应商名称</TableHead>
                               <TableHead>类别</TableHead>
                               <TableHead>匹配度</TableHead>
-                              <TableHead>添加日期</TableHead>
+                              <TableHead className="text-right">操作</TableHead>
                             </TableRow>
                           </TableHeader>
                            <TableBody>
@@ -545,7 +569,12 @@ export default function SuppliersPage() {
                                   <TableCell className="font-medium">{supplier.name}</TableCell>
                                   <TableCell>{supplier.category}</TableCell>
                                   <TableCell>{supplier.matchRate}%</TableCell>
-                                  <TableCell>{supplier.addedDate}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => setSelectedSupplier(supplier)}>
+                                        <Eye className="h-4 w-4" />
+                                        <span className="sr-only">查看详情</span>
+                                    </Button>
+                                  </TableCell>
                                 </TableRow>
                               ))
                             ) : (
@@ -563,6 +592,12 @@ export default function SuppliersPage() {
         )}
       </Tabs>
     </main>
+    <ItemDetailsDialog
+        isOpen={!!selectedSupplier}
+        onClose={() => setSelectedSupplier(null)}
+        item={formatSupplierForDialog(selectedSupplier)}
+    />
+    </>
   );
 }
 
@@ -717,7 +752,3 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
-
-
-
-    
