@@ -14,13 +14,18 @@ import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle } from "lucide-react";
+import { User, Building, Briefcase, Trash2, UploadCloud, FileUp, Video, Image as ImageIcon, AlertTriangle, Download, FileText, LoaderCircle, PlusCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import Image from "next/image";
 import { handleFileUpload } from "./actions";
 import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data";
 import { useToast } from "@/hooks/use-toast";
+
+const customFieldSchema = z.object({
+  fieldName: z.string().min(1, "字段名不能为空"),
+  fieldValue: z.string().min(1, "字段值不能为空"),
+});
 
 // Zod schema for validation
 const supplierInfoSchema = z.object({
@@ -39,6 +44,7 @@ const supplierInfoSchema = z.object({
   contactMobile: z.string().optional(),
   contactPhone: z.string().optional(),
   contactEmail: z.string().email("请输入有效的邮箱地址").optional().or(z.literal("")),
+  customFields: z.array(customFieldSchema).optional(),
 });
 
 const productServiceSchema = z.object({
@@ -49,6 +55,7 @@ const productServiceSchema = z.object({
     description: z.string().optional(),
     price: z.string().optional(),
     media: z.any().optional(),
+    customFields: z.array(customFieldSchema).optional(),
   }))
 });
 
@@ -83,14 +90,20 @@ export default function SuppliersPage() {
       contactMobile: "",
       contactPhone: "",
       contactEmail: "",
+      customFields: [],
     },
   });
 
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ name: "", category: "", sku: "", description: "", price: "" }]
+      products: [{ name: "", category: "", sku: "", description: "", price: "", customFields: [] }]
     }
+  });
+  
+  const { fields: supplierCustomFields, append: appendSupplierCustomField, remove: removeSupplierCustomField } = useFieldArray({
+    control: supplierForm.control,
+    name: "customFields",
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -330,6 +343,43 @@ export default function SuppliersPage() {
                        <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </div>
                   </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-headline text-lg font-semibold">补充内容</h3>
+                     {supplierCustomFields.map((item, index) => (
+                      <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                        <FormField
+                          control={supplierForm.control}
+                          name={`customFields.${index}.fieldName`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>字段名</FormLabel>
+                              <FormControl><Input placeholder="例如：官方网站" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                         <FormField
+                          control={supplierForm.control}
+                          name={`customFields.${index}.fieldValue`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>字段值</FormLabel>
+                              <FormControl><Input placeholder="例如：https://example.com" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSupplierCustomField(index)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" onClick={() => appendSupplierCustomField({ fieldName: "", fieldValue: "" })}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        增加补充内容
+                    </Button>
+                  </div>
 
                   <Button type="submit">保存基本信息</Button>
                 </form>
@@ -348,102 +398,16 @@ export default function SuppliersPage() {
                 <form onSubmit={productServiceForm.handleSubmit(onProductSubmit)} className="space-y-6">
                   <div className="space-y-4">
                     {fields.map((item, index) => (
-                      <Card key={item.id} className="p-4 relative">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <FormField
-                              control={productServiceForm.control}
-                              name={`products.${index}.name`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>名称</FormLabel>
-                                  <FormControl><Input placeholder="产品或服务名称" {...field} /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                             <FormField
-                              control={productServiceForm.control}
-                              name={`products.${index}.price`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>价格</FormLabel>
-                                  <FormControl><Input placeholder="例如：¥1,299.00 或 ¥500/次" {...field} /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={productServiceForm.control}
-                              name={`products.${index}.category`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>类别</FormLabel>
-                                  <FormControl><Input placeholder="例如：消费电子产品" {...field} /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={productServiceForm.control}
-                              name={`products.${index}.sku`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>SKU/服务代码</FormLabel>
-                                  <FormControl><Input placeholder="产品或服务的唯一代码" {...field} /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                        </div>
-                         <FormField
-                            control={productServiceForm.control}
-                            name={`products.${index}.description`}
-                            render={({ field }) => (
-                              <FormItem className="mt-6">
-                                <FormLabel>描述</FormLabel>
-                                <FormControl><Textarea placeholder="详细介绍产品或服务..." {...field} /></FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        <Controller
-                            control={productServiceForm.control}
-                            name={`products.${index}.media`}
-                            render={({ field }) => (
-                              <FormItem className="mt-6">
-                                <FormLabel>相关媒体</FormLabel>
-                                 <FormControl>
-                                  <div className="flex items-center gap-2">
-                                    <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={(e) => field.onChange(e.target.files?.[0])} className="hidden" />
-                                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
-                                    {field.value && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
-                                    <ImageIcon className="text-muted-foreground" />
-                                    <Video className="text-muted-foreground" />
-                                  </div>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-2 right-2"
-                          onClick={() => remove(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </Card>
+                       <ProductServiceItem key={item.id} form={productServiceForm} index={index} remove={remove} />
                     ))}
                   </div>
                   <div className="flex justify-between items-center">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "" })}
+                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", customFields: [] })}
                     >
+                      <PlusCircle className="mr-2 h-4 w-4" />
                       增加一项
                     </Button>
                     <Button type="submit">保存商品/服务</Button>
@@ -537,3 +501,140 @@ export default function SuppliersPage() {
     </main>
   );
 }
+
+// Extracted component for product/service item to use its own useFieldArray
+function ProductServiceItem({ form, index, remove }: { form: any, index: number, remove: (index: number) => void }) {
+    const { fields: customFields, append: appendCustomField, remove: removeCustomField } = useFieldArray({
+        control: form.control,
+        name: `products.${index}.customFields`
+    });
+
+    return (
+        <Card className="p-4 relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                    control={form.control}
+                    name={`products.${index}.name`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>名称</FormLabel>
+                            <FormControl><Input placeholder="产品或服务名称" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name={`products.${index}.price`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>价格</FormLabel>
+                            <FormControl><Input placeholder="例如：¥1,299.00 或 ¥500/次" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name={`products.${index}.category`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>类别</FormLabel>
+                            <FormControl><Input placeholder="例如：消费电子产品" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name={`products.${index}.sku`}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>SKU/服务代码</FormLabel>
+                            <FormControl><Input placeholder="产品或服务的唯一代码" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+            <FormField
+                control={form.control}
+                name={`products.${index}.description`}
+                render={({ field }) => (
+                    <FormItem className="mt-6">
+                        <FormLabel>描述</FormLabel>
+                        <FormControl><Textarea placeholder="详细介绍产品或服务..." {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <Controller
+                control={form.control}
+                name={`products.${index}.media`}
+                render={({ field }) => (
+                    <FormItem className="mt-6">
+                        <FormLabel>相关媒体</FormLabel>
+                        <FormControl>
+                            <div className="flex items-center gap-2">
+                                <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={(e) => field.onChange(e.target.files?.[0])} className="hidden" />
+                                <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
+                                {field.value && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
+                                <ImageIcon className="text-muted-foreground" />
+                                <Video className="text-muted-foreground" />
+                            </div>
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            
+            <div className="space-y-4 mt-6">
+                <h4 className="font-headline text-md font-semibold">补充内容</h4>
+                {customFields.map((item, k) => (
+                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                    <FormField
+                      control={form.control}
+                      name={`products.${index}.customFields.${k}.fieldName`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>字段名</FormLabel>
+                          <FormControl><Input placeholder="例如：颜色" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name={`products.${index}.customFields.${k}.fieldValue`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>字段值</FormLabel>
+                          <FormControl><Input placeholder="例如：黑色" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomField(k)} className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={() => appendCustomField({ fieldName: "", fieldValue: "" })}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    增加补充内容
+                </Button>
+            </div>
+
+            <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2"
+                onClick={() => remove(index)}
+            >
+                <Trash2 className="h-4 w-4" />
+            </Button>
+        </Card>
+    );
+}
+
