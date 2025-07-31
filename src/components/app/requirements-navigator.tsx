@@ -45,7 +45,7 @@ export function RequirementsNavigator({
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <Bot className="h-6 w-6 text-accent" />
-          AI Requirements Navigator
+          AI 需求导航器
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
@@ -103,12 +103,12 @@ export function RequirementsNavigator({
         <form onSubmit={onFormSubmit} className="mt-auto pt-4 border-t">
           {isFinished ? (
             <div className="text-center text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
-              Requirements finalized! Check the scenario panel to see the results.
+              需求已敲定！请在场景面板中查看结果。
             </div>
           ) : (
             <div className="relative">
               <Textarea
-                placeholder="Type your message here..."
+                placeholder="在此输入您的消息..."
                 className="pr-16 resize-none"
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}

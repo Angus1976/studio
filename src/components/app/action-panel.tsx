@@ -19,10 +19,10 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPane
         <CardHeader>
           <CardTitle className="font-headline flex items-center gap-2">
             <ClipboardCheck className="h-6 w-6 text-accent" />
-            <span>Actions</span>
+            <span>操作</span>
           </CardTitle>
           <CardDescription>
-            Manage your workflow and payments.
+            管理您的工作流和付款。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col justify-between gap-6">
@@ -31,10 +31,10 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPane
             <div>
               <Label htmlFor="prompt-id" className="text-sm font-medium flex items-center gap-2 mb-2">
                 <Link className="h-4 w-4" />
-                Prompt Library Connector
+                提示库连接器
               </Label>
               <div className="flex items-center gap-2">
-                <Input id="prompt-id" placeholder="Enter Prompt ID" />
+                <Input id="prompt-id" placeholder="输入提示 ID" />
                 <Button variant="outline" size="icon">
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -47,15 +47,15 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPane
             <div>
               <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
                 <ShieldCheck className="h-4 w-4" />
-                SecurePay
+                安全支付
               </h4>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline">
-                  Pay Deposit
+                  支付定金
                   <ExternalLink className="h-4 w-4 ml-2" />
                 </Button>
                 <Button variant="outline">
-                  Pay Final Amount
+                  支付尾款
                   <ExternalLink className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -70,11 +70,11 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPane
                 disabled={!isScenarioReady}
                 onClick={onGenerateTaskOrder}
             >
-              Confirm & Generate Task Order
+              确认并生成任务订单
             </Button>
             {!isScenarioReady && (
                 <p className="text-xs text-center text-muted-foreground mt-2">
-                    Finalize requirements to generate an order.
+                    敲定需求以生成订单。
                 </p>
             )}
           </div>

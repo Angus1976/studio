@@ -7,7 +7,7 @@ export function AppHeader() {
       <div className="flex items-center gap-2">
         <AppLogo className="h-8 w-8 text-accent" />
         <h1 className="text-xl font-bold font-headline text-foreground tracking-tight">
-          AI TaskFlow
+          AI 任务流
         </h1>
       </div>
       <UserCircle className="h-8 w-8 text-muted-foreground" />

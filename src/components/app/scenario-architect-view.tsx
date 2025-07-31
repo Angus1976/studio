@@ -19,8 +19,8 @@ export function ScenarioArchitectView({ scenario, onScenarioChange }: ScenarioAr
   const handleSave = () => {
     // In a real app, this would save to a backend.
     toast({
-      title: "Customizations Saved!",
-      description: "Your changes to the AI scenario have been saved.",
+      title: "自定义已保存！",
+      description: "您对 AI 场景的更改已保存。",
     });
   };
 
@@ -29,41 +29,41 @@ export function ScenarioArchitectView({ scenario, onScenarioChange }: ScenarioAr
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <Sparkles className="h-6 w-6 text-accent" />
-          Digital Employee Customizer
+          数字员工定制器
         </CardTitle>
         <CardDescription>
-          Fine-tune the AI-generated scenario to perfectly match your needs.
+          微调 AI 生成的场景以完全满足您的需求。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
           <Label htmlFor="optimized-scenario" className="text-base font-medium">
-            Optimized Scenario
+            优化场景
           </Label>
           <Textarea
             id="optimized-scenario"
             value={scenario.optimizedScenario}
             onChange={(e) => onScenarioChange({ ...scenario, optimizedScenario: e.target.value })}
             className="mt-2 min-h-[120px]"
-            placeholder="Optimized work scenario..."
+            placeholder="优化的工作场景..."
           />
         </div>
         <div>
           <Label htmlFor="improvement-suggestions" className="text-base font-medium">
-            Improvement Suggestions
+            改进建议
           </Label>
           <Textarea
             id="improvement-suggestions"
             value={scenario.improvementSuggestions}
             onChange={(e) => onScenarioChange({ ...scenario, improvementSuggestions: e.target.value })}
             className="mt-2 min-h-[100px]"
-            placeholder="Suggestions for improvement..."
+            placeholder="改进建议..."
           />
         </div>
         <div className="flex justify-end">
             <Button onClick={handleSave}>
                 <Save className="mr-2 h-4 w-4" />
-                Save Customizations
+                保存自定义
             </Button>
         </div>
       </CardContent>

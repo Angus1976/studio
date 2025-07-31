@@ -16,10 +16,10 @@ export function WorkflowViewer({ tasks }: WorkflowViewerProps) {
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
             <SlidersHorizontal className="h-6 w-6 text-accent"/>
-            Workflow Viewer
+            工作流查看器
         </CardTitle>
         <CardDescription>
-            These tasks have been identified for AI automation.
+            这些任务已被确定为可由 AI 自动化。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -33,7 +33,7 @@ export function WorkflowViewer({ tasks }: WorkflowViewerProps) {
             ))}
             </ul>
         ) : (
-            <p className="text-sm text-muted-foreground">No automatable tasks were identified.</p>
+            <p className="text-sm text-muted-foreground">未识别到可自动化的任务。</p>
         )}
       </CardContent>
     </Card>

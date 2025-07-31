@@ -33,7 +33,7 @@ export default function Home() {
     setConversationHistory([
       {
         role: "assistant",
-        content: "Hello! I'm here to help you define your needs for an AI-driven workflow. To start, could you please describe the task or process you'd like to automate or improve?",
+        content: "你好！我在这里帮助您定义 AI 驱动工作流的需求。首先，您能描述一下您希望自动化或改进的任务或流程吗？",
       },
     ]);
   }, []);
@@ -59,18 +59,18 @@ export default function Home() {
         setIsConversationFinished(true);
         setExtractedRequirements(result.extractedRequirements);
         toast({
-          title: "Requirements Finalized!",
-          description: "Now generating your optimized work scenario...",
+          title: "需求已敲定！",
+          description: "正在为您生成优化的工作场景...",
         });
         // Automatically trigger the scenario architect
         generateScenario(result.extractedRequirements);
       }
     } catch (error) {
-      console.error("Error with AI Requirements Navigator:", error);
+      console.error("AI 需求导航器出错:", error);
       toast({
         variant: "destructive",
-        title: "An error occurred.",
-        description: "Failed to get a response from the AI. Please try again.",
+        title: "发生错误。",
+        description: "从 AI 获取响应失败。请重试。",
       });
       setConversationHistory(conversationHistory); // Revert to previous history on error
     } finally {
@@ -84,11 +84,11 @@ export default function Home() {
       const result = await aiScenarioArchitect({ userRequirements: requirements });
       setScenarioOutput(result);
     } catch (error) {
-      console.error("Error with AI Scenario Architect:", error);
+      console.error("AI 场景架构师出错:", error);
       toast({
         variant: "destructive",
-        title: "An error occurred.",
-        description: "Failed to generate the AI scenario. Please try again.",
+        title: "发生错误。",
+        description: "生成 AI 场景失败。请重试。",
       });
     } finally {
       setIsLoading(false);
@@ -97,8 +97,8 @@ export default function Home() {
   
   const handleTaskOrderGeneration = () => {
     toast({
-        title: "Task Order Generated",
-        description: "Your task order has been successfully created.",
+        title: "任务订单已生成",
+        description: "您的任务订单已成功创建。",
       });
   }
 
@@ -133,14 +133,14 @@ export default function Home() {
               <Card className="h-full flex flex-col items-center justify-center bg-card/50 border-dashed">
                 <div className="text-center p-8">
                   <Wand2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium text-foreground">AI Scenario Architect</h3>
+                  <h3 className="mt-4 text-lg font-medium text-foreground">AI 场景架构师</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Your optimized work scenario will appear here once your requirements are finalized.
+                    一旦您的需求最终确定，您优化的工作场景将显示在此处。
                   </p>
                   {isLoading && isConversationFinished && (
                      <div className="flex items-center justify-center gap-2 mt-4 text-primary">
                         <LoaderCircle className="animate-spin h-5 w-5" />
-                        <span>Generating scenario...</span>
+                        <span>正在生成场景...</span>
                      </div>
                   )}
                 </div>
