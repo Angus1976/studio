@@ -34,6 +34,7 @@ export async function recommendProductsOrServices(input: RecommendProductsOrServ
 
 const recommendProductsOrServicesPrompt = ai.definePrompt({
   name: 'recommendProductsOrServicesPrompt',
+  model: 'googleai/gemini-1.5-pro-latest',
   input: {schema: RecommendProductsOrServicesInputSchema},
   output: {schema: RecommendProductsOrServicesOutputSchema},
   prompt: `You are an AI recommendation engine that suggests products or services to users based on their needs and available information.

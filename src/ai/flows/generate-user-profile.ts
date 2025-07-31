@@ -41,6 +41,7 @@ export async function generateUserProfile(
 
 const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
+  model: 'googleai/gemini-1.5-pro-latest',
   input: {schema: GenerateUserProfileInputSchema},
   output: {schema: GenerateUserProfileOutputSchema},
   prompt: `You are an AI assistant that generates user profiles based on user input.
