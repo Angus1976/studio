@@ -144,7 +144,7 @@ export default function PromptsPage() {
                                     <TableCell>
                                         <Badge variant={prompt.status === 'active' ? 'default' : 'secondary'}>
                                             {prompt.status === 'active' ? '生效中' : '已停用'}
-                                        </dge>
+                                        </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
