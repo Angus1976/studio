@@ -5,9 +5,8 @@ export const ai = genkit({
   plugins: [
     googleAI(),
   ],
-  // The Gemini 1.5 Flash model is a good default for most use cases.
-  // It is fast and versatile.
-  defaultModel: 'googleai/gemini-1.5-flash-latest',
+  // The Gemini 1.5 Pro model is a powerful, general-purpose model.
+  defaultModel: 'googleai/gemini-1.5-pro-latest',
   // Log all errors to the console.
   logLevel: 'error',
   // OTel is the standard for observability in modern cloud-native apps.
