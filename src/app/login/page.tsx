@@ -9,7 +9,7 @@ import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { User, Shield, Code, Building, Briefcase } from "lucide-react";
+import { Shield, Code, Building, Briefcase } from "lucide-react";
 
 type DemoRole = {
   key: string;
