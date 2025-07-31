@@ -167,7 +167,7 @@ export default function Home() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="描述你的需求，什么时间花多少预算送给什么人用于什么场景的物品或服务？"
-            className="w-full resize-none pr-32 pl-12 py-3 text-base"
+            className="w-full resize-none pr-56 pl-12 py-3 text-base"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -182,7 +182,11 @@ export default function Home() {
               <ImageIcon className="w-5 h-5" />
             </Button>
           </div>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+             <Button type="button" variant="outline" className="text-accent border-accent/50 hover:bg-accent/10 hover:text-accent">
+                <Wand2 className="mr-2 h-4 w-4" />
+                定制我的独特创意
+            </Button>
             <Button type="submit" size="sm" disabled={isLoading}>
               {isLoading ? "思考中..." : "发送"}
               <Send className="w-4 h-4 ml-2" />
