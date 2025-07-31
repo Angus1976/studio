@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users, Bot, BrainCircuit, Blocks, Building2, Landmark, Plug } from "lucide-react";
 
 type ActionPanelProps = {
   isScenarioReady: boolean;
@@ -24,6 +25,33 @@ function RoleManagement() {
             <div className="space-y-2 text-sm text-muted-foreground">
                 <p><span className="font-semibold text-foreground">平台方:</span> 管理员, 技术工程师</p>
                 <p><span className="font-semibold text-foreground">用户方:</span> 企业租户, 个人用户</p>
+            </div>
+        </div>
+    )
+}
+
+function SystemCapabilities() {
+    const capabilities = [
+        { name: "软件系统", icon: Blocks },
+        { name: "LLM", icon: BrainCircuit },
+        { name: "RPA", icon: Bot },
+        { name: "ERP", icon: Building2 },
+        { name: "财务", icon: Landmark },
+        { name: "通用接口", icon: Plug },
+    ];
+    return (
+        <div>
+            <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                <ClipboardCheck className="h-4 w-4" />
+                平台能力库
+            </h4>
+            <div className="grid grid-cols-3 gap-3 text-center">
+                {capabilities.map(cap => (
+                    <div key={cap.name} className="flex flex-col items-center justify-center gap-1 p-2 rounded-md bg-secondary/50">
+                        <cap.icon className="h-5 w-5 text-accent" />
+                        <span className="text-xs text-muted-foreground">{cap.name}</span>
+                    </div>
+                ))}
             </div>
         </div>
     )
@@ -52,6 +80,8 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder, onConnectPro
         <CardContent className="flex-grow flex flex-col justify-between gap-6">
           <div className="space-y-6">
             <RoleManagement />
+            <Separator />
+            <SystemCapabilities />
             <Separator />
             {/* Prompt Library Connector */}
             <div>
