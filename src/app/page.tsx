@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, CornerDownLeft, Star, Wand2, Briefcase } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
@@ -66,7 +66,6 @@ export default function Home() {
     setImageDataUri(null);
 
     try {
-      // Pass the full data context to the AI
       const aiResult = await getAiResponse({
           textInput: input,
           imageDataUri: imageDataUri ?? undefined,
@@ -94,7 +93,6 @@ export default function Home() {
         description: `从 AI 获取回应失败: ${errorMessage}. 请检查您的API密钥并稍后重试。`,
         variant: "destructive",
       });
-      // Remove the user message that caused the error
       setMessages((prev) =>
         prev.filter((msg) => msg.id !== userMessage.id)
       );
@@ -103,9 +101,9 @@ export default function Home() {
     }
   };
   
-    if (!user) {
+  if (!user) {
     return (
-      <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center">
+      <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center p-4">
         <div className="p-4 bg-primary/10 rounded-full mb-4">
           <User className="w-10 h-10 text-primary" />
         </div>
@@ -121,84 +119,109 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-[calc(100svh-4rem)] w-full flex-col">
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"
-      >
-        {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-             <div className="p-4 bg-primary/10 rounded-full mb-4">
-               <Bot className="w-10 h-10 text-primary" />
-             </div>
-            <h1 className="text-3xl font-headline font-bold text-primary-foreground/90">AI 智能匹配</h1>
-             <p className="mt-2 text-muted-foreground max-w-md">
-              描述您的需求，甚至可以上传图片。我将分析您的请求，并为您推荐最合适的产品或服务。
+    <main className="p-4 md:p-8 flex-1">
+        <div className="flex flex-col items-center text-center mb-10">
+            <h1 className="text-4xl md:text-5xl font-headline font-bold">欢迎光临“情动于艺”</h1>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+                与AI导购对话,发现为您量身推荐的独特设计,部分商品更支持个性化定制。
             </p>
-            {user.role === 'creator' && (
-                 <Card className="mt-8 bg-accent/10 border-accent/20 animate-in fade-in-50">
-                    <CardHeader>
-                        <CardTitle className="font-headline text-accent flex items-center"><Wand2 className="mr-2"/>创意者专属入口</CardTitle>
-                        <CardDescription>直接进入您的创意工作台开始创作</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                            <Link href="/creator-workbench">前往创作者工作台</Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Left Column: AI Chat */}
+            <Card className="lg:col-span-2 h-full flex flex-col">
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">AI购物助手</CardTitle>
+                    <CardDescription>告诉我您的想法,我会为您找到完美的作品。</CardDescription>
+                </CardHeader>
+                <CardContent ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 p-6">
+                     {messages.length === 0 && !isLoading && (
+                        <div className="flex items-start gap-3">
+                           <Avatar className="w-9 h-9 border-2 border-primary/50">
+                              <AvatarFallback className="bg-primary/20 text-primary"><Bot className="w-5 h-5" /></AvatarFallback>
+                           </Avatar>
+                           <div className="rounded-2xl p-4 bg-card max-w-2xl">
+                              <p className="whitespace-pre-wrap">您好! 我是您的专属购物助手。请问您在寻找什么? 比如,是为自己选购,还是为朋友挑选</p>
+                           </div>
+                        </div>
+                    )}
+                    {messages.map((message) => (
+                      <ChatMessage key={message.id} message={message} />
+                    ))}
+                    {isLoading && <LoadingMessage />}
+                </CardContent>
+                <div className="border-t bg-background/80 backdrop-blur-sm p-4 rounded-b-lg">
+                    <form onSubmit={handleSendMessage} className="relative">
+                        {previewImage && (
+                            <div className="absolute bottom-full mb-2 left-0 p-2 bg-card border rounded-lg shadow-sm">
+                                <Image src={previewImage} alt="图片预览" width={64} height={64} className="rounded-md object-cover"/>
+                                <button type="button" onClick={() => { setPreviewImage(null); setImageDataUri(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 text-xs">&times;</button>
+                            </div>
+                        )}
+                      <Textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="例如: 我想找一个送给科幻迷的礼物..."
+                        className="w-full resize-none pr-28 pl-12 py-3 text-base"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage(e);
+                          }
+                        }}
+                        rows={1}
+                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
+                        <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden"/>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-primary">
+                          <ImageIcon className="w-5 h-5" />
                         </Button>
-                    </CardContent>
-                </Card>
-            )}
-          </div>
-        )}
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
-        {isLoading && <LoadingMessage />}
-      </div>
-      <div className="border-t bg-background/80 backdrop-blur-sm p-4">
-        <form onSubmit={handleSendMessage} className="relative max-w-4xl mx-auto">
-            {previewImage && (
-                <div className="absolute bottom-full mb-2 left-0 p-2 bg-card border rounded-lg shadow-sm">
-                    <Image src={previewImage} alt="图片预览" width={64} height={64} className="rounded-md object-cover"/>
-                    <button type="button" onClick={() => { setPreviewImage(null); setImageDataUri(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 text-xs">&times;</button>
+                      </div>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Button type="submit" size="icon" disabled={isLoading}>
+                          <Send className="w-5 h-5" />
+                          <span className="sr-only">发送</span>
+                        </Button>
+                      </div>
+                    </form>
                 </div>
-            )}
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="描述你的需求，什么时间花多少预算送给什么人用于什么场景的物品或服务？"
-            className="w-full resize-none pr-56 pl-12 py-3 text-base"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(e);
-              }
-            }}
-            rows={1}
-          />
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center">
-            <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden"/>
-            <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-primary">
-              <ImageIcon className="w-5 h-5" />
-            </Button>
-          </div>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-             <Button type="button" variant="outline" className="text-accent border-accent/50 hover:bg-accent/10 hover:text-accent">
-                <Wand2 className="mr-2 h-4 w-4" />
-                定制我的独特创意
-            </Button>
-            <Button type="submit" size="sm" disabled={isLoading}>
-              {isLoading ? "思考中..." : "发送"}
-              <Send className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        </form>
-         <p className="text-xs text-muted-foreground text-center mt-2">
-            <CornerDownLeft className="inline w-3 h-3 mr-1" />
-            <span className="font-semibold">Shift + Enter</span> 换行。
-          </p>
-      </div>
-    </div>
+            </Card>
+
+            {/* Right Column: Customization Service */}
+            <Card className="bg-accent/20 border-accent/30">
+                <CardHeader className="text-center">
+                    <div className="inline-block p-3 bg-primary/10 rounded-full mb-3 mx-auto border-2 border-primary/20">
+                      <Diamond className="w-8 h-8 text-primary" />
+                    </div>
+                    <CardTitle className="font-headline text-2xl text-primary-foreground/90">高端定制服务</CardTitle>
+                    <CardDescription className="max-w-xs mx-auto">
+                        将您独一无二的构想变为现实。我们的顶尖设计师将与您一对一合作,打造专属于您的艺术品。
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ul className="space-y-3 text-sm text-muted-foreground">
+                        <li className="flex items-start">
+                            <ArrowRight className="w-4 h-4 mr-3 mt-1 text-primary shrink-0" />
+                            <span>与专业3D艺术家深度沟通</span>
+                        </li>
+                         <li className="flex items-start">
+                            <ArrowRight className="w-4 h-4 mr-3 mt-1 text-primary shrink-0" />
+                            <span>从草图到模型的全程跟进</span>
+                        </li>
+                         <li className="flex items-start">
+                            <ArrowRight className="w-4 h-4 mr-3 mt-1 text-primary shrink-0" />
+                            <span>使用顶级材质和工艺制作</span>
+                        </li>
+                    </ul>
+                </CardContent>
+                <div className="p-6 pt-2">
+                    <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground" size="lg">
+                        预约设计师 (付费) <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                </div>
+            </Card>
+        </div>
+    </main>
   );
 }
 
