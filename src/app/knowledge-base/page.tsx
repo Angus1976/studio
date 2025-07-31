@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -69,10 +69,25 @@ const knowledgeBaseEntries = [
   },
 ];
 
+const categories = [...new Set(knowledgeBaseEntries.map(entry => entry.category))];
+
 
 export default function KnowledgeBasePage() {
     const { user } = useAuth();
     const [selectedEntry, setSelectedEntry] = useState<typeof knowledgeBaseEntries[0] | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [categoryFilters, setCategoryFilters] = useState<Record<string, boolean>>(
+        categories.reduce((acc, category) => ({ ...acc, [category]: true }), {})
+    );
+
+    const filteredEntries = useMemo(() => {
+        return knowledgeBaseEntries.filter(entry => {
+            const searchMatch = entry.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                entry.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+            const categoryMatch = categoryFilters[entry.category];
+            return searchMatch && categoryMatch;
+        });
+    }, [searchTerm, categoryFilters]);
 
     if (!user || user.role !== 'admin') {
         return (
@@ -106,6 +121,10 @@ export default function KnowledgeBasePage() {
         };
     };
 
+    const handleFilterChange = (category: string, checked: boolean) => {
+        setCategoryFilters(prev => ({ ...prev, [category]: checked }));
+    };
+
     return (
         <>
             <main className="p-4 md:p-6">
@@ -128,7 +147,12 @@ export default function KnowledgeBasePage() {
                         <div className="flex items-center justify-between gap-4 mb-6">
                             <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="搜索条目名称或标签..." className="pl-10" />
+                                <Input 
+                                    placeholder="搜索条目名称或标签..." 
+                                    className="pl-10" 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
                             <div className="flex items-center gap-2">
                                  <DropdownMenu>
@@ -141,10 +165,15 @@ export default function KnowledgeBasePage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>按类别筛选</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuCheckboxItem checked>消费电子产品</DropdownMenuCheckboxItem>
-                                        <DropdownMenuCheckboxItem>家用电器</DropdownMenuCheckboxItem>
-                                        <DropdownMenuCheckboxItem>软件服务</DropdownMenuCheckboxItem>
-                                        <DropdownMenuCheckboxItem>健康服务</DropdownMenuCheckboxItem>
+                                        {categories.map(category => (
+                                            <DropdownMenuCheckboxItem
+                                                key={category}
+                                                checked={categoryFilters[category]}
+                                                onCheckedChange={(checked) => handleFilterChange(category, !!checked)}
+                                            >
+                                                {category}
+                                            </DropdownMenuCheckboxItem>
+                                        ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                                  <Button>
@@ -165,7 +194,7 @@ export default function KnowledgeBasePage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {knowledgeBaseEntries.map((entry) => (
+                                    {filteredEntries.map((entry) => (
                                         <TableRow key={entry.id}>
                                             <TableCell className="font-medium">{entry.name}</TableCell>
                                             <TableCell>
@@ -196,6 +225,11 @@ export default function KnowledgeBasePage() {
                                 </TableBody>
                             </Table>
                         </div>
+                         {filteredEntries.length === 0 && (
+                            <div className="text-center py-10 text-muted-foreground">
+                                <p>未找到匹配的条目。请尝试调整您的搜索词或筛选条件。</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </main>

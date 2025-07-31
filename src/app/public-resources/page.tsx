@@ -100,7 +100,7 @@ export default function PublicResourcesPage() {
 
             <Card className="mx-auto mt-8 max-w-7xl">
                  <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                             <CardTitle>资源列表</CardTitle>
                             <CardDescription>管理所有外部链接和API接口。</CardDescription>
@@ -137,7 +137,7 @@ export default function PublicResourcesPage() {
                                         {externalLinks.map((link) => (
                                             <TableRow key={link.id}>
                                                 <TableCell className="font-medium">{link.name}</TableCell>
-                                                <TableCell><a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{link.url}</a></TableCell>
+                                                <TableCell><a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">{link.url} <ExternalLink className="h-3 w-3"/></a></TableCell>
                                                 <TableCell className="text-muted-foreground">{link.description}</TableCell>
                                                 <TableCell><Badge variant="outline">{link.category}</Badge></TableCell>
                                                 <TableCell>{link.lastUpdated}</TableCell>
@@ -176,13 +176,13 @@ export default function PublicResourcesPage() {
                                                 <TableCell className="font-mono text-xs">{api.endpoint}</TableCell>
                                                 <TableCell><Badge variant="secondary">{api.authMethod}</Badge></TableCell>
                                                 <TableCell>
-                                                  <Badge variant={api.status === 'active' ? 'default' : 'destructive'}>
+                                                  <Badge variant={api.status === 'active' ? 'default' : 'secondary'}>
                                                     {api.status === 'active' ? '生效中' : '已停用'}
                                                   </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                  <a href={api.docsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                                    查看文档 <ExternalLink className="inline-block ml-1 h-3 w-3" />
+                                                  <a href={api.docsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                                                    查看文档 <ExternalLink className="inline-block h-3 w-3" />
                                                   </a>
                                                 </TableCell>
                                                 <TableCell className="text-right">
@@ -203,5 +203,3 @@ export default function PublicResourcesPage() {
         </main>
     );
 }
-
-    

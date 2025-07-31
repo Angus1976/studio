@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent, DragEvent } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +22,7 @@ import { handleFileUpload } from "./actions";
 import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data";
 import { useToast } from "@/hooks/use-toast";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
+import { cn } from "@/lib/utils";
 
 const customFieldSchema = z.object({
   fieldName: z.string().min(1, "字段名不能为空"),
@@ -72,6 +73,7 @@ export default function SuppliersPage() {
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [licensePreview, setLicensePreview] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   
   // State for bulk processing
   const [isUploading, setIsUploading] = useState(false);
@@ -141,6 +143,20 @@ export default function SuppliersPage() {
     const file = event.target.files?.[0];
     if (file) {
       uploadAndProcessFile(file);
+    }
+  };
+
+   const handleDragEvents = (e: DragEvent<HTMLDivElement>, isOver: boolean) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(isOver);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    handleDragEvents(e, false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+        uploadAndProcessFile(file);
     }
   };
   
@@ -515,8 +531,15 @@ export default function SuppliersPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div 
-                            className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-muted/50"
+                            className={cn(
+                                "border-2 border-dashed border-muted-foreground/20 rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors",
+                                isDragOver ? "bg-accent" : "hover:bg-muted/50"
+                            )}
                             onClick={() => fileInputRef.current?.click()}
+                            onDragEnter={(e) => handleDragEvents(e, true)}
+                            onDragLeave={(e) => handleDragEvents(e, false)}
+                            onDragOver={(e) => handleDragEvents(e, true)}
+                            onDrop={handleDrop}
                         >
                             <UploadCloud className="w-12 h-12 text-muted-foreground" />
                             <p className="mt-4 text-muted-foreground">将文件拖放到此处，或点击浏览</p>
@@ -609,7 +632,17 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
     });
 
     return (
-        <Card className="p-4 relative">
+        <Card className="p-4 relative bg-background/50">
+            <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 w-7 h-7"
+                onClick={() => remove(index)}
+            >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">移除此项</span>
+            </Button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                     control={form.control}
@@ -712,7 +745,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                       name={`products.${index}.customFields.${k}.fieldName`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>字段名</FormLabel>
+                          <FormLabel className="text-xs">字段名</FormLabel>
                           <FormControl><Input placeholder="例如：颜色" {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
@@ -723,7 +756,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                       name={`products.${index}.customFields.${k}.fieldValue`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>字段值</FormLabel>
+                          <FormLabel className="text-xs">字段值</FormLabel>
                           <FormControl><Input placeholder="例如：黑色" {...field} /></FormControl>
                           <FormMessage />
                         </FormItem>
@@ -731,6 +764,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     />
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomField(k)} className="text-destructive hover:text-destructive">
                       <Trash2 className="h-4 w-4" />
+                       <span className="sr-only">移除补充内容</span>
                     </Button>
                   </div>
                 ))}
@@ -739,16 +773,6 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     增加补充内容
                 </Button>
             </div>
-
-            <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2"
-                onClick={() => remove(index)}
-            >
-                <Trash2 className="h-4 w-4" />
-            </Button>
         </Card>
     );
 }
