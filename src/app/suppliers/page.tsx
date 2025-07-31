@@ -630,6 +630,20 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         control: form.control,
         name: `products.${index}.customFields`
     });
+    
+    const [fileName, setFileName] = useState<string | null>(null);
+
+    const handleMediaChange = (e: ChangeEvent<HTMLInputElement>, field: any) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setFileName(file.name);
+            field.onChange(file);
+        } else {
+            setFileName(null);
+            field.onChange(undefined);
+        }
+    };
+
 
     return (
         <Card className="p-4 relative bg-background/50">
@@ -724,9 +738,9 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                         <FormLabel>相关媒体</FormLabel>
                         <FormControl>
                             <div className="flex items-center gap-2">
-                                <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={(e) => field.onChange(e.target.files?.[0])} className="hidden" />
+                                <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={(e) => handleMediaChange(e, field)} className="hidden" />
                                 <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
-                                {field.value instanceof File && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
+                                {fileName && <span className="text-sm text-muted-foreground">{fileName}</span>}
                                 <ImageIcon className="text-muted-foreground" />
                                 <Video className="text-muted-foreground" />
                             </div>
@@ -776,9 +790,3 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
-
-    
-
-    
-
-
