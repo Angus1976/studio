@@ -19,7 +19,7 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const getRoleBadgeVariant = (role: User['role']) => {
+  const getRoleBadgeVariant = (role: User['role']): "destructive" | "secondary" | "default" | "outline" => {
     switch (role) {
       case 'admin':
         return 'destructive';
@@ -27,8 +27,8 @@ export default function LoginPage() {
         return 'secondary';
       case 'creator':
         return 'default'; // Using 'default' (primary color) for creator
-      default:
-        return 'outline'; // Changed 'user' to outline
+      case 'user':
+        return 'outline';
     }
   };
   
@@ -40,7 +40,7 @@ export default function LoginPage() {
         return '供应商';
       case 'creator':
         return '创意者';
-      default:
+      case 'user':
         return '普通用户';
     }
   };
@@ -83,3 +83,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    

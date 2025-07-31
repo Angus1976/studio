@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2 } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
@@ -90,7 +90,7 @@ export default function Home() {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({
         title: "发生错误",
-        description: `从 AI 获取回应失败: ${errorMessage}. 请检查您的API密钥并稍后重试。`,
+        description: `从 AI 获取回应失败: ${errorMessage}. 请稍后重试。`,
         variant: "destructive",
       });
       setMessages((prev) =>
@@ -151,7 +151,7 @@ export default function Home() {
                     {isLoading && <LoadingMessage />}
                 </CardContent>
                 <div className="border-t bg-background/80 backdrop-blur-sm p-4 rounded-b-lg">
-                    <form onSubmit={handleSendMessage} className="relative">
+                   <form onSubmit={handleSendMessage} className="relative">
                         {previewImage && (
                             <div className="absolute bottom-full mb-2 left-0 p-2 bg-card border rounded-lg shadow-sm">
                                 <Image src={previewImage} alt="图片预览" width={64} height={64} className="rounded-md object-cover"/>
@@ -162,7 +162,7 @@ export default function Home() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="例如: 我想找一个送给科幻迷的礼物..."
-                        className="w-full resize-none pr-28 pl-12 py-3 text-base"
+                        className="w-full resize-none pr-36 pl-12 py-3 text-base"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -177,7 +177,11 @@ export default function Home() {
                           <ImageIcon className="w-5 h-5" />
                         </Button>
                       </div>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <Button variant="outline" size="sm" className="bg-accent/20 border-accent/30 hover:bg-accent/30">
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            定制
+                        </Button>
                         <Button type="submit" size="icon" disabled={isLoading}>
                           <Send className="w-5 h-5" />
                           <span className="sr-only">发送</span>
@@ -188,38 +192,48 @@ export default function Home() {
             </Card>
 
             {/* Right Column: Customization Service */}
-            <Card className="bg-accent/20 border-accent/30">
-                <CardHeader className="text-center">
-                    <div className="inline-block p-3 bg-primary/10 rounded-full mb-3 mx-auto border-2 border-primary/20">
-                      <Diamond className="w-8 h-8 text-primary" />
-                    </div>
-                    <CardTitle className="font-headline text-2xl text-primary-foreground/90">高端定制服务</CardTitle>
-                    <CardDescription className="max-w-xs mx-auto">
-                        将您独一无二的构想变为现实。我们的顶尖设计师将与您一对一合作,打造专属于您的艺术品。
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ul className="space-y-3 text-sm text-muted-foreground">
-                        <li className="flex items-start">
-                            <ArrowRight className="w-4 h-4 mr-3 mt-1 text-primary shrink-0" />
-                            <span>与专业3D艺术家深度沟通</span>
-                        </li>
-                         <li className="flex items-start">
-                            <ArrowRight className="w-4 h-4 mr-3 mt-1 text-primary shrink-0" />
-                            <span>从草图到模型的全程跟进</span>
-                        </li>
-                         <li className="flex items-start">
-                            <ArrowRight className="w-4 h-4 mr-3 mt-1 text-primary shrink-0" />
-                            <span>使用顶级材质和工艺制作</span>
-                        </li>
-                    </ul>
-                </CardContent>
-                <div className="p-6 pt-2">
-                    <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground" size="lg">
-                        预约设计师 (付费) <ArrowRight className="ml-2 w-4 h-4" />
+            <div className="flex flex-col gap-8">
+                 {user?.role === 'creator' && (
+                     <Button asChild size="lg" className="w-full">
+                        <Link href="/creator-workbench">
+                            <Wand2 className="mr-2 h-5 w-5" />
+                            进入创作者工作台
+                        </Link>
                     </Button>
-                </div>
-            </Card>
+                 )}
+                <Card className="bg-accent/20 border-accent/30">
+                    <CardHeader className="text-center p-4">
+                        <div className="inline-block p-2 bg-primary/10 rounded-full mb-2 mx-auto border-2 border-primary/20">
+                          <Diamond className="w-6 h-6 text-primary" />
+                        </div>
+                        <CardTitle className="font-headline text-xl text-primary-foreground/90">高端定制服务</CardTitle>
+                        <CardDescription className="text-xs max-w-xs mx-auto pt-1">
+                            将您的构想变为现实。我们的顶尖设计师将与您合作,打造专属艺术品。
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-2">
+                        <ul className="space-y-1.5 text-xs text-muted-foreground">
+                            <li className="flex items-start">
+                                <ArrowRight className="w-3 h-3 mr-2 mt-0.5 text-primary shrink-0" />
+                                <span>与专业3D艺术家深度沟通</span>
+                            </li>
+                             <li className="flex items-start">
+                                <ArrowRight className="w-3 h-3 mr-2 mt-0.5 text-primary shrink-0" />
+                                <span>从草图到模型的全程跟进</span>
+                            </li>
+                             <li className="flex items-start">
+                                <ArrowRight className="w-3 h-3 mr-2 mt-0.5 text-primary shrink-0" />
+                                <span>使用顶级材质和工艺制作</span>
+                            </li>
+                        </ul>
+                    </CardContent>
+                    <div className="p-4 pt-2">
+                        <Button className="w-full bg-primary/90 hover:bg-primary text-primary-foreground" size="sm">
+                            预约设计师 (付费) <ArrowRight className="ml-2 w-4 h-4" />
+                        </Button>
+                    </div>
+                </Card>
+            </div>
         </div>
     </main>
   );
@@ -227,6 +241,8 @@ export default function Home() {
 
 function ChatMessage({ message }: { message: Message }) {
     const isAssistant = message.role === 'assistant';
+    const { user } = useAuth();
+
     return (
         <div className={`flex items-start gap-3 ${isAssistant ? '' : 'justify-end'}`}>
             {isAssistant && (
@@ -245,7 +261,8 @@ function ChatMessage({ message }: { message: Message }) {
                 </div>
             </div>
              {!isAssistant && (
-                <Avatar className="w-9 h-9 border-2 border-muted">
+                 <Avatar className="w-9 h-9 border-2 border-muted">
+                    {user?.avatar ? <AvatarImage src={user.avatar} alt={user.name} /> : null}
                     <AvatarFallback><User className="w-5 h-5"/></AvatarFallback>
                 </Avatar>
             )}
@@ -330,3 +347,5 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
         </div>
     );
 }
+
+    

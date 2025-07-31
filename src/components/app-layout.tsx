@@ -21,9 +21,9 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from "./ui/button";
 
 const navLabels = {
-  main: "智能匹配",
+  main: "AI 智能匹配",
   search: "智能搜索",
-  suppliers: "供应商整合",
+  suppliers: "供应商中心",
   prompts: "提示词管理",
   knowledgeBase: "知识库管理",
   publicResources: "公共资源库",
@@ -39,7 +39,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
 
   const allMenuItems = [
-    { href: "/", label: navLabels.main, icon: Home, roles: ['admin', 'user', 'creator'] },
+    { href: "/", label: navLabels.main, icon: Home, roles: ['admin', 'user', 'supplier', 'creator'] },
     { href: "/demand-pool", label: navLabels.demandPool, icon: Briefcase, roles: ['admin', 'user', 'supplier', 'creator'] },
     { href: "/creator-workbench", label: navLabels.creatorWorkbench, icon: Wand2, roles: ['creator'] },
     { href: "/search", label: navLabels.search, icon: Search, roles: ['admin', 'user', 'supplier', 'creator'] },
@@ -130,3 +130,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    
