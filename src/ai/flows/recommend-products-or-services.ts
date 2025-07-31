@@ -22,8 +22,16 @@ const RecommendProductsOrServicesInputSchema = z.object({
 });
 export type RecommendProductsOrServicesInput = z.infer<typeof RecommendProductsOrServicesInputSchema>;
 
+const ProductSchema = z.object({
+    name: z.string().describe('The name of the recommended product or service.'),
+    description: z.string().describe('A brief description of the product or service.'),
+    image: z.string().url().describe('A URL to an image of the product or service.'),
+    price: z.string().describe('The price of the product or service.'),
+    purchaseUrl: z.string().url().describe('The URL where the user can purchase the product or service.'),
+});
+
 const RecommendProductsOrServicesOutputSchema = z.object({
-  recommendations: z.array(z.string()).describe('A list of recommended products or services.'),
+  recommendations: z.array(ProductSchema).describe('A list of recommended products or services, between 3 and 5 items.'),
   reasoning: z.string().describe('The reasoning behind the recommendations.'),
 });
 export type RecommendProductsOrServicesOutput = z.infer<typeof RecommendProductsOrServicesOutputSchema>;
@@ -49,10 +57,9 @@ const recommendProductsOrServicesPrompt = ai.definePrompt({
   Public Resources: {{{publicResources}}}
   Supplier Databases: {{{supplierDatabases}}}
 
-  Provide a list of 3 to 5 recommended products or services, along with a clear explanation of why each recommendation is suitable for the user.
-
-  Format your response as a JSON object with 'recommendations' (an array of product/service names) and 'reasoning' (an explanation for each recommendation).
-  `, // Ensure valid JSON format
+  Provide a list of 3 to 5 recommended products or services. For each, you must provide a name, description, image URL, price, and a purchase URL, extracting this information directly from the provided knowledge base.
+  Also provide a clear explanation of why these recommendations are suitable for the user.
+  `,
 });
 
 const recommendProductsOrServicesFlow = ai.defineFlow(

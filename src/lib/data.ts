@@ -7,30 +7,40 @@ export const knowledgeBase = `
   - 描述: 一款集成了语音助手、智能家居控制和家庭娱乐功能的中心设备。支持 Zigbee、Wi-Fi 和蓝牙连接。
   - 价格: ¥1299
   - 标签: 智能家居, 语音助手, Zigbee, 家庭娱乐
+  - image: "https://placehold.co/600x400.png"
+  - purchaseUrl: "https://example.com/product/smart-hub"
 
 - 产品: "静音大师洗衣机"
   - 类别: 家用电器
   - 描述: 采用直驱变频电机，实现超静音洗涤。拥有10公斤大容量和多种智能洗涤程序。
   - 价格: ¥3499
   - 标签: 节能, 直驱变频, 10公斤, 静音
+  - image: "https://placehold.co/600x400.png"
+  - purchaseUrl: "https://example.com/product/washing-machine"
 
 - 服务: "云端数据备份"
   - 类别: 软件服务
   - 描述: 提供安全可靠的云端数据备份方案，支持多设备同步和文件版本历史记录。
   - 价格: ¥99/年
   - 标签: SaaS, 数据安全, 多设备同步, 云存储
+  - image: "https://placehold.co/600x400.png"
+  - purchaseUrl: "https://example.com/service/cloud-backup"
 
 - 服务: "个性化营养咨询"
   - 类别: 健康服务
   - 描述: 由专业营养师提供在线一对一咨询，根据您的身体状况和饮食习惯定制个性化营养方案。
   - 价格: ¥499/次
   - 标签: 在线咨询, 营养师, 定制方案, 健康管理
+  - image: "https://placehold.co/600x400.png"
+  - purchaseUrl: "https://example.com/service/nutrition-consulting"
 
 - 产品: "便携式咖啡机"
   - 类别: 厨房小电
   - 描述: 小巧便携，适合户外旅行使用，手动操作，无需电源。
   - 价格: ¥299
   - 标签: 户外, 旅行, 手动, 咖啡
+  - image: "https://placehold.co/600x400.png"
+  - purchaseUrl: "https://example.com/product/portable-coffee-maker"
 `;
 
 export const publicResources = `

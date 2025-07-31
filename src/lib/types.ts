@@ -1,6 +1,13 @@
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
 
+export interface Product {
+    name: string;
+    description: string;
+    image: string;
+    price: string;
+    purchaseUrl: string;
+}
 export interface Message {
   id: string;
   role: "user" | "assistant";

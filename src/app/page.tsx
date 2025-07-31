@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect, type ChangeEvent } from "react";
-import type { Message } from "@/lib/types";
+import type { Message, Product } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { getAiResponse } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2 } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
@@ -141,7 +141,7 @@ export default function Home() {
                               <AvatarFallback className="bg-primary/20 text-primary"><Bot className="w-5 h-5" /></AvatarFallback>
                            </Avatar>
                            <div className="rounded-2xl p-4 bg-card max-w-2xl">
-                              <p className="whitespace-pre-wrap">您好! 我是您的专属购物助手。请问您在寻找什么? 比如,是为自己选购,还是为朋友挑选</p>
+                              <p className="whitespace-pre-wrap">您好!我是您的专属购物助手。请问您在寻找什么?比如,是为自己选购,还是为朋友挑选</p>
                            </div>
                         </div>
                     )}
@@ -289,10 +289,10 @@ function LoadingMessage() {
 function UserProfileDisplay({ profile }: { profile: GenerateUserProfileOutput }) {
     return (
         <Card className="mt-4 bg-background/50 border-primary/20">
-            <CardHeader className="pb-2">
+            <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-lg font-headline">生成的用户画像</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
                 <p className="text-sm text-muted-foreground mb-3">{profile.profileSummary}</p>
                 <div className="flex flex-wrap gap-2">
                     {profile.tags.map(tag => (
@@ -304,33 +304,56 @@ function UserProfileDisplay({ profile }: { profile: GenerateUserProfileOutput })
     );
 }
 
+function ProductCard({ product }: { product: Product }) {
+    return (
+        <Card className="bg-background/50 border-accent/20 overflow-hidden">
+            <div className="relative aspect-video">
+                <Image 
+                    src={product.image} 
+                    alt={product.name} 
+                    fill 
+                    className="object-cover"
+                    data-ai-hint="product image"
+                />
+            </div>
+            <CardHeader className="p-4 pb-2">
+                <div className="flex items-start justify-between gap-4">
+                    <CardTitle className="text-base font-semibold font-headline">{product.name}</CardTitle>
+                    <div className="text-lg font-bold text-primary whitespace-nowrap">{product.price}</div>
+                </div>
+                <CardDescription className="text-xs pt-1">{product.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-2">
+                <Button size="sm" className="w-full" asChild>
+                    <Link href={product.purchaseUrl} target="_blank" rel="noopener noreferrer">
+                       查看详情 <ExternalLink className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
 function RecommendationsDisplay({ recommendations }: { recommendations: RecommendProductsOrServicesOutput }) {
     const { user } = useAuth();
     return (
         <div className="mt-4">
-            <h3 className="font-headline text-lg font-semibold mb-2">首要推荐</h3>
-            <div className="space-y-3">
+            <h3 className="font-headline text-lg font-semibold mb-3">首要推荐</h3>
+            <div className="grid grid-cols-1 gap-4">
                 {recommendations.recommendations.map((rec, index) => (
-                    <Card key={index} className="bg-background/50 border-accent/20">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-base font-semibold font-headline flex items-center">
-                               <Star className="w-4 h-4 mr-2 text-accent" /> {rec}
-                            </CardTitle>
-                            <Button size="sm" variant="outline">查看详情</Button>
-                        </CardHeader>
-                    </Card>
+                    <ProductCard key={index} product={rec} />
                 ))}
             </div>
              <Card className="mt-4 bg-background/50 border-dashed">
-                <CardHeader className="pb-2">
+                <CardHeader className="p-4 pb-2">
                     <CardTitle className="text-base font-headline">推荐理由</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">{recommendations.reasoning}</p>
+                <CardContent className="p-4 pt-0">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{recommendations.reasoning}</p>
                 </CardContent>
             </Card>
              {user?.role === 'user' && (
-                <div className="mt-4 text-center">
+                <div className="mt-6 text-center">
                     <p className="text-sm text-muted-foreground mb-2">没有找到满意的结果？</p>
                     <Button variant="secondary" asChild>
                        <Link href="/demand-pool">
@@ -343,7 +366,3 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
         </div>
     );
 }
-
-    
-
-    
