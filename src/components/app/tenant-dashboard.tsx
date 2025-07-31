@@ -1,8 +1,9 @@
 
 "use client";
 
+import * as LucideReact from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,26 +41,21 @@ const users = [
 ]
 
 const procurementItems = [
-    { title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: Mail, tag: "办公基础" },
-    { title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: Cloud, tag: "IT设施" },
-    { title: "云存储", description: "大容量、高可靠性的对象存储和文件存储服务。", icon: Cpu, tag: "IT设施" },
+    { title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础" },
+    { title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: "Cloud", tag: "IT设施" },
+    { title: "云存储", description: "大容量、高可靠性的对象存储和文件存储服务。", icon: "Cpu", tag: "IT设施" },
     { title: "LLM Token 包", description: "批量采购大语言模型调用 Token，成本更优。", icon: "BrainCircuit", tag: "AI能力" },
-    { title: "IT 设备和服务", description: "提供办公电脑、服务器等硬件及运维服务。", icon: Briefcase, tag: "硬件与服务" },
-    { title: "网络租赁", description: "高速、稳定的企业专线和网络解决方案。", icon: Router, tag: "IT设施" },
+    { title: "IT 设备和服务", description: "提供办公电脑、服务器等硬件及运维服务。", icon: "Briefcase", tag: "硬件与服务" },
+    { title: "网络租赁", description: "高速、稳定的企业专线和网络解决方案。", icon: "Router", tag: "IT设施" },
     { title: "RPA 流程设计", description: "定制化设计机器人流程自动化解决方案。", icon: "ToyBrick", tag: "专业服务" },
-    { title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: Bot, tag: "AI能力" },
+    { title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: "Bot", tag: "AI能力" },
 ]
 
 const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
-    // A bit of a hack to allow strings for lucide icons in the array
-    if (name === "BrainCircuit") return <LucideReact.BrainCircuit {...props} />;
-    if (name === "ToyBrick") return <LucideReact.ToyBrick {...props} />;
-    const Icon = LucideReact[name as keyof typeof LucideReact] as React.ElementType;
+    const Icon = (LucideReact as any)[name] as React.ElementType;
     if (!Icon) return null;
     return <Icon {...props} />;
 };
-// Need to import all of Lucide to make the above work
-import * as LucideReact from "lucide-react";
 
 
 export function TenantDashboard() {
@@ -108,7 +104,7 @@ export function TenantDashboard() {
                             <CardContent className="flex flex-col gap-4">
                                 <div className="flex items-center gap-4">
                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src="https://placehold.co/128x128.png" />
+                                        <AvatarImage src="https://placehold.co/128x128.png" data-ai-hint="manager portrait" />
                                         <AvatarFallback>李</AvatarFallback>
                                     </Avatar>
                                     <div>
@@ -141,22 +137,22 @@ export function TenantDashboard() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {procurementItems.map((item) => (
-                            <Card key={item.title} className="flex flex-col">
+                            <Card key={item.title} className="flex flex-col hover:shadow-md transition-shadow">
                                 <CardHeader className="flex-row items-start gap-4 space-y-0">
-                                     <div className="p-2 bg-accent/10 rounded-full">
+                                     <div className="p-3 bg-accent/10 rounded-full">
                                          <IconComponent name={item.icon} className="h-6 w-6 text-accent" />
                                      </div>
                                      <div className="flex-1">
                                         <CardTitle className="text-base">{item.title}</CardTitle>
-                                        <Badge variant="outline" className="mt-1">{item.tag}</Badge>
+                                        <Badge variant="outline" className="mt-1 font-normal">{item.tag}</Badge>
                                      </div>
                                 </CardHeader>
                                 <CardContent className="flex-1">
                                     <p className="text-sm text-muted-foreground">{item.description}</p>
                                 </CardContent>
-                                <CardContent>
+                                <CardFooter>
                                     <Button className="w-full">进入采购</Button>
-                                </CardContent>
+                                </CardFooter>
                             </Card>
                         ))}
                     </CardContent>
@@ -263,5 +259,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-    

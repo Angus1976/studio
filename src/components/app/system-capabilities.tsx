@@ -33,9 +33,15 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import * as LucideIcons from "lucide-react";
+import { ScrollArea } from "../ui/scroll-area";
 
 
-const allIcons = Object.keys(LucideIcons).filter(key => typeof LucideIcons[key as keyof typeof LucideIcons] === 'object' && key !== 'createLucideIcon' && key !== 'icons');
+const allIcons = Object.keys(LucideIcons).filter(key => 
+    typeof (LucideIcons as any)[key] === 'object' && 
+    'displayName' in (LucideIcons as any)[key] && 
+    (LucideIcons as any)[key].displayName !== 'createLucideIcon'
+).sort();
+
 
 const capabilitySchema = z.object({
   name: z.string().min(1, "能力名称不能为空"),
@@ -53,29 +59,34 @@ const initialCapabilities: Capability[] = [
     { id: "6", name: "通用接口", icon: "Plug" },
 ];
 
-const IconComponent = ({ name }: { name: string }) => {
-    const Icon = LucideIcons[name as keyof typeof LucideIcons] as React.ElementType;
-    if (!Icon) return <LucideIcons.Blocks className="h-5 w-5 text-accent" />; // fallback icon
-    return <Icon className="h-5 w-5 text-accent" />;
+const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
+    const Icon = (LucideIcons as any)[name] as React.ElementType;
+    if (!Icon) return <LucideIcons.Blocks {...props} />; // fallback icon
+    return <Icon {...props} />;
 };
 
 
 function CapabilityForm({ onSave, capability, children }: { onSave: (data: Capability) => void; capability?: Capability | null, children: React.ReactNode }) {
-  const { register, handleSubmit, control, formState: { errors } } = useForm<z.infer<typeof capabilitySchema>>({
+  const [open, setOpen] = useState(false);
+  const { register, handleSubmit, control, formState: { errors }, reset } = useForm<z.infer<typeof capabilitySchema>>({
     resolver: zodResolver(capabilitySchema),
-    defaultValues: {
-      name: capability?.name || '',
-      icon: capability?.icon || '',
-    },
+    defaultValues: capability || { name: '', icon: '' },
   });
+
+  React.useEffect(() => {
+    if (open) {
+      reset(capability || { name: '', icon: '' });
+    }
+  }, [open, capability, reset]);
 
   const onSubmit = (data: z.infer<typeof capabilitySchema>) => {
     const fullData = { ...data, id: capability?.id || `cap_${Date.now()}` };
     onSave(fullData);
+    setOpen(false); // Close dialog on save
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -88,38 +99,42 @@ function CapabilityForm({ onSave, capability, children }: { onSave: (data: Capab
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">名称</Label>
-              <Input id="name" {...register("name")} className="col-span-3" />
-              {errors.name && <p className="col-span-4 text-red-500 text-xs text-right">{errors.name.message as string}</p>}
+              <div className="col-span-3">
+                <Input id="name" {...register("name")} />
+                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message as string}</p>}
+              </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="icon" className="text-right">图标</Label>
-              <Controller
-                name="icon"
-                control={control}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="选择一个图标" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allIcons.map(iconName => (
-                        <SelectItem key={iconName} value={iconName}>
-                          <div className="flex items-center gap-2">
-                             <IconComponent name={iconName} /> {iconName}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.icon && <p className="col-span-4 text-red-500 text-xs text-right">{errors.icon.message as string}</p>}
+               <div className="col-span-3">
+                <Controller
+                    name="icon"
+                    control={control}
+                    render={({ field }) => (
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="选择一个图标" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <ScrollArea className="h-72">
+                                {allIcons.map(iconName => (
+                                    <SelectItem key={iconName} value={iconName}>
+                                    <div className="flex items-center gap-2">
+                                        <IconComponent name={iconName} className="h-4 w-4" /> {iconName}
+                                    </div>
+                                    </SelectItem>
+                                ))}
+                            </ScrollArea>
+                        </SelectContent>
+                    </Select>
+                    )}
+                />
+                 {errors.icon && <p className="text-red-500 text-xs mt-1">{errors.icon.message as string}</p>}
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild>
-                <Button type="submit">保存</Button>
-            </DialogClose>
+             <Button type="submit">保存</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -193,21 +208,35 @@ export function SystemCapabilities() {
             <div className="grid grid-cols-3 gap-3 text-center">
                 {capabilities.map(cap => (
                     <div key={cap.id} className="group relative flex flex-col items-center justify-center gap-1 p-2 rounded-md bg-secondary/50">
-                        <IconComponent name={cap.icon} />
+                        <IconComponent name={cap.icon} className="h-5 w-5 text-accent" />
                         <span className="text-xs text-muted-foreground">{cap.name}</span>
 
                         {isEditing && (
-                            <div className="absolute top-0 right-0 flex bg-secondary/80 rounded-bl-md rounded-tr-md">
+                            <div className="absolute top-0 right-0 flex bg-secondary/80 rounded-bl-md rounded-tr-md opacity-0 group-hover:opacity-100 transition-opacity">
                                 <CapabilityForm onSave={handleSaveCapability} capability={cap}>
-                                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                                        <LucideIcons.Pencil className="h-3 w-3" />
-                                    </Button>
+                                     <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-5 w-5">
+                                                    <LucideIcons.Pencil className="h-3 w-3" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>编辑</p></TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </CapabilityForm>
                                 <Dialog>
                                     <DialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive/80 hover:text-destructive">
-                                            <LucideIcons.Trash2 className="h-3 w-3" />
-                                        </Button>
+                                         <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive/80 hover:text-destructive">
+                                                        <LucideIcons.Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent><p>删除</p></TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader><DialogTitle>确认删除</DialogTitle></DialogHeader>
@@ -237,23 +266,25 @@ export function SystemCapabilities() {
                             <DialogTitle>配置账号/数据</DialogTitle>
                             <DialogDescription>为平台能力配置相关的账号、API密钥或数据接口。</DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
-                             {capabilities.map(cap => (
-                                <div key={cap.id} className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor={cap.id} className="text-right flex items-center gap-1">
-                                       <IconComponent name={cap.icon} /> {cap.name}
-                                    </Label>
-                                    <Input 
-                                        id={cap.id}
-                                        name={cap.id}
-                                        defaultValue={configData[cap.id] || ''}
-                                        className="col-span-3"
-                                        placeholder={`输入${cap.name}的配置信息...`}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                        <DialogFooter>
+                        <ScrollArea className="max-h-[60vh] -mx-6 px-6">
+                            <div className="grid gap-4 py-4">
+                                {capabilities.map(cap => (
+                                    <div key={cap.id} className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor={cap.id} className="text-right flex items-center justify-end gap-2 text-xs">
+                                        <IconComponent name={cap.icon} className="h-4 w-4" /> {cap.name}
+                                        </Label>
+                                        <Input 
+                                            id={cap.id}
+                                            name={cap.id}
+                                            defaultValue={configData[cap.id] || ''}
+                                            className="col-span-3"
+                                            placeholder={`输入${cap.name}的配置信息...`}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                        <DialogFooter className="pt-4">
                             <DialogClose asChild>
                                 <Button type="submit">保存配置</Button>
                             </DialogClose>
