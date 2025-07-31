@@ -147,7 +147,7 @@ export default function Home() {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="描述您的需求，甚至可以上传图片..."
+            placeholder="描述你的需求，什么时间花多少预算送给什么人用于什么场景的物品或服务？"
             className="w-full resize-none pr-32 pl-12 py-3 text-base"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
