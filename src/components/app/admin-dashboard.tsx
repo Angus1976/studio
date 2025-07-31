@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -29,10 +29,11 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info, PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 
 // --- Tenant Management ---
@@ -475,26 +476,224 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
 }
 
 
-// --- Placeholder Dialog ---
+// --- Asset Management ---
+const llmModelSchema = z.object({
+  modelName: z.string().min(1, "模型名称不能为空"),
+  apiKey: z.string().min(1, "API Key不能为空"),
+  provider: z.string().min(1, "提供商不能为空"),
+});
+type LlmModel = z.infer<typeof llmModelSchema> & { id: string };
 
-function PlaceholderDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
+const tokenSchema = z.object({
+  key: z.string().min(1, "Key不能为空"),
+  assignedTo: z.string().min(1, "必须分配给一个租户或用户"),
+  usageLimit: z.number().min(0, "用量限制不能为负"),
+});
+type Token = z.infer<typeof tokenSchema> & { id: string, used: number };
+
+const softwareAssetSchema = z.object({
+  name: z.string().min(1, "资产名称不能为空"),
+  licenseKey: z.string().optional(),
+  type: z.string().min(1, "类型不能为空"),
+});
+type SoftwareAsset = z.infer<typeof softwareAssetSchema> & { id: string };
+
+
+const initialLlmModels: LlmModel[] = [
+  { id: 'llm-1', modelName: 'Gemini 1.5 Pro', provider: 'Google', apiKey: 'sk-...' },
+  { id: 'llm-2', modelName: 'GPT-4o', provider: 'OpenAI', apiKey: 'sk-...' },
+];
+
+const initialTokens: Token[] = [
+  { id: 'token-1', key: 'key-abc-123', assignedTo: 'Tech Innovators Inc.', usageLimit: 1000000, used: 250000 },
+  { id: 'token-2', key: 'key-def-456', assignedTo: 'Future Dynamics', usageLimit: 500000, used: 480000 },
+];
+
+const initialSoftwareAssets: SoftwareAsset[] = [
+  { id: 'asset-1', name: 'RPA Pro License', type: 'RPA许可', licenseKey: 'RPA-XYZ-123' },
+  { id: 'asset-2', name: 'Data Analytics Suite', type: '数据服务', licenseKey: 'DATA-ABC-789' },
+];
+
+function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
+    const { toast } = useToast();
+    const [llmModels, setLlmModels] = useState(initialLlmModels);
+    const [tokens, setTokens] = useState(initialTokens);
+    const [softwareAssets, setSoftwareAssets] = useState(initialSoftwareAssets);
+
+    const handleDelete = (type: 'llm' | 'token' | 'asset', id: string) => {
+        if (type === 'llm') setLlmModels(prev => prev.filter(item => item.id !== id));
+        if (type === 'token') setTokens(prev => prev.filter(item => item.id !== id));
+        if (type === 'asset') setSoftwareAssets(prev => prev.filter(item => item.id !== id));
+        toast({ title: '资产已删除', variant: 'destructive' });
+    };
+    
+    // Placeholder forms and handlers for adding new items
+    const LlmForm = () => {
+        const form = useForm({ resolver: zodResolver(llmModelSchema), defaultValues: {modelName: "", provider: "", apiKey: ""}});
+        const onSubmit = (data: any) => {
+            setLlmModels(prev => [...prev, {...data, id: `llm-${Date.now()}`}]);
+            toast({title: "LLM 模型已添加"});
+        };
+        return (
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="apiKey" render={({field}) => (<FormItem><FormControl><Input placeholder="API Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <Button type="submit" size="sm" className="w-full">添加模型</Button>
+                </form>
+            </Form>
+        )
+    };
+    
+     const TokenForm = () => {
+        const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {key: "", assignedTo: "", usageLimit: 0}});
+        const onSubmit = (data: any) => {
+            setTokens(prev => [...prev, {...data, id: `token-${Date.now()}`, used: 0}]);
+            toast({title: "Token 已分配"});
+        };
+        return (
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                    <FormField control={form.control} name="key" render={({field}) => (<FormItem><FormControl><Input placeholder="Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="assignedTo" render={({field}) => (<FormItem><FormControl><Input placeholder="分配给" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="usageLimit" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="用量限制" {...field} onChange={e => field.onChange(Number(e.target.value))}/></FormControl><FormMessage/></FormItem>)}/>
+                    <Button type="submit" size="sm" className="w-full">分配 Token</Button>
+                </form>
+            </Form>
+        )
+    };
+    
+    const SoftwareAssetForm = () => {
+        const form = useForm({ resolver: zodResolver(softwareAssetSchema), defaultValues: {name: "", type: "", licenseKey: ""}});
+        const onSubmit = (data: any) => {
+            setSoftwareAssets(prev => [...prev, {...data, id: `asset-${Date.now()}`}]);
+            toast({title: "软件资产已添加"});
+        };
+        return (
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                    <FormField control={form.control} name="name" render={({field}) => (<FormItem><FormControl><Input placeholder="资产名称" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="type" render={({field}) => (<FormItem><FormControl><Input placeholder="类型" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="licenseKey" render={({field}) => (<FormItem><FormControl><Input placeholder="许可证密钥 (可选)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <Button type="submit" size="sm" className="w-full">添加资产</Button>
+                </form>
+            </Form>
+        )
+    };
+
+
     return (
         <Dialog>
             <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-5xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><AlertTriangle className="text-yellow-500" /> {title}</DialogTitle>
-                    <DialogDescription>此功能模块正在开发中。</DialogDescription>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        管理平台级的LLM，对接全球LLM及其不同版本，分配TOKEN KEY,统计分析用量、充值、控制盗用，其他各类软件资产及其许可管理。
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
-                     <Card className="bg-muted/50 border-dashed">
-                        <CardContent className="p-4 text-center text-sm text-muted-foreground">
-                            <Info className="h-8 w-8 mx-auto mb-2 text-primary/50"/>
-                            此功能仍在开发中，将在未来版本中提供。
-                        </CardContent>
-                    </Card>
-                </div>
-                <DialogFooter>
+                <Tabs defaultValue="llm" className="mt-4">
+                    <TabsList>
+                        <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 模型管理</TabsTrigger>
+                        <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量分配</TabsTrigger>
+                        <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="llm">
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                            <div className="md:col-span-2">
+                                 <Card>
+                                    <CardHeader><CardTitle>已对接模型</CardTitle></CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {llmModels.map(model => (
+                                                    <TableRow key={model.id}>
+                                                        <TableCell className="font-medium">{model.modelName}</TableCell>
+                                                        <TableCell>{model.provider}</TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('llm', model.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <div>
+                                <Card>
+                                    <CardHeader><CardTitle>添加新模型</CardTitle></CardHeader>
+                                    <CardContent><LlmForm /></CardContent>
+                                </Card>
+                            </div>
+                       </div>
+                    </TabsContent>
+                    <TabsContent value="tokens">
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                            <div className="md:col-span-2">
+                                <Card>
+                                    <CardHeader><CardTitle>已分配 Token</CardTitle></CardHeader>
+                                    <CardContent>
+                                         <Table>
+                                            <TableHeader><TableRow><TableHead>分配对象</TableHead><TableHead>用量 (已用/总量)</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {tokens.map(token => (
+                                                    <TableRow key={token.id}>
+                                                        <TableCell>
+                                                            <div className="font-medium">{token.assignedTo}</div>
+                                                            <div className="text-xs text-muted-foreground">{token.key}</div>
+                                                        </TableCell>
+                                                        <TableCell>{token.used.toLocaleString()} / {token.usageLimit.toLocaleString()}</TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('token', token.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                             <div>
+                                <Card>
+                                    <CardHeader><CardTitle>分配新 Token</CardTitle></CardHeader>
+                                    <CardContent><TokenForm /></CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="software">
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                            <div className="md:col-span-2">
+                                <Card>
+                                    <CardHeader><CardTitle>软件资产列表</CardTitle></CardHeader>
+                                    <CardContent>
+                                         <Table>
+                                            <TableHeader><TableRow><TableHead>资产名称</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {softwareAssets.map(asset => (
+                                                    <TableRow key={asset.id}>
+                                                        <TableCell>
+                                                             <div className="font-medium">{asset.name}</div>
+                                                            <div className="text-xs text-muted-foreground">{asset.licenseKey}</div>
+                                                        </TableCell>
+                                                        <TableCell>{asset.type}</TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('asset', asset.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                             <div>
+                                <Card>
+                                    <CardHeader><CardTitle>添加新资产</CardTitle></CardHeader>
+                                    <CardContent><SoftwareAssetForm /></CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+                <DialogFooter className="mt-4">
                     <DialogClose asChild>
                         <Button variant="outline">关闭</Button>
                     </DialogClose>
@@ -503,7 +702,6 @@ function PlaceholderDialog({ triggerButtonText, title }: { triggerButtonText: st
         </Dialog>
     );
 }
-
 
 const kpiData = [
     { title: "总收入", value: "¥1,250,345", change: "+12.5%", icon: BarChart3 },
@@ -599,9 +797,9 @@ export function AdminDashboard() {
                                     description={panel.description}
                                 />
                             ) : (
-                                <PlaceholderDialog
+                                <AssetManagementDialog
                                     triggerButtonText={panel.buttonText}
-                                    title={`管理功能：${panel.title}`}
+                                    title={panel.title}
                                 />
                             )}
                         </CardFooter>
