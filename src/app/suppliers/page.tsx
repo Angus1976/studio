@@ -58,6 +58,13 @@ const productServiceSchema = z.object({
     description: z.string().optional(),
     price: z.string().optional(),
     purchaseLink: z.string().url("请输入有效的链接").optional().or(z.literal("")),
+    mediaPanoramic: z.any().optional(),
+    mediaTop: z.any().optional(),
+    mediaBottom: z.any().optional(),
+    mediaLeft: z.any().optional(),
+    mediaRight: z.any().optional(),
+    mediaFront: z.any().optional(),
+    mediaBack: z.any().optional(),
     customFields: z.array(customFieldSchema).optional(),
   }))
 });
@@ -105,7 +112,15 @@ export default function SuppliersPage() {
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] }]
+      products: [{ 
+        name: "", 
+        category: "", 
+        sku: "", 
+        description: "", 
+        price: "", 
+        purchaseLink: "", 
+        customFields: [] 
+      }]
     }
   });
   
@@ -330,6 +345,9 @@ export default function SuppliersPage() {
     <>
     <main className="p-4 md:p-6">
       <div className="flex flex-col items-center text-center mb-8">
+        <div className="p-3 bg-primary/10 rounded-full mb-4 border-2 border-primary/20">
+            <Building className="w-8 h-8 text-primary" />
+        </div>
         <h1 className="font-headline text-3xl md:text-4xl font-bold">供应商中心</h1>
         <p className="mt-2 max-w-2xl text-muted-foreground">
           {user.role === 'admin' ? '在此管理供应商信息，或进行批量导入导出操作。' : '在此管理您的公司基本信息以及提供的商品与服务。'}
@@ -487,7 +505,7 @@ export default function SuppliersPage() {
                     {fields.map((item, index) => (
                        <ProductServiceItem 
                             key={item.id} 
-                            control={productServiceForm.control}
+                            form={productServiceForm}
                             index={index} 
                             remove={() => remove(index)}
                         />
@@ -497,7 +515,15 @@ export default function SuppliersPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] })}
+                      onClick={() => append({ 
+                        name: "", 
+                        category: "", 
+                        sku: "", 
+                        description: "", 
+                        price: "", 
+                        purchaseLink: "", 
+                        customFields: [] 
+                      })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       增加一项
@@ -613,25 +639,70 @@ export default function SuppliersPage() {
 }
 
 // Extracted component for product/service item
-function ProductServiceItem({ control, index, remove }: {
-    control: any,
+
+type MediaUploadProps = {
+    form: ReturnType<typeof useForm<ProductServiceForm>>,
+    index: number,
+    fieldName: "mediaPanoramic" | "mediaTop" | "mediaBottom" | "mediaLeft" | "mediaRight" | "mediaFront" | "mediaBack",
+    label: string,
+}
+
+function MediaUpload({ form, index, fieldName, label }: MediaUploadProps) {
+    const [fileName, setFileName] = useState<string | null>(null);
+    const inputId = `${fieldName}-${index}`;
+    
+    const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            form.setValue(`products.${index}.${fieldName}`, file);
+            setFileName(file.name);
+        } else {
+            form.setValue(`products.${index}.${fieldName}`, null);
+            setFileName(null);
+        }
+    };
+
+    return (
+        <div className="space-y-2">
+            <Label htmlFor={inputId} className="text-sm font-medium">{label}</Label>
+            <div className="flex items-center gap-2">
+                <Input
+                    id={inputId}
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                />
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => document.getElementById(inputId)?.click()}
+                >
+                    <UploadCloud className="mr-2 h-4 w-4" />
+                    上传
+                </Button>
+                 {fileName && <span className="text-sm text-muted-foreground truncate">{fileName}</span>}
+            </div>
+             <div className="flex items-center gap-2 text-muted-foreground">
+                <ImageIcon className="h-4 w-4" />
+                <Video className="h-4 w-4" />
+                <span className="text-xs">支持图片/视频</span>
+            </div>
+        </div>
+    );
+}
+
+function ProductServiceItem({ form, index, remove }: {
+    form: ReturnType<typeof useForm<ProductServiceForm>>,
     index: number,
     remove: () => void,
 }) {
+    const { control } = form;
     const { fields: customFields, append: appendCustomField, remove: removeCustomField } = useFieldArray({
         control: control,
         name: `products.${index}.customFields`
     });
-
-    const [mediaFile, setMediaFile] = useState<File | null>(null);
-
-    const handleMediaChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0] || null;
-        setMediaFile(file);
-        // Note: The file object itself is not being set into the form state here.
-        // In a real application, you would handle the file upload separately
-        // and then perhaps store a URL or file ID in the form state.
-    };
 
     return (
         <Card className="p-4 relative bg-background/50">
@@ -718,17 +789,23 @@ function ProductServiceItem({ control, index, remove }: {
                     </FormItem>
                 )}
             />
-            <FormItem className="mt-6">
-                <FormLabel>相关媒体</FormLabel>
-                <div className="flex items-center gap-2">
-                    <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={handleMediaChange} className="hidden" />
-                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
-                    {mediaFile && <span className="text-sm text-muted-foreground">{mediaFile.name}</span>}
-                    <ImageIcon className="text-muted-foreground" />
-                    <Video className="text-muted-foreground" />
-                </div>
-            </FormItem>
             
+            <Card className="mt-6 bg-background/50">
+                <CardHeader>
+                    <CardTitle className="text-md font-semibold">典型图/视频</CardTitle>
+                    <CardDescription className="text-xs">请上传产品在7个标准方位的图片或视频。</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                     <MediaUpload form={form} index={index} fieldName="mediaPanoramic" label="全景" />
+                     <MediaUpload form={form} index={index} fieldName="mediaTop" label="上" />
+                     <MediaUpload form={form} index={index} fieldName="mediaBottom" label="下" />
+                     <MediaUpload form={form} index={index} fieldName="mediaLeft" label="左" />
+                     <MediaUpload form={form} index={index} fieldName="mediaRight" label="右" />
+                     <MediaUpload form={form} index={index} fieldName="mediaFront" label="前" />
+                     <MediaUpload form={form} index={index} fieldName="mediaBack" label="后" />
+                </CardContent>
+            </Card>
+
             <div className="space-y-4 mt-6">
                 <h4 className="font-headline text-md font-semibold">补充内容</h4>
                 {customFields.map((customField, k) => (
@@ -769,3 +846,5 @@ function ProductServiceItem({ control, index, remove }: {
         </Card>
     );
 }
+
+    
