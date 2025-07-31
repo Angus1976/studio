@@ -36,7 +36,7 @@ const managementPanels = [
         title: "多租户企业管理",
         description: "管理平台上的所有企业租户账户。",
         icon: Building,
-        buttonText: "管理企业租户",
+        buttonText: "增、改、删企业注册租户",
         placeholderText: "功能待开发：租户列表、审核、权限设置...",
     },
     {
