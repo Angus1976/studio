@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, CornerDownLeft, Star, Wand2 } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, CornerDownLeft, Star, Wand2, Briefcase } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
@@ -265,6 +265,7 @@ function UserProfileDisplay({ profile }: { profile: GenerateUserProfileOutput })
 }
 
 function RecommendationsDisplay({ recommendations }: { recommendations: RecommendProductsOrServicesOutput }) {
+    const { user } = useAuth();
     return (
         <div className="mt-4">
             <h3 className="font-headline text-lg font-semibold mb-2">首要推荐</h3>
@@ -288,6 +289,17 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
                     <p className="text-sm text-muted-foreground">{recommendations.reasoning}</p>
                 </CardContent>
             </Card>
+             {user?.role === 'user' && (
+                <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground mb-2">没有找到满意的结果？</p>
+                    <Button variant="secondary" asChild>
+                       <Link href="/demand-pool">
+                         <Briefcase className="mr-2 h-4 w-4" />
+                         发布到需求池
+                       </Link>
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }
