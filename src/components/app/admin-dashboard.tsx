@@ -742,7 +742,7 @@ const managementPanels = [
     {
         id: "permissions",
         title: "权限与资产管理",
-        description: "管理平台级的LLM，对接全球LLM及其不同版本，分配TOKEN KEY,统计分析用量、充值、控制盗用，其他各类软件资产及其许可管理",
+        description: "平台级权限分配，软件资源配置和管理",
         icon: ShieldCheck,
         buttonText: "配置权限",
     }
@@ -845,4 +845,5 @@ export function AdminDashboard() {
   );
 }
 
+    
     
