@@ -130,12 +130,12 @@ export default function SuppliersPage() {
     toast({ title: "操作成功", description: "商品/服务信息已保存。" });
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, field: any, setPreview: (url: string | null) => void) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>, fieldName: any, setPreview: (url: string | null) => void) => {
     const file = e.target.files?.[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
       setPreview(previewUrl);
-      field.onChange(file);
+      supplierForm.setValue(fieldName, file);
     }
   };
 
@@ -399,40 +399,22 @@ export default function SuppliersPage() {
                         )}
                       />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={supplierForm.control}
-                        name="logo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>供应商LOGO</FormLabel>
-                            <FormControl>
-                               <div className="flex items-center gap-4">
-                                {logoPreview && <Image src={logoPreview} alt="logo 预览" width={64} height={64} className="rounded-md object-cover" />}
-                                <Input id="logo-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, field, setLogoPreview)} className="hidden" />
-                                <Button type="button" variant="outline" onClick={() => document.getElementById('logo-upload')?.click()}><FileUp className="mr-2"/>上传图片</Button>
-                               </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField
-                        control={supplierForm.control}
-                        name="businessLicense"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>营业执照</FormLabel>
-                            <FormControl>
-                               <div className="flex items-center gap-4">
-                                {licensePreview && <Image src={licensePreview} alt="营业执照预览" width={64} height={64} className="rounded-md object-cover" />}
-                                <Input id="license-upload" type="file" accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, field, setLicensePreview)} className="hidden" />
-                                <Button type="button" variant="outline" onClick={() => document.getElementById('license-upload')?.click()}><FileUp className="mr-2"/>上传文件</Button>
-                               </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <FormItem>
+                        <FormLabel>供应商LOGO</FormLabel>
+                        <div className="flex items-center gap-4">
+                        {logoPreview && <Image src={logoPreview} alt="logo 预览" width={64} height={64} className="rounded-md object-cover" />}
+                        <Input id="logo-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, "logo", setLogoPreview)} className="hidden" />
+                        <Button type="button" variant="outline" onClick={() => document.getElementById('logo-upload')?.click()}><FileUp className="mr-2"/>上传图片</Button>
+                        </div>
+                      </FormItem>
+                      <FormItem>
+                        <FormLabel>营业执照</FormLabel>
+                        <div className="flex items-center gap-4">
+                        {licensePreview && <Image src={licensePreview} alt="营业执照预览" width={64} height={64} className="rounded-md object-cover" />}
+                        <Input id="license-upload" type="file" accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, "businessLicense", setLicensePreview)} className="hidden" />
+                        <Button type="button" variant="outline" onClick={() => document.getElementById('license-upload')?.click()}><FileUp className="mr-2"/>上传文件</Button>
+                        </div>
+                      </FormItem>
                     </div>
                   </div>
 
@@ -631,16 +613,16 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         name: `products.${index}.customFields`
     });
     
-    const [fileName, setFileName] = useState<string | null>(null);
+    const [file, setFile] = useState<File | null>(null);
 
-    const handleMediaChange = (e: ChangeEvent<HTMLInputElement>, field: any) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setFileName(file.name);
-            field.onChange(file);
+    const handleMediaChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            form.setValue(`products.${index}.media`, selectedFile);
         } else {
-            setFileName(null);
-            field.onChange(undefined);
+            setFile(null);
+            form.setValue(`products.${index}.media`, undefined);
         }
     };
 
@@ -730,25 +712,17 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                     </FormItem>
                 )}
             />
-            <Controller
-                control={form.control}
-                name={`products.${index}.media`}
-                render={({ field }) => (
-                    <FormItem className="mt-6">
-                        <FormLabel>相关媒体</FormLabel>
-                        <FormControl>
-                            <div className="flex items-center gap-2">
-                                <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={(e) => handleMediaChange(e, field)} className="hidden" />
-                                <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
-                                {fileName && <span className="text-sm text-muted-foreground">{fileName}</span>}
-                                <ImageIcon className="text-muted-foreground" />
-                                <Video className="text-muted-foreground" />
-                            </div>
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+            <FormItem className="mt-6">
+                <FormLabel>相关媒体</FormLabel>
+                <div className="flex items-center gap-2">
+                    <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={handleMediaChange} className="hidden" />
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
+                    {file && <span className="text-sm text-muted-foreground">{file.name}</span>}
+                    <ImageIcon className="text-muted-foreground" />
+                    <Video className="text-muted-foreground" />
+                </div>
+                <FormMessage />
+            </FormItem>
             
             <div className="space-y-4 mt-6">
                 <h4 className="font-headline text-md font-semibold">补充内容</h4>
@@ -790,3 +764,5 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
+
+    
