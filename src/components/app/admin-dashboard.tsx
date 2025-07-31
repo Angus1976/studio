@@ -1,11 +1,20 @@
 
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Building, Code, ShieldCheck, User, BarChart3 } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 
 const kpiData = [
@@ -22,10 +31,65 @@ const recentUsers = [
     { name: "A.I. Solutions Ltd.", role: "企业租户", date: "2024-07-18", status: "已禁用" },
 ];
 
+const managementPanels = [
+    { 
+        title: "多租户企业管理",
+        description: "管理平台上的所有企业租户账户。",
+        icon: Building,
+        buttonText: "管理企业租户",
+        placeholderText: "功能待开发：租户列表、审核、权限设置...",
+    },
+    {
+        title: "个人用户管理",
+        description: "查看和管理所有个人用户。",
+        icon: User,
+        buttonText: "管理个人用户",
+        placeholderText: "功能待开发：用户搜索、禁用、数据查看...",
+    },
+    {
+        title: "技术工程师管理",
+        description: "审核、认证和管理平台的技术工程师。",
+        icon: Code,
+        buttonText: "管理技术工程师",
+        placeholderText: "功能待开发：工程师申请列表、能力审核...",
+    },
+    {
+        title: "权限与资产管理",
+        description: "配置各角色的权限和管理平台软件资产。",
+        icon: ShieldCheck,
+        buttonText: "配置权限",
+        placeholderText: "功能待开发：角色权限矩阵、系统配置...",
+    }
+];
+
+function PlaceholderDialog({ triggerButton, title, description, buttonText }: { triggerButton: React.ReactNode, title: string, description: string, buttonText: string }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>{triggerButton}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><AlertTriangle className="text-yellow-500" /> {title}</DialogTitle>
+                    <DialogDescription>{description}</DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                     <Card className="bg-muted/50 border-dashed">
+                        <CardContent className="p-4 text-center text-sm text-muted-foreground">
+                            <Info className="h-8 w-8 mx-auto mb-2 text-primary/50"/>
+                            此功能仍在开发中，将在未来版本中提供。
+                        </CardContent>
+                    </Card>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline">关闭</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export function AdminDashboard() {
   return (
-    <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto">
+    <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
         <h1 className="text-3xl font-bold font-headline">管理员仪表盘</h1>
         
         {/* KPI Cards */}
@@ -47,54 +111,25 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Management Panels */}
             <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Building className="text-accent"/> 多租户企业管理</CardTitle>
-                        <CardDescription>管理平台上的所有企业租户账户。</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                       <p className="text-sm text-muted-foreground">功能待开发：租户列表、审核、权限设置...</p>
-                    </CardContent>
-                    <CardContent>
-                        <Button>管理企业租户</Button>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><User className="text-accent"/> 个人用户管理</CardTitle>
-                        <CardDescription>查看和管理所有个人用户。</CardDescription>
-                    </CardHeader>
-                     <CardContent>
-                       <p className="text-sm text-muted-foreground">功能待开发：用户搜索、禁用、数据查看...</p>
-                    </CardContent>
-                    <CardContent>
-                        <Button>管理个人用户</Button>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Code className="text-accent"/> 技术工程师管理</CardTitle>
-                        <CardDescription>审核、认证和管理平台的技术工程师。</CardDescription>
-                    </CardHeader>
-                     <CardContent>
-                       <p className="text-sm text-muted-foreground">功能待开发：工程师申请列表、能力审核...</p>
-                    </CardContent>
-                    <CardContent>
-                        <Button>管理技术工程师</Button>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><ShieldCheck className="text-accent"/> 权限与资产管理</CardTitle>
-                        <CardDescription>配置各角色的权限和管理平台软件资产。</CardDescription>
-                    </CardHeader>
-                     <CardContent>
-                       <p className="text-sm text-muted-foreground">功能待开发：角色权限矩阵、系统配置...</p>
-                    </CardContent>
-                    <CardContent>
-                        <Button>配置权限</Button>
-                    </CardContent>
-                </Card>
+                 {managementPanels.map((panel, index) => (
+                    <Card key={index}>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><panel.icon className="text-accent"/> {panel.title}</CardTitle>
+                            <CardDescription>{panel.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground">{panel.placeholderText}</p>
+                        </CardContent>
+                        <CardFooter>
+                             <PlaceholderDialog 
+                                triggerButton={<Button>{panel.buttonText}</Button>}
+                                title={`管理功能：${panel.title}`}
+                                description={`这里是管理“${panel.title}”的操作界面。`}
+                                buttonText={panel.buttonText}
+                             />
+                        </CardFooter>
+                    </Card>
+                ))}
             </div>
             
             {/* Recent Users */}

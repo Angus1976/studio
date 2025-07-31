@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ScenarioCard } from '@/components/app/scenario-card';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2 } from 'lucide-react';
+import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2, Trash2 } from 'lucide-react';
 import { digitalEmployee } from '@/ai/flows/digital-employee';
 import { Separator } from '../ui/separator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 type Scenario = {
     id: string;
@@ -54,19 +55,19 @@ const sampleScenarios: Scenario[] = [
 
 export function Designer() {
   const [scenarios, setScenarios] = useState(sampleScenarios);
-  const [newScenario, setNewScenario] = useState<Omit<Scenario, 'id'>>({ title: '', description: '', industry: '', task: '', prompt: '' });
+  const [editingScenario, setEditingScenario] = useState<Omit<Scenario, 'id'>>({ title: '', description: '', industry: '', task: '', prompt: '' });
   const [testContext, setTestContext] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [testResult, setTestResult] = useState('');
   const [testPromptId, setTestPromptId] = useState('');
   const { toast } = useToast();
   
-  const handleInputChange = (field: keyof typeof newScenario, value: string) => {
-    setNewScenario(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof typeof editingScenario, value: string) => {
+    setEditingScenario(prev => ({ ...prev, [field]: value }));
   };
   
-  const handleAddScenario = () => {
-    if (!newScenario.title || !newScenario.prompt) {
+  const handleAddOrUpdateScenario = () => {
+    if (!editingScenario.title || !editingScenario.prompt) {
          toast({
             variant: 'destructive',
             title: '缺少信息',
@@ -74,10 +75,10 @@ export function Designer() {
         });
         return;
     }
-    const newId = `custom-${newScenario.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-    const scenarioToAdd = { ...newScenario, id: newId };
+    const newId = `custom-${editingScenario.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+    const scenarioToAdd = { ...editingScenario, id: newId };
     setScenarios(prev => [...prev, scenarioToAdd]);
-    setNewScenario({ title: '', description: '', industry: '', task: '', prompt: '' });
+    setEditingScenario({ title: '', description: '', industry: '', task: '', prompt: '' });
     toast({
         title: '场景已添加',
         description: `能力 "${scenarioToAdd.title}" 已添加到场景库中。`,
@@ -86,7 +87,7 @@ export function Designer() {
 
   const handlePublishAndTest = async () => {
     const usePromptId = !!testPromptId.trim();
-    const useNewPrompt = !usePromptId && !!newScenario.prompt.trim();
+    const useNewPrompt = !usePromptId && !!editingScenario.prompt.trim();
 
     if (!usePromptId && !useNewPrompt) {
         toast({
@@ -112,7 +113,7 @@ export function Designer() {
     
     try {
         const promptIdForCall = usePromptId ? testPromptId : `new-prompt-${Date.now()}`;
-        const promptContentForCall = useNewPrompt ? newScenario.prompt : undefined;
+        const promptContentForCall = useNewPrompt ? editingScenario.prompt : undefined;
         
         if (usePromptId) {
             toast({
@@ -122,7 +123,7 @@ export function Designer() {
         } else {
              toast({
                 title: "正在测试新提示...",
-                description: `能力 "${newScenario.title || '新能力'}" 正在被测试。`,
+                description: `能力 "${editingScenario.title || '新能力'}" 正在被测试。`,
             });
         }
 
@@ -146,9 +147,26 @@ export function Designer() {
     }
   };
 
+  const handleEditScenario = (scenario: Scenario) => {
+    setEditingScenario(scenario);
+    toast({
+      title: '正在编辑',
+      description: `已将“${scenario.title}”加载到设计器中。`
+    })
+  };
+
+  const handleDeleteScenario = (scenarioId: string) => {
+    setScenarios(prev => prev.filter(s => s.id !== scenarioId));
+    toast({
+      variant: 'destructive',
+      title: '场景已删除',
+      description: '选定的场景已从库中移除。'
+    })
+  };
+
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full max-w-screen-2xl mx-auto">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full max-w-screen-2xl mx-auto p-4 md:p-6 lg:p-8">
       {/* Left Column: Library */}
       <div className="lg:col-span-7 h-full">
         <Card className="h-full flex flex-col shadow-lg">
@@ -165,11 +183,16 @@ export function Designer() {
             <ScrollArea className="h-full">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pr-4">
                     {scenarios.map(scenario => (
-                        <ScenarioCard key={scenario.id} scenario={scenario} />
+                        <ScenarioCard 
+                          key={scenario.id} 
+                          scenario={scenario} 
+                          onEdit={() => handleEditScenario(scenario)}
+                          onDelete={() => handleDeleteScenario(scenario.id)}
+                        />
                     ))}
                      <div 
                         className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-muted-foreground hover:bg-muted/50 cursor-pointer min-h-[220px]"
-                        onClick={handleAddScenario}
+                        onClick={handleAddOrUpdateScenario}
                         role="button"
                         aria-label="添加新场景"
                      >
@@ -199,25 +222,25 @@ export function Designer() {
                     <div className="space-y-4 pr-4">
                         <div>
                             <Label htmlFor="scenario-title">能力标题</Label>
-                            <Input id="scenario-title" placeholder="例如：智能招聘助理" value={newScenario.title} onChange={e => handleInputChange('title', e.target.value)} />
+                            <Input id="scenario-title" placeholder="例如：智能招聘助理" value={editingScenario.title} onChange={e => handleInputChange('title', e.target.value)} />
                         </div>
                         <div>
                             <Label htmlFor="scenario-desc">能力描述</Label>
-                            <Textarea id="scenario-desc" placeholder="简要描述此能力解决了什么问题..." value={newScenario.description} onChange={e => handleInputChange('description', e.target.value)}/>
+                            <Textarea id="scenario-desc" placeholder="简要描述此能力解决了什么问题..." value={editingScenario.description} onChange={e => handleInputChange('description', e.target.value)}/>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label htmlFor="scenario-industry">适用行业</Label>
-                                <Input id="scenario-industry" placeholder="例如：人力资源" value={newScenario.industry} onChange={e => handleInputChange('industry', e.target.value)} />
+                                <Input id="scenario-industry" placeholder="例如：人力资源" value={editingScenario.industry} onChange={e => handleInputChange('industry', e.target.value)} />
                             </div>
                             <div>
                                 <Label htmlFor="scenario-task">核心任务</Label>
-                                <Input id="scenario-task" placeholder="例如：招聘" value={newScenario.task} onChange={e => handleInputChange('task', e.target.value)} />
+                                <Input id="scenario-task" placeholder="例如：招聘" value={editingScenario.task} onChange={e => handleInputChange('task', e.target.value)} />
                             </div>
                         </div>
                         <div>
                             <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
-                            <Textarea id="scenario-prompt" placeholder="创建新的提示词，或留空以使用下面的ID..." rows={5} value={newScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
+                            <Textarea id="scenario-prompt" placeholder="创建新的提示词，或留空以使用下面的ID..." rows={5} value={editingScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
                         </div>
                         
                         <div className='flex items-center gap-2'>

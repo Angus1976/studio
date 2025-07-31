@@ -15,13 +15,14 @@ import { WorkflowViewer } from "@/components/app/workflow-viewer";
 import { Designer } from "@/components/app/designer";
 import { AdminDashboard } from "@/components/app/admin-dashboard";
 import { TenantDashboard } from "@/components/app/tenant-dashboard";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SystemCapabilities } from "@/components/app/system-capabilities";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogClose } from "@/components/ui/alert-dialog";
 
 
 type ConversationMessage = {
@@ -216,7 +217,7 @@ export default function Home() {
   }
 
   const renderUserView = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full max-w-screen-2xl mx-auto">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
         {/* Left Column: Requirements Navigator */}
         <div className="lg:col-span-4 xl:col-span-3 h-full">
         <RequirementsNavigator
@@ -267,7 +268,7 @@ export default function Home() {
                                 value={promptId}
                                 onChange={(e) => setPromptId(e.target.value)}
                                 />
-                                <Button variant="outline" size="icon" onClick={handleConnectPrompt}>
+                                <Button variant="outline" size="icon" onClick={handleConnectPrompt} disabled={isLoading}>
                                 <ArrowRight className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -280,11 +281,11 @@ export default function Home() {
                             </h4>
                             <p className="text-xs text-muted-foreground mb-3">通过可信的第三方平台（如天猫）担保交易，保障资金安全。</p>
                             <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline">
+                                <Button variant="outline" onClick={() => window.open('https://www.alipay.com', '_blank')}>
                                 支付定金
                                 <ExternalLink className="h-4 w-4 ml-2" />
                                 </Button>
-                                <Button variant="outline">
+                                <Button variant="outline" onClick={() => window.open('https://www.alipay.com', '_blank')}>
                                 支付尾款
                                 <ExternalLink className="h-4 w-4 ml-2" />
                                 </Button>
@@ -294,12 +295,34 @@ export default function Home() {
                         
                         <div className="mt-auto">
                             <Separator className="mb-6" />
-                            <Button 
-                                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                                onClick={handleTaskOrderGeneration}
-                            >
-                            确认并生成任务订单
-                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                                        确认并生成任务订单
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>确认您的任务订单</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            请检查以下根据您的需求生成的任务订单摘要。确认后，此订单将被创建。
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-lg flex items-center gap-2"><FileText /> 任务摘要</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="text-sm space-y-2">
+                                            <p><strong className="font-medium">优化场景:</strong> {scenarioOutput.optimizedScenario.substring(0, 100)}...</p>
+                                            <p><strong className="font-medium">自动化任务:</strong> {scenarioOutput.aiAutomatableTasks.split('\n')[0]}...</p>
+                                        </CardContent>
+                                    </Card>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>返回修改</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleTaskOrderGeneration}>确认生成</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                         </CardContent>
                     </Card>
