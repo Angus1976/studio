@@ -13,6 +13,7 @@ import { RequirementsNavigator } from "@/components/app/requirements-navigator";
 import { ScenarioArchitectView } from "@/components/app/scenario-architect-view";
 import { WorkflowViewer } from "@/components/app/workflow-viewer";
 import { Designer } from "@/components/app/designer";
+import { AdminDashboard } from "@/components/app/admin-dashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -71,7 +72,7 @@ export default function Home() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isAuthenticated && userRole !== '平台方 - 技术工程师') {
+    if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员'].includes(userRole || '')) {
         // Start with a welcome message from the assistant
         setConversationHistory([
         {
@@ -327,12 +328,27 @@ export default function Home() {
   const renderEngineerView = () => (
     <Designer />
   );
+  
+  const renderAdminView = () => (
+    <AdminDashboard />
+  );
+
+  const renderContent = () => {
+    switch (userRole) {
+        case '平台方 - 管理员':
+            return renderAdminView();
+        case '平台方 - 技术工程师':
+            return renderEngineerView();
+        default:
+            return renderUserView();
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       <AppHeader userRole={userRole} onLogout={logout} />
       <main className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8">
-        {userRole === '平台方 - 技术工程师' ? renderEngineerView() : renderUserView()}
+        {renderContent()}
       </main>
     </div>
   );
