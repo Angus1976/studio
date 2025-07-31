@@ -1,7 +1,8 @@
+import { Badge } from "@/components/ui/badge";
 import { UserCircle } from "lucide-react";
 import { AppLogo } from "@/components/app/icons";
 
-export function AppHeader() {
+export function AppHeader({ userRole }: { userRole: string | null }) {
   return (
     <header className="flex items-center justify-between p-4 border-b bg-card/50 sticky top-0 z-10">
       <div className="flex items-center gap-2">
@@ -10,7 +11,14 @@ export function AppHeader() {
           AI 任务流
         </h1>
       </div>
-      <UserCircle className="h-8 w-8 text-muted-foreground" />
+      <div className="flex items-center gap-3">
+        {userRole && (
+          <Badge variant="outline" className="text-sm">
+            {userRole}
+          </Badge>
+        )}
+        <UserCircle className="h-8 w-8 text-muted-foreground" />
+      </div>
     </header>
   );
 }

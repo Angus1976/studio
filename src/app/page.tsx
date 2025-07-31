@@ -26,21 +26,28 @@ type ConversationMessage = {
 // 在真实应用中，这应该来自您的认证上下文或会话管理
 const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
     useEffect(() => {
         // 在真实应用中，您会在这里检查有效的会话或令牌
         const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated');
+        const role = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+        
         // 为了演示，我们将其设置为true
         setTimeout(() => {
              setIsAuthenticated(!!loggedIn);
+             setUserRole(role);
+             setIsLoading(false);
         }, 500);
     }, [])
 
-    return { isAuthenticated };
+    return { isAuthenticated, userRole, isLoading };
 };
 
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userRole, isLoading: isAuthLoading } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [extractedRequirements, setExtractedRequirements] = useState<string | undefined>(undefined);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
@@ -151,6 +158,14 @@ export default function Home() {
     }
   };
 
+  if (isAuthLoading) {
+      return (
+          <div className="flex h-full items-center justify-center bg-background">
+              <LoaderCircle className="h-12 w-12 animate-spin text-accent" />
+          </div>
+      )
+  }
+
   if (!isAuthenticated) {
     return (
          <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
@@ -178,7 +193,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
-      <AppHeader />
+      <AppHeader userRole={userRole} />
       <main className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full max-w-screen-2xl mx-auto">
           {/* Left Column: Requirements Navigator */}
