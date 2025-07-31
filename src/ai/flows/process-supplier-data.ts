@@ -35,7 +35,7 @@ export async function processSupplierData(input: ProcessSupplierDataInput): Prom
 
 const prompt = ai.definePrompt({
   name: 'processSupplierDataPrompt',
-  model: 'googleai/gemini-1.5-pro-latest',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: ProcessSupplierDataInputSchema},
   output: {schema: ProcessSupplierDataOutputSchema},
   prompt: `你是一个智能数据处理助手。你的任务是解析以下 CSV 格式的供应商数据，并为每个供应商评估一个“匹配度”。

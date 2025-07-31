@@ -28,7 +28,7 @@ export async function generatePrompt(input: GeneratePromptInput): Promise<Genera
 
 const prompt = ai.definePrompt({
   name: 'generatePromptPrompt',
-  model: 'googleai/gemini-1.5-pro-latest',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: GeneratePromptInputSchema},
   output: {schema: GeneratePromptOutputSchema},
   prompt: `Generate a prompt based on the user input and the prompt template.\n\nUser Input: {{{userInput}}}\nPrompt Template: {{{promptTemplate}}}`,

@@ -34,7 +34,7 @@ export async function intelligentSearch(input: IntelligentSearchInput): Promise<
 
 const prompt = ai.definePrompt({
   name: 'intelligentSearchPrompt',
-  model: 'googleai/gemini-1.5-pro-latest',
+  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: IntelligentSearchInputSchema},
   output: {schema: IntelligentSearchOutputSchema},
   prompt: `You are an AI-powered search engine. Your task is to find the most relevant information from the provided knowledge base based on the user's query.
