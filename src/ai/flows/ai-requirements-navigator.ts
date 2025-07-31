@@ -10,6 +10,17 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import Handlebars from 'handlebars';
+
+Handlebars.registerHelper('ifeq', function (a, b, options) {
+  if (a === b) {
+    // @ts-ignore
+    return options.fn(this);
+  }
+  // @ts-ignore
+  return options.inverse(this);
+});
+
 
 const AIRequirementsNavigatorInputSchema = z.object({
   userInput: z.string().describe('The user input for the current turn.'),
@@ -66,11 +77,11 @@ Follow these steps:
 
 Conversation History:
 {{#each conversationHistory}}
-  {{#if (this.role === 'user')}}
+  {{#ifeq this.role 'user'}}
     User: {{{this.content}}}
   {{else}}
     Assistant: {{{this.content}}}
-  {{/if}}
+  {{/ifeq}}
 {{/each}}
 
 User input:
