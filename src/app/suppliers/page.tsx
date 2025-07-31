@@ -106,7 +106,7 @@ export default function SuppliersPage() {
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] }]
+      products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", media: undefined, customFields: [] }]
     }
   });
   
@@ -509,7 +509,7 @@ export default function SuppliersPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] })}
+                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", media: undefined, customFields: [] })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       增加一项
@@ -726,7 +726,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
                             <div className="flex items-center gap-2">
                                 <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={(e) => field.onChange(e.target.files?.[0])} className="hidden" />
                                 <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
-                                {field.value && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
+                                {field.value?.name && <span className="text-sm text-muted-foreground">{field.value.name}</span>}
                                 <ImageIcon className="text-muted-foreground" />
                                 <Video className="text-muted-foreground" />
                             </div>
@@ -776,5 +776,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
+
+    
 
     
