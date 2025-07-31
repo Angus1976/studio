@@ -326,7 +326,7 @@ function ProductCard({ product }: { product: Product }) {
             <CardContent className="p-4 pt-2">
                 <Button size="sm" className="w-full" asChild>
                     <Link href={product.purchaseUrl} target="_blank" rel="noopener noreferrer">
-                       查看详情 <ExternalLink className="ml-2 h-4 w-4" />
+                       立即购买 <ExternalLink className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>
             </CardContent>
