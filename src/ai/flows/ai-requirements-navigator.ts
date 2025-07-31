@@ -66,10 +66,10 @@ Follow these steps:
 
 Conversation History:
 {{#each conversationHistory}}
-  {{#if (eq role 'user')}}
-    User: {{{content}}}
+  {{#if (this.role === 'user')}}
+    User: {{{this.content}}}
   {{else}}
-    Assistant: {{{content}}}
+    Assistant: {{{this.content}}}
   {{/if}}
 {{/each}}
 
