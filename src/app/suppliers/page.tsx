@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { UploadCloud, FileSpreadsheet, LoaderCircle, AlertCircle, User } from "lucide-react";
+import { UploadCloud, FileSpreadsheet, LoaderCircle, AlertCircle, User, Download } from "lucide-react";
 import { handleFileUpload } from "./actions";
 import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data";
 import { useAuth } from "@/lib/auth";
@@ -55,6 +55,24 @@ export default function SuppliersPage() {
 
   const triggerFileSelect = () => fileInputRef.current?.click();
 
+  const handleDownloadTemplate = () => {
+    const csvHeaders = "name,category\n";
+    const exampleData = `"创新科技","消费电子产品"\n"绿色家电","家用电器"\n"云服务公司","软件服务"\n`;
+    const csvContent = csvHeaders + exampleData;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "supplier_template.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+
   if (!user || !['admin', 'supplier'].includes(user.role)) {
     return (
       <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center">
@@ -83,9 +101,15 @@ export default function SuppliersPage() {
 
       <div className="mx-auto mt-8 grid max-w-4xl gap-8">
         <Card>
-          <CardHeader>
-            <CardTitle className="font-headline">导入供应商数据</CardTitle>
-            <CardDescription>上传 CSV 文件以添加或更新供应商信息。</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+                <CardTitle className="font-headline">导入供应商数据</CardTitle>
+                <CardDescription>上传 CSV 文件以添加或更新供应商信息。</CardDescription>
+            </div>
+             <Button variant="outline" onClick={handleDownloadTemplate}>
+                <Download className="mr-2 h-4 w-4" />
+                下载模板
+             </Button>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border-2 border-dashed p-12 text-center">
