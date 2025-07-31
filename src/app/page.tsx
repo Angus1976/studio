@@ -17,6 +17,7 @@ import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
+import { knowledgeBase, publicResources, supplierDatabases } from "@/lib/data";
 
 export default function Home() {
   const { toast } = useToast();
@@ -65,7 +66,15 @@ export default function Home() {
     setImageDataUri(null);
 
     try {
-      const aiResult = await getAiResponse(input, imageDataUri);
+      // Pass the full data context to the AI
+      const aiResult = await getAiResponse({
+          textInput: input,
+          imageDataUri: imageDataUri ?? undefined,
+          knowledgeBase,
+          publicResources,
+          supplierDatabases,
+      });
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
