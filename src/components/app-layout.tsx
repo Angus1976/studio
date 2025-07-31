@@ -14,7 +14,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon } from "lucide-react";
+import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon, Settings } from "lucide-react";
 import { useAuth, User } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -28,6 +28,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/", label: "智能匹配", icon: Home, roles: ['admin', 'user'] },
     { href: "/search", label: "智能搜索", icon: Search, roles: ['admin', 'user', 'supplier'] },
     { href: "/suppliers", label: "供应商整合", icon: UploadCloud, roles: ['admin', 'supplier'] },
+    { href: "/prompts", label: "提示词管理", icon: Settings, roles: ['admin'] },
   ];
 
   const menuItems = allMenuItems.filter(item => user?.role && item.roles.includes(user.role));
@@ -75,11 +76,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {user ? menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
-                asChild
                 isActive={pathname === item.href}
                 tooltip={item.label}
               >
-                <Link href={item.href}>
+                <Link href={item.href} className="flex items-center gap-2 w-full">
                   <item.icon />
                   <span>{item.label}</span>
                 </Link>
@@ -87,8 +87,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
           )) : (
              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/login">
+                <SidebarMenuButton>
+                  <Link href="/login" className="flex items-center gap-2 w-full">
                     <UserIcon />
                     <span>请先登录</span>
                   </Link>
