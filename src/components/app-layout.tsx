@@ -14,7 +14,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bot, Home, Search, UploadCloud, Github } from "lucide-react";
+import { Bot, Home, Search, UploadCloud } from "lucide-react";
 import { Button } from "./ui/button";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -56,11 +56,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           ))}
         </SidebarMenu>
         <SidebarFooter>
-           <Button variant="ghost" className="justify-start gap-2">
-             <Github className="w-4 h-4" />
-             <span className="group-data-[collapsible=icon]:hidden">GitHub</span>
-           </Button>
-        </SidebarFooter>
+         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex items-center justify-end md:justify-between h-16 px-4 border-b">
