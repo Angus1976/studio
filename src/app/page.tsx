@@ -147,7 +147,7 @@ export default function Home() {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="现在是DEMO阶段，输入信息之后就给出5个以上推荐产品的信息，可直接购买，或者联系供应商的企微在线沟通后再下单"
+            placeholder="描述您的需求，甚至可以上传图片..."
             className="w-full resize-none pr-32 pl-12 py-3 text-base"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -272,5 +272,3 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
         </div>
     );
 }
-
-    
