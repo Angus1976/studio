@@ -110,6 +110,7 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder, onConnectPro
                 <ShieldCheck className="h-4 w-4" />
                 安全支付
               </h4>
+              <p className="text-xs text-muted-foreground mb-3">通过可信的第三方平台（如天猫）担保交易，保障资金安全。</p>
               <div className="grid grid-cols-2 gap-2">
                 <Button variant="outline">
                   支付定金

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -15,7 +16,7 @@ import { WorkflowViewer } from "@/components/app/workflow-viewer";
 import { ActionPanel } from "@/components/app/action-panel";
 import { Designer } from "@/components/app/designer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoaderCircle, Wand2, LogIn } from "lucide-react";
+import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type ConversationMessage = {
@@ -43,12 +44,20 @@ const useAuth = () => {
         }, 500);
     }, [])
 
-    return { isAuthenticated, userRole, isLoading };
+    const logout = () => {
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userRole');
+        setIsAuthenticated(false);
+        setUserRole(null);
+        window.location.reload();
+    }
+
+    return { isAuthenticated, userRole, isLoading, logout };
 };
 
 
 export default function Home() {
-  const { isAuthenticated, userRole, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [extractedRequirements, setExtractedRequirements] = useState<string | undefined>(undefined);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
@@ -129,7 +138,7 @@ export default function Home() {
   const handleTaskOrderGeneration = () => {
     toast({
         title: "任务订单已生成",
-        description: "您的任务订单已成功创建。",
+        description: "您的任务订单已成功创建。请前往支付。",
       });
   };
 
@@ -142,6 +151,7 @@ export default function Home() {
         });
         return;
     }
+    setIsLoading(true);
     try {
         const result = await promptLibraryConnector({ promptId });
         toast({
@@ -156,6 +166,8 @@ export default function Home() {
             title: "连接失败",
             description: "无法从库中获取提示。",
         });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -170,10 +182,13 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
          <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
-            <Wand2 className="mx-auto h-16 w-16 text-accent mb-6" />
-            <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流</h1>
+            <div className="flex items-center justify-center gap-4 mb-6">
+                <Users className="h-16 w-16 text-accent" />
+                <Bot className="h-16 w-16 text-accent" />
+            </div>
+            <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流 C2C 平台</h1>
             <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
-                请先登录或注册以开始构建、管理和优化您的 AI 驱动的工作流程。
+               一个连接 AI 数字员工设计者与需求方的市场。在这里，您可以购买、定制或亲自设计和销售 AI 驱动的工作流程。
             </p>
             <div className="flex gap-4">
                 <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -184,6 +199,7 @@ export default function Home() {
                 </Button>
                 <Button asChild size="lg" variant="outline">
                     <Link href="/signup">
+                       <UserPlus className="mr-2" />
                        注册
                     </Link>
                 </Button>
@@ -252,7 +268,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
-      <AppHeader userRole={userRole} />
+      <AppHeader userRole={userRole} onLogout={logout} />
       <main className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8">
         {userRole === '平台方 - 技术工程师' ? renderEngineerView() : renderUserView()}
       </main>

@@ -1,8 +1,10 @@
-import { Badge } from "@/components/ui/badge";
-import { UserCircle } from "lucide-react";
-import { AppLogo } from "@/components/app/icons";
 
-export function AppHeader({ userRole }: { userRole: string | null }) {
+import { Badge } from "@/components/ui/badge";
+import { UserCircle, LogOut } from "lucide-react";
+import { AppLogo } from "@/components/app/icons";
+import { Button } from "@/components/ui/button";
+
+export function AppHeader({ userRole, onLogout }: { userRole: string | null, onLogout: () => void }) {
   return (
     <header className="flex items-center justify-between p-4 border-b bg-card/50 sticky top-0 z-10">
       <div className="flex items-center gap-2">
@@ -18,6 +20,9 @@ export function AppHeader({ userRole }: { userRole: string | null }) {
           </Badge>
         )}
         <UserCircle className="h-8 w-8 text-muted-foreground" />
+        <Button variant="ghost" size="icon" onClick={onLogout} aria-label="登出">
+            <LogOut className="h-5 w-5" />
+        </Button>
       </div>
     </header>
   );
