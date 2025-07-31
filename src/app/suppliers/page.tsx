@@ -108,9 +108,6 @@ export default function SuppliersPage() {
       products: [{ name: "", category: "", sku: "", description: "", price: "", purchaseLink: "", customFields: [] }]
     }
   });
-
-  // Independent state for product media files, keyed by the field array's item id
-  const [productMedia, setProductMedia] = useState<Record<string, File | null>>({});
   
   const { fields: supplierCustomFields, append: appendSupplierCustomField, remove: removeSupplierCustomField } = useFieldArray({
     control: supplierForm.control,
@@ -122,24 +119,15 @@ export default function SuppliersPage() {
     name: "products",
   });
 
-  const handleRemoveProduct = (index: number, id: string) => {
-    remove(index);
-    setProductMedia(prev => {
-        const newMedia = {...prev};
-        delete newMedia[id];
-        return newMedia;
-    });
-  };
-
   const onSupplierSubmit = (data: SupplierInfoForm) => {
     console.log("基本信息提交:", data);
     toast({ title: "操作成功", description: "供应商基本信息已保存。" });
   };
 
   const onProductSubmit = (data: ProductServiceForm) => {
-    // Here you would handle both the form data and the productMedia state
+    // In a real app, you would also handle the media files.
+    // For this DEMO, we just log the form data.
     console.log("商品服务信息提交:", data);
-    console.log("关联的媒体文件:", productMedia);
     toast({ title: "操作成功", description: "商品/服务信息已保存。" });
   };
 
@@ -499,14 +487,9 @@ export default function SuppliersPage() {
                     {fields.map((item, index) => (
                        <ProductServiceItem 
                             key={item.id} 
-                            formControl={productServiceForm.control}
+                            control={productServiceForm.control}
                             index={index} 
-                            item={item}
-                            remove={() => handleRemoveProduct(index, item.id)}
-                            mediaFile={productMedia[item.id] || null}
-                            onMediaChange={(file) => {
-                                setProductMedia(prev => ({...prev, [item.id]: file}));
-                            }}
+                            remove={() => remove(index)}
                         />
                     ))}
                   </div>
@@ -630,22 +613,24 @@ export default function SuppliersPage() {
 }
 
 // Extracted component for product/service item
-function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMediaChange }: {
-    formControl: any,
+function ProductServiceItem({ control, index, remove }: {
+    control: any,
     index: number,
-    item: any,
     remove: () => void,
-    mediaFile: File | null,
-    onMediaChange: (file: File | null) => void
 }) {
     const { fields: customFields, append: appendCustomField, remove: removeCustomField } = useFieldArray({
-        control: formControl,
+        control: control,
         name: `products.${index}.customFields`
     });
 
+    const [mediaFile, setMediaFile] = useState<File | null>(null);
+
     const handleMediaChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
-        onMediaChange(file);
+        setMediaFile(file);
+        // Note: The file object itself is not being set into the form state here.
+        // In a real application, you would handle the file upload separately
+        // and then perhaps store a URL or file ID in the form state.
     };
 
     return (
@@ -662,7 +647,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
             </Button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
-                    control={formControl}
+                    control={control}
                     name={`products.${index}.name`}
                     render={({ field }) => (
                         <FormItem>
@@ -673,7 +658,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                     )}
                 />
                 <FormField
-                    control={formControl}
+                    control={control}
                     name={`products.${index}.price`}
                     render={({ field }) => (
                         <FormItem>
@@ -684,7 +669,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                     )}
                 />
                  <FormField
-                    control={formControl}
+                    control={control}
                     name={`products.${index}.purchaseLink`}
                     render={({ field }) => (
                         <FormItem>
@@ -700,7 +685,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                     )}
                 />
                 <FormField
-                    control={formControl}
+                    control={control}
                     name={`products.${index}.category`}
                     render={({ field }) => (
                         <FormItem>
@@ -711,7 +696,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                     )}
                 />
                 <FormField
-                    control={formControl}
+                    control={control}
                     name={`products.${index}.sku`}
                     render={({ field }) => (
                         <FormItem>
@@ -723,7 +708,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                 />
             </div>
             <FormField
-                control={formControl}
+                control={control}
                 name={`products.${index}.description`}
                 render={({ field }) => (
                     <FormItem className="mt-6">
@@ -736,8 +721,8 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
             <FormItem className="mt-6">
                 <FormLabel>相关媒体</FormLabel>
                 <div className="flex items-center gap-2">
-                    <Input id={`media-upload-${item.id}`} type="file" accept="image/*,video/*" onChange={handleMediaChange} className="hidden" />
-                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${item.id}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
+                    <Input id={`media-upload-${index}`} type="file" accept="image/*,video/*" onChange={handleMediaChange} className="hidden" />
+                    <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById(`media-upload-${index}`)?.click()}><UploadCloud className="mr-2 h-4 w-4"/>上传文件</Button>
                     {mediaFile && <span className="text-sm text-muted-foreground">{mediaFile.name}</span>}
                     <ImageIcon className="text-muted-foreground" />
                     <Video className="text-muted-foreground" />
@@ -749,7 +734,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                 {customFields.map((customField, k) => (
                   <div key={customField.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
                     <FormField
-                      control={formControl}
+                      control={control}
                       name={`products.${index}.customFields.${k}.fieldName`}
                       render={({ field }) => (
                         <FormItem>
@@ -760,7 +745,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
                       )}
                     />
                      <FormField
-                      control={formControl}
+                      control={control}
                       name={`products.${index}.customFields.${k}.fieldValue`}
                       render={({ field }) => (
                         <FormItem>
@@ -784,5 +769,7 @@ function ProductServiceItem({ formControl, index, item, remove, mediaFile, onMed
         </Card>
     );
 }
+
+    
 
     
