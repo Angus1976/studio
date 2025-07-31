@@ -106,16 +106,16 @@ export default function DesignersPage() {
                            {designer.status === 'online' ? (
                                <div className="flex gap-2">
                                    <Button className="w-full">
-                                       立即预约
+                                       预约
                                    </Button>
                                    <Button className="w-full" variant="secondary">
                                        <MessageSquare className="mr-2 h-4 w-4" />
-                                       立即沟通
+                                       沟通
                                    </Button>
                                </div>
                            ) : (
                                <Button className="w-full" disabled>
-                                   立即预约
+                                   预约
                                </Button>
                            )}
                         </div>
