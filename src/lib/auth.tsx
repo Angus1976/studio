@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -7,7 +8,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'supplier' | 'user';
+  role: 'admin' | 'supplier' | 'user' | 'creator';
   avatar: string;
   description: string;
 }
@@ -36,6 +37,14 @@ export const mockUsers: User[] = [
     role: 'user',
     avatar: 'https://placehold.co/100x100.png',
     description: '可以使用智能匹配和智能搜索功能来发现最适合自己的产品和服务。',
+  },
+  {
+    id: '4',
+    name: '王芳 (创意者)',
+    email: 'creator@example.com',
+    role: 'creator',
+    avatar: 'https://placehold.co/100x100.png',
+    description: '可以访问创意工坊，利用AI工具进行内容创作和设计。',
   },
 ];
 

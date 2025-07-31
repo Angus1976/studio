@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useAuth, mockUsers } from "@/lib/auth";
+import { useAuth, mockUsers, User } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,23 +19,27 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const getRoleBadgeVariant = (role: 'admin' | 'supplier' | 'user') => {
+  const getRoleBadgeVariant = (role: User['role']) => {
     switch (role) {
       case 'admin':
         return 'destructive';
       case 'supplier':
         return 'secondary';
+      case 'creator':
+        return 'default'; // Using 'default' (primary color) for creator
       default:
-        return 'default';
+        return 'outline'; // Changed 'user' to outline
     }
   };
   
-  const getRoleDisplayName = (role: 'admin' | 'supplier' | 'user') => {
+  const getRoleDisplayName = (role: User['role']) => {
     switch (role) {
       case 'admin':
         return '管理员';
       case 'supplier':
         return '供应商';
+      case 'creator':
+        return '创意者';
       default:
         return '普通用户';
     }
@@ -42,7 +47,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-[calc(100svh-4rem)] p-4 md:p-6">
-      <div className="max-w-4xl w-full">
+      <div className="max-w-5xl w-full">
         <div className="text-center mb-10">
           <h1 className="font-headline text-4xl md:text-5xl font-bold">选择一个角色登录</h1>
           <p className="mt-3 max-w-2xl mx-auto text-muted-foreground">
@@ -50,7 +55,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {mockUsers.map((mockUser) => (
             <Card key={mockUser.id} className="flex flex-col">
               <CardHeader className="items-center text-center">
