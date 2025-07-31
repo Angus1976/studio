@@ -14,7 +14,7 @@ import {
   SidebarInset,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon, Settings } from "lucide-react";
+import { Bot, Home, Search, UploadCloud, LogOut, User as UserIcon, Settings, Database, Library } from "lucide-react";
 import { useAuth, User } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "./ui/dropdown-menu";
@@ -29,6 +29,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     { href: "/search", label: "智能搜索", icon: Search, roles: ['admin', 'user', 'supplier'] },
     { href: "/suppliers", label: "供应商整合", icon: UploadCloud, roles: ['admin', 'supplier'] },
     { href: "/prompts", label: "提示词管理", icon: Settings, roles: ['admin'] },
+    { href: "/knowledge-base", label: "知识库管理", icon: Database, roles: ['admin'] },
+    { href: "/public-resources", label: "公共资源库", icon: Library, roles: ['admin'] },
   ];
 
   const menuItems = allMenuItems.filter(item => user?.role && item.roles.includes(user.role));
