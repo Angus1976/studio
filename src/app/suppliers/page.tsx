@@ -138,7 +138,7 @@ export default function SuppliersPage() {
   };
   
   const uploadAndProcessFile = async (file: File) => {
-    if (file.type !== 'text/csv') {
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       toast({
         title: "文件格式错误",
         description: "请上传 CSV 格式的文件。",
@@ -171,12 +171,70 @@ export default function SuppliersPage() {
         setIsUploading(false);
       }
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'utf-8');
   };
 
   const downloadTemplate = () => {
-    const header = "公司名称,注册资本,法人,地址,业务覆盖,产地,生产规模,业务规模,渠道分布\n";
-    const blob = new Blob([header], { type: 'text/csv;charset=utf-8;' });
+    // Helper to repeat a string
+    const repeat = (str: string, times: number) => Array(times + 1).join(str);
+
+    // Define header structure
+    const header1 = [
+        `基本信息${repeat(',', 8)}`,
+        `经营范围${repeat(',', 5)}`,
+        `标品（标准内容）交付${repeat(',', 3)}`,
+        `标品（标准内容）关键词备注/建议${repeat(',', 2)}`,
+        `定制（客制化内容）交付${repeat(',', 5)}`,
+        `定制（客制化内容）关键词备注${repeat(',', 2)}`,
+        `质量安全${repeat(',', 3)}`,
+        '质量安全关键词备注',
+        `业务联系${repeat(',', 6)}`,
+        `配送供应${repeat(',', 3)}`,
+        `配送供应关键词备注${repeat(',', 1)}`,
+        `价格接洽${repeat(',', 1)}`,
+        `价格接洽关键词备注${repeat(',', 3)}`,
+        `系统ai检验-资质/安全${repeat(',', 4)}`,
+        `系统ai检验-价格${repeat(',', 3)}`
+    ].join(',');
+
+    const header2 = [
+        // 基本信息
+        '公司名称', '注册', '法人', '地址', '业务覆盖', '产地', '生产规模', '业务规模', '渠道分布',
+        // 经营范围
+        '经营范围/行业', '主营业务', '资质', '设备', '环境', '经营许可证（图片）',
+        // 标品（标准内容）交付
+        '类别/领域', '自主设计/创作', '设计/创作版权', '自主生产制作',
+        // 标品（标准内容）关键词备注/建议
+        '消费者用途', '用户类型', '平台业务意愿',
+        // 定制（客制化内容）交付
+        '类别/领域', '设计/创作调整', '规格开模调整', '原材料调整', '结构调整', '包装',
+        // 定制（客制化内容）关键词备注
+        '消费者用途', '用户类型', '平台业务意愿',
+        // 质量安全
+        '生产许可', '安全许可', '原材料', '抽检/认证',
+        // 质量安全关键词备注
+        '质量安全提价意愿',
+        // 业务联系
+        '接洽方式', '联系方式', '线上', '线下', '链接渠道', '平台使用', '客户接洽',
+        // 配送供应
+        '国内地区', '国外地区', '线上供应', '线下供应',
+        // 配送供应关键词备注
+        '配送供应周期', '配送供应要求',
+        // 价格接洽
+        '业务领域/产品', '市场参考范围',
+        // 价格接洽关键词备注
+        '设计单价接洽范围', '成品单价接洽范围', '灵活面聊', '精准推送',
+        // 系统ai检验-资质/安全
+        '公司名称', '注册', '法人', '经营许可', '抽检/认证',
+        // 系统ai检验-价格
+        '线上店铺', '线上价格', '线下店铺', '线下价格'
+    ].join(',');
+
+    const csvContent = `${header1}\n${header2}\n`;
+    
+    // Add BOM to ensure UTF-8 compatibility with Excel
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -184,7 +242,7 @@ export default function SuppliersPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-     toast({ title: "模板已开始下载" });
+    toast({ title: "模板已开始下载" });
   };
   
   const exportData = () => {
@@ -193,8 +251,10 @@ export default function SuppliersPage() {
       return;
     }
     const header = "name,category,matchRate,addedDate\n";
-    const csvContent = processedSuppliers.map(s => `${s.name},${s.category},${s.matchRate},${s.addedDate}`).join("\n");
-    const blob = new Blob([header + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = processedSuppliers.map(s => `"${s.name}","${s.category}",${s.matchRate},${s.addedDate}`).join("\n");
+    
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, header + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -637,5 +697,6 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
+
 
 
