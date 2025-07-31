@@ -191,71 +191,73 @@ export function Designer() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-between gap-4 overflow-y-auto">
-                <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="scenario-title">能力标题</Label>
-                        <Input id="scenario-title" placeholder="例如：智能招聘助理" value={newScenario.title} onChange={e => handleInputChange('title', e.target.value)} />
-                    </div>
-                    <div>
-                        <Label htmlFor="scenario-desc">能力描述</Label>
-                        <Textarea id="scenario-desc" placeholder="简要描述此能力解决了什么问题..." value={newScenario.description} onChange={e => handleInputChange('description', e.target.value)}/>
-                    </div>
-                     <div className="grid grid-cols-2 gap-4">
+                <ScrollArea className="flex-1 -mx-6 px-6">
+                    <div className="space-y-4 pr-4">
                         <div>
-                            <Label htmlFor="scenario-industry">适用行业</Label>
-                            <Input id="scenario-industry" placeholder="例如：人力资源" value={newScenario.industry} onChange={e => handleInputChange('industry', e.target.value)} />
+                            <Label htmlFor="scenario-title">能力标题</Label>
+                            <Input id="scenario-title" placeholder="例如：智能招聘助理" value={newScenario.title} onChange={e => handleInputChange('title', e.target.value)} />
                         </div>
                         <div>
-                            <Label htmlFor="scenario-task">核心任务</Label>
-                            <Input id="scenario-task" placeholder="例如：招聘" value={newScenario.task} onChange={e => handleInputChange('task', e.target.value)} />
+                            <Label htmlFor="scenario-desc">能力描述</Label>
+                            <Textarea id="scenario-desc" placeholder="简要描述此能力解决了什么问题..." value={newScenario.description} onChange={e => handleInputChange('description', e.target.value)}/>
                         </div>
-                    </div>
-                    <div>
-                         <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
-                         <Textarea id="scenario-prompt" placeholder="创建新的提示词，或留空以使用下面的ID..." rows={5} value={newScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
-                    </div>
-                    
-                    <div className='flex items-center gap-2'>
-                        <Separator className='flex-1' />
-                        <span className='text-xs text-muted-foreground'>或</span>
-                        <Separator className='flex-1' />
-                    </div>
-                    
-                     <div>
-                        <Label htmlFor="prompt-id">调用已有提示词ID进行测试</Label>
-                        <Input id="prompt-id" placeholder="例如: recruitment-expert" value={testPromptId} onChange={e => setTestPromptId(e.target.value)} />
-                    </div>
-
-                    <Separator />
-
-                    <div>
-                        <Label htmlFor="scenario-test">测试内容</Label>
-                        <Textarea id="scenario-test" placeholder="输入需要AI处理的具体内容来测试提示词效果..." value={testContext} onChange={e => setTestContext(e.target.value)} />
-                    </div>
-                     
-                    {isLoading && (
-                        <div className="flex items-center justify-center gap-2 text-primary">
-                            <LoaderCircle className="animate-spin h-5 w-5" />
-                            <span>正在调用AI进行测试...</span>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="scenario-industry">适用行业</Label>
+                                <Input id="scenario-industry" placeholder="例如：人力资源" value={newScenario.industry} onChange={e => handleInputChange('industry', e.target.value)} />
+                            </div>
+                            <div>
+                                <Label htmlFor="scenario-task">核心任务</Label>
+                                <Input id="scenario-task" placeholder="例如：招聘" value={newScenario.task} onChange={e => handleInputChange('task', e.target.value)} />
+                            </div>
                         </div>
-                    )}
-                    {testResult && (
-                        <Card className="bg-secondary/50">
-                            <CardHeader className="p-4">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <Wand2 className="h-5 w-5 text-accent" />
-                                    测试输出
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-4 pt-0 text-sm">
-                                {testResult}
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
+                        <div>
+                            <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
+                            <Textarea id="scenario-prompt" placeholder="创建新的提示词，或留空以使用下面的ID..." rows={5} value={newScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
+                        </div>
+                        
+                        <div className='flex items-center gap-2'>
+                            <Separator className='flex-1' />
+                            <span className='text-xs text-muted-foreground'>或</span>
+                            <Separator className='flex-1' />
+                        </div>
+                        
+                        <div>
+                            <Label htmlFor="prompt-id">调用已有提示词ID进行测试</Label>
+                            <Input id="prompt-id" placeholder="例如: recruitment-expert" value={testPromptId} onChange={e => setTestPromptId(e.target.value)} />
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                            <Label htmlFor="scenario-test">测试内容</Label>
+                            <Textarea id="scenario-test" placeholder="输入需要AI处理的具体内容来测试提示词效果..." value={testContext} onChange={e => setTestContext(e.target.value)} />
+                        </div>
+                        
+                        {isLoading && (
+                            <div className="flex items-center justify-center gap-2 text-primary">
+                                <LoaderCircle className="animate-spin h-5 w-5" />
+                                <span>正在调用AI进行测试...</span>
+                            </div>
+                        )}
+                        {testResult && (
+                            <Card className="bg-secondary/50">
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Wand2 className="h-5 w-5 text-accent" />
+                                        测试输出
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 text-sm">
+                                    <p className="whitespace-pre-wrap">{testResult}</p>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                </ScrollArea>
 
 
-                <div className="mt-auto pt-4">
+                <div className="mt-auto pt-4 border-t">
                     <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePublishAndTest} disabled={isLoading}>
                         <UploadCloud className="mr-2" />
                         发布并测试

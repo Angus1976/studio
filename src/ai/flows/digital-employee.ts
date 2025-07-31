@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -41,8 +42,6 @@ const digitalEmployeeFlow = ai.defineFlow(
   async ({ promptId, promptContent, userContext }) => {
     let finalPromptContent: string;
 
-    // 1. If promptContent is provided, use it directly (for testing new prompts).
-    //    Otherwise, retrieve the prompt from the library using its ID.
     if (promptContent) {
       finalPromptContent = promptContent;
     } else {
@@ -50,9 +49,8 @@ const digitalEmployeeFlow = ai.defineFlow(
       finalPromptContent = retrievedContent;
     }
 
-    // 2. Define a dynamic prompt using the determined content
     const dynamicPrompt = ai.definePrompt({
-        name: `dynamicPromptFor_${promptId}`,
+        name: `dynamicPromptFor_${promptId.replace(/[^a-zA-Z0-9]/g, '_')}`, // Sanitize name
         prompt: `${finalPromptContent}
 
 User Context:
@@ -61,7 +59,6 @@ User Context:
         input: { schema: z.object({ userContext: z.string() }) },
     });
 
-    // 3. Execute the dynamic prompt with the user's context
     const llmResponse = await dynamicPrompt({ userContext });
 
     return { response: llmResponse.text };
