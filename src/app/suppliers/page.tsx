@@ -44,6 +44,7 @@ const supplierInfoSchema = z.object({
   contactMobile: z.string().optional(),
   contactPhone: z.string().optional(),
   contactEmail: z.string().email("请输入有效的邮箱地址").optional().or(z.literal("")),
+  contactWeCom: z.string().optional(),
   customFields: z.array(customFieldSchema).optional(),
 });
 
@@ -90,6 +91,7 @@ export default function SuppliersPage() {
       contactMobile: "",
       contactPhone: "",
       contactEmail: "",
+      contactWeCom: "",
       customFields: [],
     },
   });
@@ -400,7 +402,8 @@ export default function SuppliersPage() {
                        <FormField control={supplierForm.control} name="contactTitle" render={({ field }) => ( <FormItem><FormLabel>职务</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                        <FormField control={supplierForm.control} name="contactMobile" render={({ field }) => ( <FormItem><FormLabel>手机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
                        <FormField control={supplierForm.control} name="contactPhone" render={({ field }) => ( <FormItem><FormLabel>座机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="contactWeCom" render={({ field }) => ( <FormItem><FormLabel>企微/客服</FormLabel><FormControl><Input placeholder="企业微信号或其它客服联系方式" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                       <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
                     </div>
                   </div>
                   
@@ -697,7 +700,4 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
-
-
-
 
