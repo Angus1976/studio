@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 const GenerateUserProfileInputSchema = z.object({
   textInput: z
@@ -42,6 +43,7 @@ const prompt = ai.definePrompt({
   name: 'generateUserProfilePrompt',
   input: {schema: GenerateUserProfileInputSchema},
   output: {schema: GenerateUserProfileOutputSchema},
+  model: googleAI('gemini-1.5-flash-latest'),
   prompt: `You are an AI assistant that generates user profiles based on user input.
 
   Analyze the following user input and generate a profile summary and a list of tags associated with the user.
