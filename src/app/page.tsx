@@ -75,6 +75,10 @@ export default function Home() {
           supplierDatabases,
       });
 
+      if (!aiResult || !aiResult.userProfile || !aiResult.recommendations) {
+        throw new Error("AI response is incomplete.");
+      }
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -84,11 +88,13 @@ export default function Home() {
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error(error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({
         title: "发生错误",
-        description: "从 AI 获取回应失败。请再试一次。",
+        description: `从 AI 获取回应失败: ${errorMessage}. 请检查您的API密钥并稍后重试。`,
         variant: "destructive",
       });
+      // Remove the user message that caused the error
       setMessages((prev) =>
         prev.filter((msg) => msg.id !== userMessage.id)
       );
