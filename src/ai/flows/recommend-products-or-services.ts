@@ -25,7 +25,7 @@ export type RecommendProductsOrServicesInput = z.infer<typeof RecommendProductsO
 const ProductSchema = z.object({
     name: z.string().describe('The name of the recommended product or service.'),
     description: z.string().describe('A brief description of the product or service.'),
-    image: z.string().describe('A URL to an image of the product or service.'),
+    panoramicImage: z.string().describe('A URL to the panoramic image of the product or service.'),
     price: z.string().describe('The price of the product or service.'),
     purchaseUrl: z.string().describe('The URL where the user can purchase the product or service.'),
 });
@@ -57,7 +57,7 @@ const recommendProductsOrServicesPrompt = ai.definePrompt({
   Public Resources: {{{publicResources}}}
   Supplier Databases: {{{supplierDatabases}}}
 
-  Provide a list of 3 to 5 recommended products or services. For each, you must provide a name, description, image URL, price, and a purchase URL, extracting this information directly from the provided knowledge base.
+  Provide a list of 3 to 5 recommended products or services. For each, you must provide a name, description, panoramicImage URL, price, and a purchase URL, extracting this information directly from the provided knowledge base.
   Also provide a clear explanation of why these recommendations are suitable for the user.
   `,
 });
@@ -73,3 +73,4 @@ const recommendProductsOrServicesFlow = ai.defineFlow(
     return output!;
   }
 );
+

@@ -4,7 +4,7 @@ import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-pro
 export interface Product {
     name: string;
     description: string;
-    image: string;
+    panoramicImage: string;
     price: string;
     purchaseUrl: string;
 }
@@ -18,3 +18,4 @@ export interface Message {
     recommendations: RecommendProductsOrServicesOutput;
   }
 }
+

@@ -309,11 +309,11 @@ function ProductCard({ product }: { product: Product }) {
         <Card className="bg-background/50 border-accent/20 overflow-hidden flex flex-col">
             <div className="relative aspect-video">
                 <Image 
-                    src={product.image} 
+                    src={product.panoramicImage} 
                     alt={product.name} 
                     fill 
                     className="object-cover"
-                    data-ai-hint="product image"
+                    data-ai-hint="panoramic product image"
                 />
             </div>
             <div className="flex flex-col flex-grow p-4">
