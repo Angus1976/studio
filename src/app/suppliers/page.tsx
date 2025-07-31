@@ -175,7 +175,7 @@ export default function SuppliersPage() {
   };
 
   const downloadTemplate = () => {
-    const header = "供应商全称,供应商简称,供应商简介,所在区域,详细地址,成立日期,注册资本,统一社会信用代码,联系人,职务,手机,邮箱,商品/服务名称,商品/服务描述,价格,类别\n";
+    const header = "公司名称,注册资本,法人,地址,业务覆盖,产地,生产规模,业务规模,渠道分布\n";
     const blob = new Blob([header], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -637,4 +637,5 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
+
 
