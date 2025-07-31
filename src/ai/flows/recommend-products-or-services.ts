@@ -25,9 +25,9 @@ export type RecommendProductsOrServicesInput = z.infer<typeof RecommendProductsO
 const ProductSchema = z.object({
     name: z.string().describe('The name of the recommended product or service.'),
     description: z.string().describe('A brief description of the product or service.'),
-    image: z.string().url().describe('A URL to an image of the product or service.'),
+    image: z.string().describe('A URL to an image of the product or service.'),
     price: z.string().describe('The price of the product or service.'),
-    purchaseUrl: z.string().url().describe('The URL where the user can purchase the product or service.'),
+    purchaseUrl: z.string().describe('The URL where the user can purchase the product or service.'),
 });
 
 const RecommendProductsOrServicesOutputSchema = z.object({
