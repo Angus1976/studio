@@ -176,7 +176,7 @@ export default function SuppliersPage() {
 
   const downloadTemplate = () => {
     // Helper to repeat a string
-    const repeat = (str: string, times: number) => Array(times + 1).join(str);
+    const repeat = (str: string, times: number) => new Array(times).fill(str).join('');
 
     // Define header structure
     const header1 = [
@@ -697,6 +697,7 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
+
 
 
 
