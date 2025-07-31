@@ -148,7 +148,13 @@ export function Designer() {
   };
 
   const handleEditScenario = (scenario: Scenario) => {
-    setEditingScenario(scenario);
+    setEditingScenario({
+      title: scenario.title,
+      description: scenario.description,
+      industry: scenario.industry,
+      task: scenario.task,
+      prompt: scenario.prompt
+    });
     toast({
       title: '正在编辑',
       description: `已将“${scenario.title}”加载到设计器中。`
