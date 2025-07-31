@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const usageData = [
   { month: "一月", tokens: 120000 },
@@ -76,25 +77,60 @@ export function TenantDashboard() {
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Token 使用量统计</CardTitle>
-                        <CardDescription>过去六个月的每月 Token 总消耗量。</CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ChartContainer config={chartConfig}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={usageData} margin={{ top: 20, right: 20, left: 20, bottom: 5 }}>
-                                    <CartesianGrid vertical={false} />
-                                    <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                                    <YAxis tickFormatter={(value) => `${Number(value) / 1000}k`} />
-                                    <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                                    <Bar dataKey="tokens" fill="var(--color-tokens)" radius={4} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Token 使用量统计</CardTitle>
+                                <CardDescription>过去六个月的每月 Token 总消耗量。</CardDescription>
+                            </CardHeader>
+                            <CardContent className="h-[300px] pl-2">
+                                <ChartContainer config={chartConfig}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={usageData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                            <CartesianGrid vertical={false} />
+                                            <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
+                                            <YAxis tickFormatter={(value) => `${Number(value) / 1000}k`} />
+                                            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                                            <Bar dataKey="tokens" fill="var(--color-tokens)" radius={4} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="lg:col-span-1">
+                        <Card className="h-full">
+                             <CardHeader>
+                                <CardTitle>您的专属客户成功经理</CardTitle>
+                                <CardDescription>随时联系我们以获得帮助。</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-4">
+                                <div className="flex items-center gap-4">
+                                    <Avatar className="h-16 w-16">
+                                        <AvatarImage src="https://placehold.co/128x128.png" />
+                                        <AvatarFallback>李</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-bold text-lg">李经理</p>
+                                        <p className="text-sm text-muted-foreground">大客户服务</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <Phone className="h-4 w-4 text-muted-foreground" />
+                                        <span>138-0013-8000</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <MailIcon className="h-4 w-4 text-muted-foreground" />
+                                        <span>li.manager@example.com</span>
+                                    </div>
+                                </div>
+                                <Button className="mt-2">发起在线会话</Button>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </TabsContent>
 
              <TabsContent value="procurement" className="mt-6">
