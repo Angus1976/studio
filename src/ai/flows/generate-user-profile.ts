@@ -46,18 +46,20 @@ const prompt = ai.definePrompt({
   model: googleAI('gemini-1.5-flash-latest'),
   prompt: `You are an AI assistant that generates user profiles based on user input.
 
-  Analyze the following user input and generate a profile summary and a list of tags associated with the user.
-  The tags should reflect the user's interests, preferences, and needs.
+  Your primary goal is to analyze the user's request, which can be text, an image, or both, to understand their needs and generate an accurate profile summary and a list of relevant tags.
+
+  If an image is provided, your analysis should start with the image. Identify the main objects, scenes, and any key features within the picture. These visual cues are the most important part of the user's request.
+  - If the user provides text along with the image, use the text to refine the request (e.g., "find a similar dress but in blue" or "what is this flower?").
+  - If no text is provided, your analysis should be based purely on the image content. The user wants to find what's in the picture or something very similar.
+
+  If only text is provided, analyze the text for the user's interests, preferences, and needs.
 
   Your response must be in Chinese.
 
   Input: {{{textInput}}}
   {{#if imageDataUri}}
   Image: {{media url=imageDataUri}}
-  {{/if}}
-
-  Profile Summary:
-  Tags:`, // Ensure the prompt ends with 'Profile Summary:' and 'Tags:'
+  {{/if}}`,
 });
 
 const generateUserProfileFlow = ai.defineFlow(
