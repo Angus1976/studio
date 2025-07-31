@@ -128,7 +128,7 @@ export default function KnowledgeBasePage() {
     return (
         <>
             <main className="p-4 md:p-6">
-                <div className="flex flex-col items-center text-center">
+                <div className="flex flex-col items-center text-center mb-8">
                      <div className="p-3 bg-primary/10 rounded-full mb-4 border-2 border-primary/20">
                         <Database className="w-8 h-8 text-primary" />
                     </div>
