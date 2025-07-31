@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -29,10 +30,10 @@ export function ScenarioArchitectView({ scenario, onScenarioChange }: ScenarioAr
       <CardHeader>
         <CardTitle className="font-headline flex items-center gap-2">
           <Sparkles className="h-6 w-6 text-accent" />
-          数字员工定制器
+          AI 场景架构师
         </CardTitle>
         <CardDescription>
-          微调 AI 生成的场景以完全满足您的需求。
+          微调 AI 生成的场景以完全满足您的需求。您也可以直接编辑下面的文本来自定义。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -3,11 +3,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users, Bot, BrainCircuit, Blocks, Building2, Landmark, Plug, PlusCircle, Pencil, Trash2, Database, Settings, X, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Tooltip,
@@ -38,7 +35,7 @@ import * as z from "zod";
 import * as LucideIcons from "lucide-react";
 
 
-const allIcons = Object.keys(LucideIcons).filter(key => typeof LucideIcons[key as keyof typeof LucideIcons] === 'object');
+const allIcons = Object.keys(LucideIcons).filter(key => typeof LucideIcons[key as keyof typeof LucideIcons] === 'object' && key !== 'createLucideIcon' && key !== 'icons');
 
 const capabilitySchema = z.object({
   name: z.string().min(1, "能力名称不能为空"),
@@ -58,7 +55,7 @@ const initialCapabilities: Capability[] = [
 
 const IconComponent = ({ name }: { name: string }) => {
     const Icon = LucideIcons[name as keyof typeof LucideIcons] as React.ElementType;
-    if (!Icon) return <Blocks className="h-5 w-5 text-accent" />; // fallback icon
+    if (!Icon) return <LucideIcons.Blocks className="h-5 w-5 text-accent" />; // fallback icon
     return <Icon className="h-5 w-5 text-accent" />;
 };
 
@@ -92,7 +89,7 @@ function CapabilityForm({ onSave, capability, children }: { onSave: (data: Capab
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">名称</Label>
               <Input id="name" {...register("name")} className="col-span-3" />
-              {errors.name && <p className="col-span-4 text-red-500 text-xs text-right">{errors.name.message}</p>}
+              {errors.name && <p className="col-span-4 text-red-500 text-xs text-right">{errors.name.message as string}</p>}
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="icon" className="text-right">图标</Label>
@@ -116,7 +113,7 @@ function CapabilityForm({ onSave, capability, children }: { onSave: (data: Capab
                   </Select>
                 )}
               />
-              {errors.icon && <p className="col-span-4 text-red-500 text-xs text-right">{errors.icon.message}</p>}
+              {errors.icon && <p className="col-span-4 text-red-500 text-xs text-right">{errors.icon.message as string}</p>}
             </div>
           </div>
           <DialogFooter>
@@ -130,10 +127,11 @@ function CapabilityForm({ onSave, capability, children }: { onSave: (data: Capab
   );
 }
 
-function SystemCapabilities() {
+export function SystemCapabilities() {
     const { toast } = useToast();
     const [capabilities, setCapabilities] = useState<Capability[]>(initialCapabilities);
     const [configData, setConfigData] = useState<Record<string, string>>({});
+    const [isEditing, setIsEditing] = useState(false);
 
     const handleSaveCapability = (data: Capability) => {
         setCapabilities(prev => {
@@ -169,21 +167,28 @@ function SystemCapabilities() {
         <div>
              <div className="flex justify-between items-center mb-3">
                 <h4 className="text-sm font-medium flex items-center gap-2">
-                    <ClipboardCheck className="h-4 w-4" />
+                    <LucideIcons.ClipboardCheck className="h-4 w-4" />
                     平台能力库
                 </h4>
-                <CapabilityForm onSave={handleSaveCapability}>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                 <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <PlusCircle className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>新增能力</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </CapabilityForm>
+                <div className="flex items-center">
+                    <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)} className="h-7">
+                        {isEditing ? '完成' : '编辑'}
+                    </Button>
+                    {isEditing && (
+                        <CapabilityForm onSave={handleSaveCapability}>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                                            <LucideIcons.PlusCircle className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>新增能力</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </CapabilityForm>
+                    )}
+                </div>
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
                 {capabilities.map(cap => (
@@ -191,28 +196,30 @@ function SystemCapabilities() {
                         <IconComponent name={cap.icon} />
                         <span className="text-xs text-muted-foreground">{cap.name}</span>
 
-                        <div className="absolute top-1 right-1 flex opacity-0 group-hover:opacity-100 transition-opacity">
-                            <CapabilityForm onSave={handleSaveCapability} capability={cap}>
-                                <Button variant="ghost" size="icon" className="h-5 w-5">
-                                    <Pencil className="h-3 w-3" />
-                                </Button>
-                            </CapabilityForm>
-                             <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive/80 hover:text-destructive">
-                                        <Trash2 className="h-3 w-3" />
+                        {isEditing && (
+                            <div className="absolute top-0 right-0 flex bg-secondary/80 rounded-bl-md rounded-tr-md">
+                                <CapabilityForm onSave={handleSaveCapability} capability={cap}>
+                                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                                        <LucideIcons.Pencil className="h-3 w-3" />
                                     </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader><DialogTitle>确认删除</DialogTitle></DialogHeader>
-                                    <p>您确定要删除 "{cap.name}" 能力吗？此操作无法撤销。</p>
-                                    <DialogFooter>
-                                        <DialogClose asChild><Button variant="outline">取消</Button></DialogClose>
-                                        <DialogClose asChild><Button variant="destructive" onClick={() => handleDeleteCapability(cap.id)}>删除</Button></DialogClose>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                        </div>
+                                </CapabilityForm>
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive/80 hover:text-destructive">
+                                            <LucideIcons.Trash2 className="h-3 w-3" />
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader><DialogTitle>确认删除</DialogTitle></DialogHeader>
+                                        <p>您确定要删除 "{cap.name}" 能力吗？此操作无法撤销。</p>
+                                        <DialogFooter>
+                                            <DialogClose asChild><Button variant="outline">取消</Button></DialogClose>
+                                            <DialogClose asChild><Button variant="destructive" onClick={() => handleDeleteCapability(cap.id)}>删除</Button></DialogClose>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -220,7 +227,7 @@ function SystemCapabilities() {
             <Dialog>
                 <DialogTrigger asChild>
                      <Button variant="outline" size="sm" className="w-full mt-4 text-xs">
-                        <Settings className="mr-2 h-3 w-3" />
+                        <LucideIcons.Settings className="mr-2 h-3 w-3" />
                         配置账号/数据
                     </Button>
                 </DialogTrigger>
@@ -256,91 +263,4 @@ function SystemCapabilities() {
             </Dialog>
         </div>
     )
-}
-
-
-export function ActionPanel({ isScenarioReady, onGenerateTaskOrder, onConnectPrompt }: ActionPanelProps) {
-  const [promptId, setPromptId] = useState("");
-
-  const handleConnectClick = () => {
-    onConnectPrompt(promptId);
-  };
-
-  return (
-    <div className="flex flex-col gap-6 h-full">
-      <Card className="flex-grow flex flex-col">
-        <CardHeader>
-          <CardTitle className="font-headline flex items-center gap-2">
-            <ClipboardCheck className="h-6 w-6 text-accent" />
-            <span>操作</span>
-          </CardTitle>
-          <CardDescription>
-            管理您的工作流、能力和付款。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow flex flex-col justify-between gap-6">
-          <div className="space-y-6">
-            <SystemCapabilities />
-            <Separator />
-            {/* Prompt Library Connector */}
-            <div>
-              <Label htmlFor="prompt-id" className="text-sm font-medium flex items-center gap-2 mb-2">
-                <Link className="h-4 w-4" />
-                提示库连接器
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input 
-                  id="prompt-id" 
-                  placeholder="输入提示 ID" 
-                  value={promptId}
-                  onChange={(e) => setPromptId(e.target.value)}
-                />
-                <Button variant="outline" size="icon" onClick={handleConnectClick}>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* SecurePay */}
-            <div>
-              <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                <ShieldCheck className="h-4 w-4" />
-                安全支付
-              </h4>
-              <p className="text-xs text-muted-foreground mb-3">通过可信的第三方平台（如天猫）担保交易，保障资金安全。</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline">
-                  支付定金
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Button>
-                <Button variant="outline">
-                  支付尾款
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-          </div>
-          
-          {/* Task Order Creator */}
-          <div className="mt-auto">
-             <Separator className="mb-6" />
-            <Button 
-                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                disabled={!isScenarioReady}
-                onClick={onGenerateTaskOrder}
-            >
-              确认并生成任务订单
-            </Button>
-            {!isScenarioReady && (
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                    敲定需求以生成订单。
-                </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }

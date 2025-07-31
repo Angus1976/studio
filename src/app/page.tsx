@@ -7,17 +7,20 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput } from "@/ai/flows/ai-requirements-navigator";
 import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
-import { promptLibraryConnector } from "@/ai/flows/prompt-library-connector";
 
 import { AppHeader } from "@/components/app/header";
 import { RequirementsNavigator } from "@/components/app/requirements-navigator";
 import { ScenarioArchitectView } from "@/components/app/scenario-architect-view";
 import { WorkflowViewer } from "@/components/app/workflow-viewer";
-import { ActionPanel } from "@/components/app/action-panel";
 import { Designer } from "@/components/app/designer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { SystemCapabilities } from "@/components/app/system-capabilities";
+
 
 type ConversationMessage = {
   role: "user" | "assistant";
@@ -64,6 +67,7 @@ export default function Home() {
   const [scenarioOutput, setScenarioOutput] = useState<AIScenarioArchitectOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentInput, setCurrentInput] = useState("");
+  const [promptId, setPromptId] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -142,7 +146,7 @@ export default function Home() {
       });
   };
 
-  const handleConnectPrompt = async (promptId: string) => {
+  const handleConnectPrompt = async () => {
     if (!promptId) {
         toast({
             variant: "destructive",
@@ -153,6 +157,7 @@ export default function Home() {
     }
     setIsLoading(true);
     try {
+        const { promptLibraryConnector } = await import("@/ai/flows/prompt-library-connector");
         const result = await promptLibraryConnector({ promptId });
         toast({
             title: "提示已连接",
@@ -222,16 +227,82 @@ export default function Home() {
         />
         </div>
 
-        {/* Middle Column: Scenario & Workflow */}
-        <div className="lg:col-span-5 xl:col-span-6 h-full flex flex-col gap-6 overflow-y-auto">
+        {/* Right Columns: Scenario & Actions */}
+        <div className="lg:col-span-8 xl:col-span-9 h-full flex flex-col gap-6 overflow-y-auto">
         {scenarioOutput ? (
-            <>
-            <ScenarioArchitectView
-                scenario={scenarioOutput}
-                onScenarioChange={setScenarioOutput}
-            />
-            <WorkflowViewer tasks={scenarioOutput.aiAutomatableTasks} />
-            </>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2 flex flex-col gap-6">
+                    <ScenarioArchitectView
+                        scenario={scenarioOutput}
+                        onScenarioChange={setScenarioOutput}
+                    />
+                    <WorkflowViewer tasks={scenarioOutput.aiAutomatableTasks} />
+                </div>
+                <div className="xl:col-span-1">
+                     <Card className="flex-grow flex flex-col">
+                        <CardHeader>
+                        <CardTitle className="font-headline flex items-center gap-2">
+                            <ClipboardCheck className="h-6 w-6 text-accent" />
+                            <span>操作</span>
+                        </CardTitle>
+                        <CardDescription>
+                            管理您的工作流、能力和付款。
+                        </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-grow flex flex-col justify-between gap-6">
+                        <div className="space-y-6">
+                            <SystemCapabilities />
+                            <Separator />
+                            <div>
+                            <Label htmlFor="prompt-id" className="text-sm font-medium flex items-center gap-2 mb-2">
+                                <LinkIcon className="h-4 w-4" />
+                                提示库连接器
+                            </Label>
+                            <div className="flex items-center gap-2">
+                                <Input 
+                                id="prompt-id" 
+                                placeholder="输入提示 ID" 
+                                value={promptId}
+                                onChange={(e) => setPromptId(e.target.value)}
+                                />
+                                <Button variant="outline" size="icon" onClick={handleConnectPrompt}>
+                                <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            </div>
+                            <Separator />
+                            <div>
+                            <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+                                <ShieldCheck className="h-4 w-4" />
+                                安全支付
+                            </h4>
+                            <p className="text-xs text-muted-foreground mb-3">通过可信的第三方平台（如天猫）担保交易，保障资金安全。</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button variant="outline">
+                                支付定金
+                                <ExternalLink className="h-4 w-4 ml-2" />
+                                </Button>
+                                <Button variant="outline">
+                                支付尾款
+                                <ExternalLink className="h-4 w-4 ml-2" />
+                                </Button>
+                            </div>
+                            </div>
+                        </div>
+                        
+                        <div className="mt-auto">
+                            <Separator className="mb-6" />
+                            <Button 
+                                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                                onClick={handleTaskOrderGeneration}
+                            >
+                            确认并生成任务订单
+                            </Button>
+                        </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         ) : (
             <Card className="h-full flex flex-col items-center justify-center bg-card/50 border-dashed">
             <div className="text-center p-8">
@@ -249,15 +320,6 @@ export default function Home() {
             </div>
             </Card>
         )}
-        </div>
-
-        {/* Right Column: Actions */}
-        <div className="lg:col-span-3 xl:col-span-3 h-full">
-        <ActionPanel
-            isScenarioReady={!!scenarioOutput}
-            onGenerateTaskOrder={handleTaskOrderGeneration}
-            onConnectPrompt={handleConnectPrompt}
-        />
         </div>
     </div>
   );
