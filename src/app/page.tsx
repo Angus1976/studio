@@ -193,7 +193,7 @@ export default function Home() {
                 <Users className="h-16 w-16 text-accent" />
                 <Bot className="h-16 w-16 text-accent" />
             </div>
-            <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流 C2C 平台</h1>
+            <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流平台</h1>
             <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
                一个连接 AI 数字员工设计者与需求方的市场。在这里，您可以购买、定制或亲自设计和销售 AI 驱动的工作流程。
             </p>
