@@ -44,6 +44,8 @@ const supplierInfoSchema = z.object({
 const productServiceSchema = z.object({
   products: z.array(z.object({
     name: z.string().min(1, "产品名称不能为空"),
+    category: z.string().optional(),
+    sku: z.string().optional(),
     description: z.string().optional(),
     price: z.string().optional(),
     media: z.any().optional(),
@@ -87,7 +89,7 @@ export default function SuppliersPage() {
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ name: "", description: "", price: "" }]
+      products: [{ name: "", category: "", sku: "", description: "", price: "" }]
     }
   });
 
@@ -370,6 +372,28 @@ export default function SuppliersPage() {
                                 </FormItem>
                               )}
                             />
+                            <FormField
+                              control={productServiceForm.control}
+                              name={`products.${index}.category`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>类别</FormLabel>
+                                  <FormControl><Input placeholder="例如：消费电子产品" {...field} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={productServiceForm.control}
+                              name={`products.${index}.sku`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>SKU/服务代码</FormLabel>
+                                  <FormControl><Input placeholder="产品或服务的唯一代码" {...field} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
                         </div>
                          <FormField
                             control={productServiceForm.control}
@@ -418,7 +442,7 @@ export default function SuppliersPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ name: "", description: "", price: "" })}
+                      onClick={() => append({ name: "", category: "", sku: "", description: "", price: "" })}
                     >
                       增加一项
                     </Button>
