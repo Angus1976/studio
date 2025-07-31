@@ -162,7 +162,7 @@ export default function Home() {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="例如: 我想找一个送给科幻迷的礼物..."
-                        className="w-full resize-none pr-36 pl-12 py-3 text-base"
+                        className="w-full resize-none pr-16 pl-12 py-3 text-base"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -178,10 +178,6 @@ export default function Home() {
                         </Button>
                       </div>
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                        <Button variant="outline" size="sm" className="bg-accent/20 border-accent/30 hover:bg-accent/30">
-                            <Wand2 className="mr-2 h-4 w-4" />
-                            定制
-                        </Button>
                         <Button type="submit" size="icon" disabled={isLoading}>
                           <Send className="w-5 h-5" />
                           <span className="sr-only">发送</span>
@@ -349,5 +345,7 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
         </div>
     );
 }
+
+    
 
     
