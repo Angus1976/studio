@@ -5,12 +5,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck } from "lucide-react";
+import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users } from "lucide-react";
 
 type ActionPanelProps = {
   isScenarioReady: boolean;
   onGenerateTaskOrder: () => void;
 };
+
+function RoleManagement() {
+    return (
+        <div>
+            <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                <Users className="h-4 w-4" />
+                角色管理
+            </h4>
+            <div className="space-y-2 text-sm text-muted-foreground">
+                <p><span className="font-semibold text-foreground">平台方:</span> 管理员, 技术工程师</p>
+                <p><span className="font-semibold text-foreground">用户方:</span> 企业租户, 个人用户</p>
+            </div>
+        </div>
+    )
+}
+
 
 export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPanelProps) {
   return (
@@ -22,11 +38,13 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPane
             <span>操作</span>
           </CardTitle>
           <CardDescription>
-            管理您的工作流和付款。
+            管理您的工作流、角色和付款。
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col justify-between gap-6">
           <div className="space-y-6">
+            <RoleManagement />
+            <Separator />
             {/* Prompt Library Connector */}
             <div>
               <Label htmlFor="prompt-id" className="text-sm font-medium flex items-center gap-2 mb-2">
