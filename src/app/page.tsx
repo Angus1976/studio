@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, CornerDownLeft, Star } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, CornerDownLeft, Star, Wand2 } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
@@ -132,9 +132,22 @@ export default function Home() {
                <Bot className="w-10 h-10 text-primary" />
              </div>
             <h1 className="text-3xl font-headline font-bold text-primary-foreground/90">AI 智能匹配</h1>
-            <p className="mt-2 text-muted-foreground max-w-md">
+             <p className="mt-2 text-muted-foreground max-w-md">
               描述您的需求，甚至可以上传图片。我将分析您的请求，并为您推荐最合适的产品或服务。
             </p>
+            {user.role === 'creator' && (
+                 <Card className="mt-8 bg-accent/10 border-accent/20 animate-in fade-in-50">
+                    <CardHeader>
+                        <CardTitle className="font-headline text-accent flex items-center"><Wand2 className="mr-2"/>创意者专属入口</CardTitle>
+                        <CardDescription>直接进入您的创意工作台开始创作</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                            <Link href="/creator-workbench">前往创作者工作台</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
           </div>
         )}
         {messages.map((message) => (
