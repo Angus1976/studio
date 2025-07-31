@@ -61,6 +61,7 @@ const PromptInputSchema = z.object({
 
 const prompt = ai.definePrompt({
   name: 'aiRequirementsNavigatorPrompt',
+  model: 'googleai/gemini-1.5-flash-preview-0514',
   input: {schema: PromptInputSchema},
   output: {schema: AIRequirementsNavigatorOutputSchema},
   prompt: `You are an AI assistant designed to guide users in articulating their needs for AI-driven workflows by collecting a detailed user profile. Analyze their input and extract key requirements effectively. 
