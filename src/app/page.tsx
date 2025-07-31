@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2, ExternalLink } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2, ExternalLink, Eye } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
@@ -306,7 +306,7 @@ function UserProfileDisplay({ profile }: { profile: GenerateUserProfileOutput })
 
 function ProductCard({ product }: { product: Product }) {
     return (
-        <Card className="bg-background/50 border-accent/20 overflow-hidden">
+        <Card className="bg-background/50 border-accent/20 overflow-hidden flex flex-col">
             <div className="relative aspect-video">
                 <Image 
                     src={product.image} 
@@ -316,20 +316,25 @@ function ProductCard({ product }: { product: Product }) {
                     data-ai-hint="product image"
                 />
             </div>
-            <CardHeader className="p-4 pb-2">
+            <div className="flex flex-col flex-grow p-4">
                 <div className="flex items-start justify-between gap-4">
-                    <CardTitle className="text-base font-semibold font-headline">{product.name}</CardTitle>
-                    <div className="text-lg font-bold text-primary whitespace-nowrap">{product.price}</div>
+                    <CardTitle className="text-base font-semibold font-headline flex-grow">{product.name}</CardTitle>
+                    <div className="text-lg font-bold text-primary whitespace-nowrap flex-shrink-0">{product.price}</div>
                 </div>
-                <CardDescription className="text-xs pt-1">{product.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-2">
+                <CardDescription className="text-xs pt-1 mt-1 flex-grow">{product.description}</CardDescription>
+            </div>
+            <CardFooter className="p-4 pt-2 flex gap-2">
+                 <Button size="sm" className="w-full" variant="outline" asChild>
+                    <Link href={product.purchaseUrl} target="_blank" rel="noopener noreferrer">
+                       <Eye className="mr-2 h-4 w-4" /> 查看详情
+                    </Link>
+                </Button>
                 <Button size="sm" className="w-full" asChild>
                     <Link href={product.purchaseUrl} target="_blank" rel="noopener noreferrer">
                        立即购买 <ExternalLink className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>
-            </CardContent>
+            </CardFooter>
         </Card>
     );
 }
