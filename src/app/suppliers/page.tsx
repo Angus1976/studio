@@ -619,6 +619,8 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
             setFile(selectedFile);
+            // You might want to upload the file here and set a URL to the form,
+            // instead of the file object itself. For now, we'll just update the form value.
             form.setValue(`products.${index}.media`, selectedFile);
         } else {
             setFile(null);
@@ -764,5 +766,3 @@ function ProductServiceItem({ form, index, remove }: { form: any, index: number,
         </Card>
     );
 }
-
-    
