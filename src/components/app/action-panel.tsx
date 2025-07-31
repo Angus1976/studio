@@ -23,21 +23,6 @@ type ActionPanelProps = {
   onConnectPrompt: (promptId: string) => void;
 };
 
-function RoleManagement() {
-    return (
-        <div>
-            <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4" />
-                角色管理
-            </h4>
-            <div className="space-y-2 text-sm text-muted-foreground">
-                <p><span className="font-semibold text-foreground">平台方:</span> 管理员, 技术工程师</p>
-                <p><span className="font-semibold text-foreground">用户方:</span> 企业租户, 个人用户</p>
-            </div>
-        </div>
-    )
-}
-
 function SystemCapabilities() {
     const { toast } = useToast();
     const capabilities = [
@@ -130,8 +115,6 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder, onConnectPro
         </CardHeader>
         <CardContent className="flex-grow flex flex-col justify-between gap-6">
           <div className="space-y-6">
-            <RoleManagement />
-            <Separator />
             <SystemCapabilities />
             <Separator />
             {/* Prompt Library Connector */}
