@@ -243,6 +243,237 @@ function TenantManagementDialog() {
   );
 }
 
+// --- User Management ---
+
+const userSchema = z.object({
+  name: z.string().min(2, { message: "用户姓名至少需要2个字符。" }),
+  email: z.string().email({ message: "请输入有效的邮箱地址。" }),
+  role: z.enum(["个人用户", "技术工程师"]),
+  status: z.enum(["活跃", "待审核", "已禁用"]),
+});
+
+type IndividualUser = z.infer<typeof userSchema> & {
+  id: string;
+  registeredDate: string;
+};
+
+const initialUsers: IndividualUser[] = [
+    { id: "user-1", name: "李四", email: "lisi@example.com", registeredDate: "2024-07-21", role: "个人用户", status: "活跃" },
+    { id: "user-2", name: "王五", email: "wangwu@example.com", registeredDate: "2024-07-20", role: "技术工程师", status: "待审核" },
+    { id: "user-3", name: "赵六", email: "zhaoliu@example.com", registeredDate: "2024-07-19", role: "个人用户", status: "已禁用" },
+];
+
+function UserForm({ user, onSubmit }: { user?: IndividualUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void }) {
+    const form = useForm<z.infer<typeof userSchema>>({
+        resolver: zodResolver(userSchema),
+        defaultValues: user || { name: "", email: "", role: "个人用户", status: "待审核" },
+    });
+
+    const handleSubmit = (values: z.infer<typeof userSchema>) => {
+        onSubmit(values);
+        form.reset();
+    };
+    
+    return (
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>姓名</FormLabel>
+                            <FormControl><Input placeholder="例如：张三" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>邮箱</FormLabel>
+                            <FormControl><Input placeholder="user@example.com" {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>角色</FormLabel>
+                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="选择角色" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="个人用户">个人用户</SelectItem>
+                                    <SelectItem value="技术工程师">技术工程师</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>状态</FormLabel>
+                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="选择状态" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="活跃">活跃</SelectItem>
+                                    <SelectItem value="待审核">待审核</SelectItem>
+                                    <SelectItem value="已禁用">已禁用</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="submit">保存用户</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </form>
+        </Form>
+    );
+}
+
+function UserManagementDialog() {
+  const [users, setUsers] = useState<IndividualUser[]>(initialUsers);
+  const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleAddOrUpdateUser = (values: z.infer<typeof userSchema>) => {
+    if (editingUser) {
+      // Update
+      const updatedUsers = users.map(u => u.id === editingUser.id ? { ...u, ...values } : u);
+      setUsers(updatedUsers);
+      toast({ title: "用户已更新", description: `${values.name} 的信息已更新。` });
+    } else {
+      // Add
+      const newUser: IndividualUser = {
+        ...values,
+        id: `user-${Date.now()}`,
+        registeredDate: new Date().toISOString().split('T')[0],
+      };
+      setUsers([...users, newUser]);
+      toast({ title: "用户已添加", description: `${values.name} 已成功添加到平台。` });
+    }
+    setEditingUser(null);
+    setIsFormOpen(false);
+  };
+  
+  const handleEdit = (user: IndividualUser) => {
+    setEditingUser(user);
+    setIsFormOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingUser(null);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (userId: string) => {
+    setUsers(users.filter(u => u.id !== userId));
+    toast({ title: "用户已删除", variant: "destructive" });
+  };
+  
+  return (
+    <Dialog>
+        <DialogTrigger asChild>
+            <Button>管理个人用户</Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl">
+            <DialogHeader>
+                <DialogTitle>个人用户管理</DialogTitle>
+                <DialogDescription>管理平台上的所有个人用户账户，包括普通用户和技术工程师。</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div className="md:col-span-2">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <CardTitle className="text-lg">用户列表</CardTitle>
+                             <Button size="sm" onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4"/> 添加新用户</Button>
+                        </CardHeader>
+                        <CardContent>
+                            <ScrollArea className="h-[400px]">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>用户</TableHead>
+                                            <TableHead>角色</TableHead>
+                                            <TableHead>状态</TableHead>
+                                            <TableHead className="text-right">操作</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {users.map(user => (
+                                            <TableRow key={user.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{user.name}</div>
+                                                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                                                </TableCell>
+                                                 <TableCell>{user.role}</TableCell>
+                                                <TableCell>
+                                                     <Badge variant={user.status === '活跃' ? 'default' : user.status === '待审核' ? 'secondary' : 'destructive'}>
+                                                        {user.status}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(user)}><Pencil className="h-4 w-4"/></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDelete(user.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="md:col-span-1">
+                    <Card>
+                         <CardHeader>
+                            <CardTitle className="text-lg">{editingUser ? '编辑用户' : '添加新用户'}</CardTitle>
+                            <CardDescription>{editingUser ? '修改用户信息。' : '添加一个新用户到平台。'}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           {isFormOpen || editingUser ? (
+                                <UserForm user={editingUser} onSubmit={handleAddOrUpdateUser} />
+                            ) : (
+                                <div className="text-center text-sm text-muted-foreground py-10">
+                                    <p>点击“添加新用户”或选择一个现有用户进行编辑。</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+            <DialogFooter>
+                 <DialogClose asChild>
+                    <Button variant="outline">关闭</Button>
+                </DialogClose>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+  );
+}
+
 
 // --- Placeholder Dialog ---
 
@@ -355,6 +586,8 @@ export function AdminDashboard() {
                         <CardFooter>
                             {panel.id === 'tenants' ? (
                                 <TenantManagementDialog />
+                            ) : panel.id === 'users' ? (
+                                <UserManagementDialog />
                             ) : (
                                 <PlaceholderDialog
                                     triggerButtonText={panel.buttonText}
@@ -403,5 +636,7 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    
 
     
