@@ -14,6 +14,7 @@ import { promptLibraryConnector } from './prompt-library-connector';
 
 const DigitalEmployeeInputSchema = z.object({
   promptId: z.string().describe('The ID of the prompt to use from the library.'),
+  promptContent: z.string().optional().describe('Optional: The raw content of the prompt, used for testing new prompts without saving them.'),
   userContext: z.string().describe('The user-provided context or question for the AI to act upon.'),
 });
 
@@ -37,14 +38,22 @@ const digitalEmployeeFlow = ai.defineFlow(
     inputSchema: DigitalEmployeeInputSchema,
     outputSchema: DigitalEmployeeOutputSchema,
   },
-  async ({ promptId, userContext }) => {
-    // 1. Retrieve the prompt content from the library using its ID
-    const { promptContent } = await promptLibraryConnector({ promptId });
+  async ({ promptId, promptContent, userContext }) => {
+    let finalPromptContent: string;
 
-    // 2. Define a dynamic prompt using the retrieved content
+    // 1. If promptContent is provided, use it directly (for testing new prompts).
+    //    Otherwise, retrieve the prompt from the library using its ID.
+    if (promptContent) {
+      finalPromptContent = promptContent;
+    } else {
+      const { promptContent: retrievedContent } = await promptLibraryConnector({ promptId });
+      finalPromptContent = retrievedContent;
+    }
+
+    // 2. Define a dynamic prompt using the determined content
     const dynamicPrompt = ai.definePrompt({
         name: `dynamicPromptFor_${promptId}`,
-        prompt: `${promptContent}
+        prompt: `${finalPromptContent}
 
 User Context:
 {{{userContext}}}

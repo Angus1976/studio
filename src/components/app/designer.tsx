@@ -57,6 +57,7 @@ export function Designer() {
   const [testContext, setTestContext] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [testResult, setTestResult] = useState('');
+  const [testPromptId, setTestPromptId] = useState('');
   const { toast } = useToast();
   
   const handleInputChange = (field: keyof typeof newScenario, value: string) => {
@@ -64,45 +65,46 @@ export function Designer() {
   };
 
   const handlePublishAndTest = async () => {
-    if (!newScenario.title || !newScenario.prompt || !testContext) {
+    const useNewPrompt = !testPromptId;
+    
+    if (useNewPrompt && (!newScenario.title || !newScenario.prompt)) {
         toast({
             variant: 'destructive',
             title: '缺少信息',
-            description: '请填写能力标题、核心提示词和测试内容。',
+            description: '请填写能力标题和核心提示词，或提供一个已有的提示ID。',
         });
         return;
     }
 
+    if (!testContext) {
+        toast({
+            variant: 'destructive',
+            title: '缺少测试内容',
+            description: '请输入需要AI处理的具体内容来测试效果。',
+        });
+        return;
+    }
+
+
     setIsLoading(true);
     setTestResult('');
-
-    // In a real app, this would save to a database and get a real ID.
-    // For now, we'll generate a random ID for testing.
-    const newId = `custom-${Math.random().toString(36).substr(2, 9)}`;
-    const createdScenario = { ...newScenario, id: newId };
-    
-    // Add to the local "database" of prompts for the new flow to use
-    // NOTE: This is a temporary solution for demonstration.
-    // In a real app, the `digital-employee` flow would fetch from a DB.
-    // We are adding it to the list of scenarios to simulate this.
-    // We would need to update the prompt-library-connector to read from a shared store.
-    // For now, let's just test the flow.
     
     try {
-        // Here we would ideally register the new prompt in the library.
-        // For this demo, we'll call the `digitalEmployee` flow directly
-        // with the prompt content. To do that, we would need to refactor the flow.
-        // Let's assume for now that publishing makes it available via an ID.
-        // We will just test with an existing ID for now to prove the concept.
-        
-        toast({
-            title: "场景已发布 (模拟)",
-            description: `能力 "${newScenario.title}" 已添加到库中。`,
-        });
+        if (useNewPrompt) {
+            toast({
+                title: "正在测试新提示...",
+                description: `能力 "${newScenario.title}" 正在被测试。`,
+            });
+        } else {
+             toast({
+                title: "正在测试已有提示...",
+                description: `正在调用提示 ID: "${testPromptId}"。`,
+            });
+        }
 
-        // We will use the new flow to test the prompt
         const result = await digitalEmployee({
-            promptId: 'recruitment-expert', // Using a known ID for testing
+            promptId: useNewPrompt ? `new-prompt-${Date.now()}` : testPromptId,
+            promptContent: useNewPrompt ? newScenario.prompt : undefined,
             userContext: testContext,
         });
 
@@ -184,9 +186,20 @@ export function Designer() {
                     </div>
                     <div>
                          <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
-                         <Textarea id="scenario-prompt" placeholder="定义数字员工的核心指令..." rows={5} value={newScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
+                         <Textarea id="scenario-prompt" placeholder="创建新的提示词，或留空以使用下面的ID..." rows={5} value={newScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
                     </div>
                     
+                    <div className='flex items-center gap-2'>
+                        <Separator className='flex-1' />
+                        <span className='text-xs text-muted-foreground'>或</span>
+                        <Separator className='flex-1' />
+                    </div>
+                    
+                     <div>
+                        <Label htmlFor="prompt-id">调用已有提示词ID进行测试</Label>
+                        <Input id="prompt-id" placeholder="例如: recruitment-expert" value={testPromptId} onChange={e => setTestPromptId(e.target.value)} />
+                    </div>
+
                     <Separator />
 
                     <div>
