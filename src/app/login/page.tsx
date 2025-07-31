@@ -18,6 +18,7 @@ type DemoRole = {
   group: 'platform' | 'user';
 };
 
+// This now matches the labels in AuthForm for consistency
 const demoRoles: DemoRole[] = [
     { key: 'admin', name: '平台方 - 管理员', icon: Shield, group: 'platform' },
     { key: 'engineer', name: '平台方 - 技术工程师', icon: Code, group: 'platform' },
@@ -34,10 +35,10 @@ export default function LoginPage() {
   const handleLogin = async (values: any) => {
     setIsLoading(true);
     console.log("登录信息:", values);
-    // 在此处添加您的登录逻辑
-    // 例如: const response = await api.login(values);
+    // In a real app, you'd have your login logic here
+    // e.g. const response = await api.login(values);
     setTimeout(() => {
-        // Find the full role name from the value
+        // Find the full role name from the key
         const role = demoRoles.find(r => r.key === values.role);
         
         localStorage.setItem('isAuthenticated', 'true');
@@ -47,7 +48,7 @@ export default function LoginPage() {
             description: "欢迎回来！",
         });
         setIsLoading(false);
-        // 登录成功后重定向到主页
+        // Redirect to homepage on successful login
         router.push('/');
     }, 1000);
   };

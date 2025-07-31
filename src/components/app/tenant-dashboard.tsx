@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const usageData = [
@@ -44,27 +44,27 @@ const procurementItems = [
     { title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础" },
     { title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: "Cloud", tag: "IT设施" },
     { title: "云存储", description: "大容量、高可靠性的对象存储和文件存储服务。", icon: "Cpu", tag: "IT设施" },
-    { title: "LLM Token 包", description: "批量采购大语言模型调用 Token，成本更优。", icon: "BrainCircuit", tag: "AI能力" },
+    { title: "LLM Token 包", description: "批量采购大语言模型调用 Token，成本更优。", icon: "Cpu", tag: "AI能力" },
     { title: "IT 设备和服务", description: "提供办公电脑、服务器等硬件及运维服务。", icon: "Briefcase", tag: "硬件与服务" },
     { title: "网络租赁", description: "高速、稳定的企业专线和网络解决方案。", icon: "Router", tag: "IT设施" },
-    { title: "RPA 流程设计", description: "定制化设计机器人流程自动化解决方案。", icon: "ToyBrick", tag: "专业服务" },
+    { title: "RPA 流程设计", description: "定制化设计机器人流程自动化解决方案。", icon: "Palette", tag: "专业服务" },
     { title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: "Bot", tag: "AI能力" },
 ]
 
 const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
     const Icon = (LucideReact as any)[name] as React.ElementType;
-    if (!Icon) return null;
+    if (!Icon) return <LucideReact.Package {...props} />; // Fallback icon
     return <Icon {...props} />;
 };
 
 
 export function TenantDashboard() {
   return (
-    <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto">
+    <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
         <h1 className="text-3xl font-bold font-headline">企业仪表盘</h1>
         
         <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
                 <TabsTrigger value="overview"><Activity className="mr-2"/>概览</TabsTrigger>
                 <TabsTrigger value="procurement"><ShoppingCart className="mr-2"/>集采市场</TabsTrigger>
                 <TabsTrigger value="billing"><DollarSign className="mr-2"/>账单与发票</TabsTrigger>
@@ -81,12 +81,12 @@ export function TenantDashboard() {
                                 <CardDescription>过去六个月的每月 Token 总消耗量。</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[300px] pl-2">
-                                <ChartContainer config={chartConfig}>
+                                <ChartContainer config={chartConfig} className="w-full h-full">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={usageData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                        <BarChart data={usageData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                                             <CartesianGrid vertical={false} />
                                             <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} />
-                                            <YAxis tickFormatter={(value) => `${Number(value) / 1000}k`} />
+                                            <YAxis tickFormatter={(value) => `${Number(value) / 1000}k`} tickLine={false} axisLine={false} width={30}/>
                                             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                                             <Bar dataKey="tokens" fill="var(--color-tokens)" radius={4} />
                                         </BarChart>
