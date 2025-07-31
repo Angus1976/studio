@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput } from "@/ai/flows/ai-requirements-navigator";
 import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
@@ -12,14 +13,33 @@ import { ScenarioArchitectView } from "@/components/app/scenario-architect-view"
 import { WorkflowViewer } from "@/components/app/workflow-viewer";
 import { ActionPanel } from "@/components/app/action-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoaderCircle, Wand2 } from "lucide-react";
+import { LoaderCircle, Wand2, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type ConversationMessage = {
   role: "user" | "assistant";
   content: string;
 };
 
+// 模拟检查用户是否已登录
+// 在真实应用中，这应该来自您的认证上下文或会话管理
+const useAuth = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    useEffect(() => {
+        // 在真实应用中，您会在这里检查有效的会话或令牌
+        const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated');
+        // 为了演示，我们在2秒后将其设置为true
+        setTimeout(() => {
+             setIsAuthenticated(!!loggedIn);
+        }, 500);
+    }, [])
+
+    return { isAuthenticated };
+};
+
+
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [extractedRequirements, setExtractedRequirements] = useState<string | undefined>(undefined);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
@@ -29,14 +49,16 @@ export default function Home() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Start with a welcome message from the assistant
-    setConversationHistory([
-      {
-        role: "assistant",
-        content: "你好！我在这里帮助您定义 AI 驱动工作流的需求。首先，您能描述一下您希望自动化或改进的任务或流程吗？",
-      },
-    ]);
-  }, []);
+    if (isAuthenticated) {
+        // Start with a welcome message from the assistant
+        setConversationHistory([
+        {
+            role: "assistant",
+            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求。首先，您能描述一下您希望自动化或改进的任务或流程吗？",
+        },
+        ]);
+    }
+  }, [isAuthenticated]);
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -100,6 +122,31 @@ export default function Home() {
         title: "任务订单已生成",
         description: "您的任务订单已成功创建。",
       });
+  }
+
+  if (!isAuthenticated) {
+    return (
+         <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
+            <Wand2 className="mx-auto h-16 w-16 text-accent mb-6" />
+            <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流</h1>
+            <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
+                请先登录或注册以开始构建、管理和优化您的 AI 驱动的工作流程。
+            </p>
+            <div className="flex gap-4">
+                <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    <Link href="/login">
+                        <LogIn className="mr-2" />
+                        登录
+                    </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                    <Link href="/signup">
+                       注册
+                    </Link>
+                </Button>
+            </div>
+        </div>
+    )
   }
 
   return (
