@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput } from "@/ai/flows/ai-requirements-navigator";
 import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
+import { promptLibraryConnector } from "@/ai/flows/prompt-library-connector";
 
 import { AppHeader } from "@/components/app/header";
 import { RequirementsNavigator } from "@/components/app/requirements-navigator";
@@ -28,7 +29,7 @@ const useAuth = () => {
     useEffect(() => {
         // 在真实应用中，您会在这里检查有效的会话或令牌
         const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated');
-        // 为了演示，我们在2秒后将其设置为true
+        // 为了演示，我们将其设置为true
         setTimeout(() => {
              setIsAuthenticated(!!loggedIn);
         }, 500);
@@ -122,7 +123,33 @@ export default function Home() {
         title: "任务订单已生成",
         description: "您的任务订单已成功创建。",
       });
-  }
+  };
+
+  const handleConnectPrompt = async (promptId: string) => {
+    if (!promptId) {
+        toast({
+            variant: "destructive",
+            title: "错误",
+            description: "请输入提示ID。",
+        });
+        return;
+    }
+    try {
+        const result = await promptLibraryConnector({ promptId });
+        toast({
+            title: "提示已连接",
+            description: `成功获取提示: "${result.promptTitle}"`,
+        });
+        console.log("获取的提示内容:", result.promptContent);
+    } catch (error) {
+        console.error("连接提示库出错:", error);
+        toast({
+            variant: "destructive",
+            title: "连接失败",
+            description: "无法从库中获取提示。",
+        });
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -197,7 +224,11 @@ export default function Home() {
 
           {/* Right Column: Actions */}
           <div className="lg:col-span-3 xl:col-span-3 h-full">
-            <ActionPanel isScenarioReady={!!scenarioOutput} onGenerateTaskOrder={handleTaskOrderGeneration} />
+            <ActionPanel
+              isScenarioReady={!!scenarioOutput}
+              onGenerateTaskOrder={handleTaskOrderGeneration}
+              onConnectPrompt={handleConnectPrompt}
+            />
           </div>
         </div>
       </main>

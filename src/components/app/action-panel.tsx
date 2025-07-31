@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { ArrowRight, ClipboardCheck, ExternalLink, Link, ShieldCheck, Users } fr
 type ActionPanelProps = {
   isScenarioReady: boolean;
   onGenerateTaskOrder: () => void;
+  onConnectPrompt: (promptId: string) => void;
 };
 
 function RoleManagement() {
@@ -28,7 +30,13 @@ function RoleManagement() {
 }
 
 
-export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPanelProps) {
+export function ActionPanel({ isScenarioReady, onGenerateTaskOrder, onConnectPrompt }: ActionPanelProps) {
+  const [promptId, setPromptId] = useState("");
+
+  const handleConnectClick = () => {
+    onConnectPrompt(promptId);
+  };
+
   return (
     <div className="flex flex-col gap-6 h-full">
       <Card className="flex-grow flex flex-col">
@@ -52,8 +60,13 @@ export function ActionPanel({ isScenarioReady, onGenerateTaskOrder }: ActionPane
                 提示库连接器
               </Label>
               <div className="flex items-center gap-2">
-                <Input id="prompt-id" placeholder="输入提示 ID" />
-                <Button variant="outline" size="icon">
+                <Input 
+                  id="prompt-id" 
+                  placeholder="输入提示 ID" 
+                  value={promptId}
+                  onChange={(e) => setPromptId(e.target.value)}
+                />
+                <Button variant="outline" size="icon" onClick={handleConnectClick}>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
