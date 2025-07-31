@@ -11,6 +11,7 @@ type Scenario = {
   description: string;
   industry: string;
   task: string;
+  prompt: string;
 };
 
 type ScenarioCardProps = {
@@ -19,10 +20,12 @@ type ScenarioCardProps = {
 
 export function ScenarioCard({ scenario }: ScenarioCardProps) {
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow">
+    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow min-h-[220px]">
       <CardHeader>
         <CardTitle className="text-lg font-headline">{scenario.title}</CardTitle>
-        <CardDescription className="text-xs pt-1">{scenario.description}</CardDescription>
+        <CardDescription className="text-xs pt-1 h-10 overflow-hidden text-ellipsis">
+          {scenario.description}
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
         <div className="flex flex-wrap gap-2">
@@ -30,7 +33,7 @@ export function ScenarioCard({ scenario }: ScenarioCardProps) {
           <Badge variant="outline">{scenario.task}</Badge>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end gap-2 mt-auto">
+      <CardFooter className="flex justify-end gap-2 mt-auto pt-4">
         <Button variant="ghost" size="icon" className="h-8 w-8">
             <Pencil className="h-4 w-4" />
         </Button>
