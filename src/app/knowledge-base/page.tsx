@@ -4,7 +4,59 @@
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Database } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Database, Search, ListFilter, FilePenLine, Trash2, PlusCircle, Eye } from "lucide-react";
+
+// Mock data for the knowledge base
+const knowledgeBaseEntries = [
+  {
+    id: "kb-001",
+    name: "智能家庭中心 Pro",
+    category: "消费电子产品",
+    tags: ["智能家居", "语音助手", "Zigbee"],
+    lastUpdated: "2024-07-28",
+  },
+  {
+    id: "kb-002",
+    name: "静音大师洗衣机",
+    category: "家用电器",
+    tags: ["节能", "直驱变频", "10公斤"],
+    lastUpdated: "2024-07-27",
+  },
+  {
+    id: "kb-003",
+    name: "云端数据备份服务",
+    category: "软件服务",
+    tags: ["SaaS", "数据安全", "多设备同步"],
+    lastUpdated: "2024-07-26",
+  },
+  {
+    id: "kb-004",
+    name: "个性化营养咨询",
+    category: "健康服务",
+    tags: ["在线咨询", "营养师", "定制方案"],
+    lastUpdated: "2024-07-25",
+  },
+    {
+    id: "kb-005",
+    name: "便携式咖啡机",
+    category: "厨房小电",
+    tags: ["户外", "旅行", "手动"],
+    lastUpdated: "2024-07-24",
+  },
+];
+
 
 export default function KnowledgeBasePage() {
     const { user } = useAuth();
@@ -32,16 +84,91 @@ export default function KnowledgeBasePage() {
                  <div className="p-3 bg-primary/10 rounded-full mb-4 border-2 border-primary/20">
                     <Database className="w-8 h-8 text-primary" />
                 </div>
-                <h1 className="font-headline text-3xl md:text-4xl font-bold">知识库管理</h1>
+                <h1 className="font-headline text-3xl md:text-4xl font-bold">知识库管理系统</h1>
                 <p className="mt-2 max-w-2xl text-muted-foreground">
-                    在此增、改、删知识条目。知识库支持标签化管理，并可由AI辅助进行维护，为智能匹配和搜索提供数据基础。
+                    在此增、改、删知识条目。知识库支持标签化管理，并可由AI辅助进行维护，为智能匹配和智能搜索提供数据基础。
                 </p>
             </div>
 
-            <div className="mx-auto mt-8 max-w-7xl text-center">
-                {/* Future implementation of knowledge base management UI will go here */}
-                <p className="text-muted-foreground">(功能开发中...)</p>
-            </div>
+            <Card className="mx-auto mt-8 max-w-7xl">
+                 <CardHeader>
+                    <CardTitle>知识条目列表</CardTitle>
+                    <CardDescription>管理所有产品、服务及相关知识。</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between gap-4 mb-6">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="搜索条目名称或标签..." className="pl-10" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="gap-1">
+                                        <ListFilter className="h-3.5 w-3.5" />
+                                        <span>筛选</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>按类别筛选</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuCheckboxItem checked>消费电子产品</DropdownMenuCheckboxItem>
+                                    <DropdownMenuCheckboxItem>家用电器</DropdownMenuCheckboxItem>
+                                    <DropdownMenuCheckboxItem>软件服务</DropdownMenuCheckboxItem>
+                                    <DropdownMenuCheckboxItem>健康服务</DropdownMenuCheckboxItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                             <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                新增条目
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>条目名称</TableHead>
+                                    <TableHead>类别</TableHead>
+                                    <TableHead>标签</TableHead>
+                                    <TableHead>最后更新</TableHead>
+                                    <TableHead className="text-right">操作</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {knowledgeBaseEntries.map((entry) => (
+                                    <TableRow key={entry.id}>
+                                        <TableCell className="font-medium">{entry.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">{entry.category}</Badge>
+                                        </TableCell>
+                                        <TableCell className="space-x-1">
+                                            {entry.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                                        </TableCell>
+                                        <TableCell>{entry.lastUpdated}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Button variant="ghost" size="icon">
+                                                    <Eye className="h-4 w-4" />
+                                                    <span className="sr-only">查看详情</span>
+                                                </Button>
+                                                <Button variant="ghost" size="icon">
+                                                    <FilePenLine className="h-4 w-4" />
+                                                    <span className="sr-only">编辑</span>
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                    <span className="sr-only">删除</span>
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
         </main>
     );
 }
