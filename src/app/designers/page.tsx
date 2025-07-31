@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, Briefcase, PlusCircle, CheckCircle, Circle } from "lucide-react";
+import { Users, Briefcase, PlusCircle, CheckCircle, Circle, MessageSquare } from "lucide-react";
 
 // Mock data for creative designers
 const designers = [
@@ -103,9 +103,21 @@ export default function DesignersPage() {
                             </div>
                         </CardContent>
                         <div className="p-4 pt-0">
-                           <Button className="w-full" disabled={designer.status === 'offline'}>
-                             立即预约
-                           </Button>
+                           {designer.status === 'online' ? (
+                               <div className="flex gap-2">
+                                   <Button className="w-full">
+                                       立即预约
+                                   </Button>
+                                   <Button className="w-full" variant="secondary">
+                                       <MessageSquare className="mr-2 h-4 w-4" />
+                                       立即沟通
+                                   </Button>
+                               </div>
+                           ) : (
+                               <Button className="w-full" disabled>
+                                   立即预约
+                               </Button>
+                           )}
                         </div>
                     </Card>
                 ))}
