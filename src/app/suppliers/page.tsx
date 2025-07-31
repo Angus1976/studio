@@ -160,7 +160,7 @@ export default function SuppliersPage() {
   };
 
   const downloadTemplate = () => {
-    const header = "name,category\n";
+    const header = "供应商全称,供应商简称,供应商简介,所在区域,详细地址,成立日期,注册资本,统一社会信用代码,联系人,职务,手机,邮箱,商品/服务名称,商品/服务描述,价格,类别\n";
     const blob = new Blob([header], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -507,4 +507,3 @@ export default function SuppliersPage() {
     </main>
   );
 }
-
