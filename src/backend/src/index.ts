@@ -19,7 +19,7 @@ app.get('/', (req: Request, res: Response) => {
   res.send('AI SmartMatch Backend is running!');
 });
 
-// Example API endpoint
+// API Health Check
 app.get('/api/health', async (req: Request, res: Response) => {
   try {
     const client = await pool.connect();
@@ -29,6 +29,83 @@ app.get('/api/health', async (req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Database connection failed', error: err });
   }
+});
+
+// --- User Management API Endpoints ---
+
+// Get all users
+app.get('/api/users', async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get a single user by ID
+app.get('/api/users/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update a user's role, status, or rating
+app.put('/api/users/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { role, status, rating } = req.body;
+
+    // Basic validation
+    if (!role && !status && rating === undefined) {
+        return res.status(400).json({ error: 'At least one field (role, status, rating) must be provided for update.' });
+    }
+
+    try {
+        const currentUserResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+        if (currentUserResult.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const currentUser = currentUserResult.rows[0];
+        const updatedUser = {
+            role: role || currentUser.role,
+            status: status || currentUser.status,
+            rating: rating !== undefined ? rating : currentUser.rating,
+        };
+
+        const result = await pool.query(
+            'UPDATE users SET role = $1, status = $2, rating = $3 WHERE id = $4 RETURNING *',
+            [updatedUser.role, updatedUser.status, updatedUser.rating, id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Delete a user
+app.delete('/api/users/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const deleteResult = await pool.query('DELETE FROM users WHERE id = $1 RETURNING *', [id]);
+        if (deleteResult.rowCount === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.status(200).json({ message: 'User deleted successfully', user: deleteResult.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 
