@@ -22,7 +22,7 @@ import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-
+import { EntryFormDialog, type KnowledgeBaseFormValues } from "./entry-form";
 
 export type KnowledgeBaseEntry = {
   id: string;
@@ -41,6 +41,9 @@ export default function KnowledgeBasePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [categories, setCategories] = useState<string[]>([]);
+    
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingEntry, setEditingEntry] = useState<KnowledgeBaseEntry | null>(null);
     
     const [selectedEntry, setSelectedEntry] = useState<KnowledgeBaseEntry | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -93,6 +96,36 @@ export default function KnowledgeBasePage() {
             console.error("Failed to delete entry:", error);
             toast({ title: "删除失败", description: "无法删除该条目，请稍后重试。", variant: "destructive" });
         }
+    };
+
+    const handleFormSubmit = async (data: KnowledgeBaseFormValues) => {
+        try {
+            if (editingEntry) {
+                // Update existing entry
+                await api.put(`/api/knowledge-base/${editingEntry.id}`, data);
+                toast({ title: "更新成功", description: `条目 “${data.name}” 已更新。` });
+            } else {
+                // Create new entry
+                await api.post('/api/knowledge-base', data);
+                toast({ title: "新增成功", description: `条目 “${data.name}” 已添加到知识库。` });
+            }
+            setIsFormOpen(false);
+            setEditingEntry(null);
+            await fetchKnowledgeBase(); // Refresh list
+        } catch (error) {
+            console.error("Failed to save entry:", error);
+            toast({ title: "保存失败", description: "无法保存条目，请稍后重试。", variant: "destructive" });
+        }
+    };
+
+    const openCreateForm = () => {
+        setEditingEntry(null);
+        setIsFormOpen(true);
+    };
+
+    const openEditForm = (entry: KnowledgeBaseEntry) => {
+        setEditingEntry(entry);
+        setIsFormOpen(true);
     };
 
     if (!user || user.role !== 'admin') {
@@ -182,7 +215,7 @@ export default function KnowledgeBasePage() {
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
-                                 <Button>
+                                 <Button onClick={openCreateForm}>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     新增条目
                                 </Button>
@@ -232,7 +265,7 @@ export default function KnowledgeBasePage() {
                                                             <Eye className="h-4 w-4" />
                                                             <span className="sr-only">查看详情</span>
                                                         </Button>
-                                                        <Button variant="ghost" size="icon">
+                                                        <Button variant="ghost" size="icon" onClick={() => openEditForm(entry)}>
                                                             <FilePenLine className="h-4 w-4" />
                                                             <span className="sr-only">编辑</span>
                                                         </Button>
@@ -281,6 +314,14 @@ export default function KnowledgeBasePage() {
                 onClose={() => setSelectedEntry(null)}
                 item={formatEntryForDialog(selectedEntry)}
             />
+            <EntryFormDialog
+                isOpen={isFormOpen}
+                onClose={() => { setIsFormOpen(false); setEditingEntry(null); }}
+                onSubmit={handleFormSubmit}
+                defaultValues={editingEntry}
+            />
         </>
     );
 }
+
+    
