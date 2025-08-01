@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import api from './api';
 
 export interface User {
   id: string;
@@ -15,6 +16,7 @@ export interface User {
   rating: number; // 1 to 5
 }
 
+// This is now only a fallback for initial load or if API fails
 export const mockUsers: User[] = [
   {
     id: '1',
@@ -83,32 +85,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        // Find the user in mockUsers to get the latest data structure
-        const fullUser = mockUsers.find(u => u.id === parsedUser.id);
-        setUser(fullUser || null);
-      }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('currentUser');
-    } finally {
-      setIsLoading(false);
-    }
+    const loadUser = async () => {
+        try {
+            const storedUser = localStorage.getItem('currentUser');
+            if (storedUser) {
+                const parsedUser = JSON.parse(storedUser);
+                // Fetch the latest user data from the backend to ensure it's fresh
+                const response = await api.get<User>(`/api/users/${parsedUser.id}`);
+                if (response.data) {
+                    setUser(response.data);
+                } else {
+                    // If user not found in DB, clear from local storage
+                    localStorage.removeItem('currentUser');
+                }
+            }
+        } catch (error) {
+            console.error("Failed to parse or fetch user:", error);
+            localStorage.removeItem('currentUser');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    loadUser();
   }, []);
 
-  const login = (userId: string) => {
-    const userToLogin = mockUsers.find((u) => u.id === userId);
-    if (userToLogin) {
-      if (userToLogin.status !== 'active') {
-        alert(`登录失败：该账户当前状态为 "${userToLogin.status}"`);
-        return;
-      }
-      setUser(userToLogin);
-      localStorage.setItem('currentUser', JSON.stringify(userToLogin));
-      router.push('/');
+  const login = async (userId: string) => {
+    try {
+        const response = await api.get<User>(`/api/users/${userId}`);
+        const userToLogin = response.data;
+
+        if (userToLogin) {
+            if (userToLogin.status !== 'active') {
+                alert(`登录失败：该账户当前状态为 "${userToLogin.status}"`);
+                return;
+            }
+            setUser(userToLogin);
+            localStorage.setItem('currentUser', JSON.stringify(userToLogin));
+            router.push('/');
+        } else {
+             alert(`登录失败：未找到用户`);
+        }
+    } catch (error) {
+        console.error("Login failed:", error);
+        alert("登录时发生错误，请稍后重试。");
     }
   };
 

@@ -7,17 +7,37 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
+import { LoaderCircle } from "lucide-react";
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { login, user, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
+  const [loginOptions, setLoginOptions] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
+    if (!isAuthLoading && user) {
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, router, isAuthLoading]);
+
+  useEffect(() => {
+    const fetchLoginOptions = async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get<User[]>('/api/users');
+            setLoginOptions(response.data);
+        } catch (error) {
+            console.error("Failed to fetch login options, using mock data.", error);
+            setLoginOptions(mockUsers);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchLoginOptions();
+  }, []);
 
   const getRoleBadgeVariant = (role: User['role']): "destructive" | "secondary" | "default" | "outline" => {
     switch (role) {
@@ -45,6 +65,14 @@ export default function LoginPage() {
     }
   };
 
+  if (isLoading || isAuthLoading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <LoaderCircle className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
+
   return (
     <main className="flex flex-col items-center justify-center min-h-[calc(100svh-4rem)] p-4 md:p-6">
       <div className="max-w-5xl w-full">
@@ -56,7 +84,7 @@ export default function LoginPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {mockUsers.map((mockUser) => (
+          {loginOptions.map((mockUser) => (
             <Card key={mockUser.id} className="flex flex-col">
               <CardHeader className="items-center text-center">
                 <Avatar className="w-20 h-20 mb-4 border-4 border-muted">
@@ -83,5 +111,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    

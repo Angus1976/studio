@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
-import { useAuth, mockUsers, User as AuthUser } from "@/lib/auth";
+import { useState, useEffect } from "react";
+import { useAuth, User as AuthUser } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,19 +11,47 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, UserCog, Save, MoreHorizontal, Star, UserX, UserCheck, ShieldOff, Trash2 } from "lucide-react";
+import { AlertTriangle, UserCog, Save, MoreHorizontal, Star, UserX, UserCheck, ShieldOff, Trash2, LoaderCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
-type User = AuthUser & {
-  editableRole: AuthUser['role'];
-};
 
 export default function PermissionsPage() {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
-    const [users, setUsers] = useState<User[]>(
-        mockUsers.map(u => ({ ...u, editableRole: u.role }))
-    );
+    const [users, setUsers] = useState<AuthUser[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // State to track role changes before saving
+    const [editableRoles, setEditableRoles] = useState<Record<string, AuthUser['role']>>({});
+
+    const fetchUsers = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const response = await api.get<AuthUser[]>('/api/users');
+            setUsers(response.data);
+            // Initialize editable roles
+            const initialRoles: Record<string, AuthUser['role']> = {};
+            response.data.forEach(u => {
+                initialRoles[u.id] = u.role;
+            });
+            setEditableRoles(initialRoles);
+        } catch (err) {
+            console.error("Failed to fetch users:", err);
+            setError("无法加载用户列表，请稍后重试。");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (currentUser?.role === 'admin') {
+            fetchUsers();
+        }
+    }, [currentUser]);
+
 
     if (!currentUser || currentUser.role !== 'admin') {
         return (
@@ -41,43 +69,54 @@ export default function PermissionsPage() {
             </div>
         );
     }
-
-    const handleRoleChange = (userId: string, newRole: AuthUser['role']) => {
-        setUsers(users.map(u => u.id === userId ? { ...u, editableRole: newRole } : u));
-    };
     
-    const handleAction = (userId: string, action: 'saveRole' | 'suspend' | 'blacklist' | 'delete' | 'activate') => {
+    const handleRoleChange = (userId: string, newRole: AuthUser['role']) => {
+        setEditableRoles(prev => ({ ...prev, [userId]: newRole }));
+    };
+
+    const handleAction = async (userId: string, action: 'saveRole' | 'suspend' | 'blacklist' | 'delete' | 'activate') => {
         const userToUpdate = users.find(u => u.id === userId);
         if (!userToUpdate) return;
         
         let message = "";
-        switch (action) {
-            case 'saveRole':
-                 setUsers(users.map(u => u.id === userId ? { ...u, role: u.editableRole } : u));
-                 message = `${userToUpdate.name} 的角色已更新为 ${getRoleDisplayName(userToUpdate.editableRole)}。`;
-                break;
-            case 'suspend':
-                setUsers(users.map(u => u.id === userId ? { ...u, status: 'suspended' } : u));
-                message = `${userToUpdate.name} 已被暂停。`;
-                break;
-            case 'blacklist':
-                setUsers(users.map(u => u.id === userId ? { ...u, status: 'blacklisted' } : u));
-                message = `${userToUpdate.name} 已被加入黑名单。`;
-                break;
-            case 'activate':
-                setUsers(users.map(u => u.id === userId ? { ...u, status: 'active' } : u));
-                message = `${userToUpdate.name} 已被激活。`;
-                break;
-            case 'delete':
-                setUsers(users.filter(u => u.id !== userId));
-                message = `${userToUpdate.name} 已被删除。`;
-                break;
+        try {
+            switch (action) {
+                case 'saveRole':
+                    const newRole = editableRoles[userId];
+                    await api.put(`/api/users/${userId}`, { role: newRole });
+                    message = `${userToUpdate.name} 的角色已更新为 ${getRoleDisplayName(newRole)}。`;
+                    break;
+                case 'suspend':
+                    await api.put(`/api/users/${userId}`, { status: 'suspended' });
+                    message = `${userToUpdate.name} 已被暂停。`;
+                    break;
+                case 'blacklist':
+                    await api.put(`/api/users/${userId}`, { status: 'blacklisted' });
+                    message = `${userToUpdate.name} 已被加入黑名单。`;
+                    break;
+                case 'activate':
+                    await api.put(`/api/users/${userId}`, { status: 'active' });
+                    message = `${userToUpdate.name} 已被激活。`;
+                    break;
+                case 'delete':
+                    await api.delete(`/api/users/${userId}`);
+                    message = `${userToUpdate.name} 已被删除。`;
+                    break;
+            }
+             toast({
+                title: "操作成功",
+                description: message,
+            });
+            // Refresh data
+            await fetchUsers();
+        } catch (err) {
+             toast({
+                title: "操作失败",
+                description: "执行操作时发生错误，请稍后重试。",
+                variant: "destructive"
+            });
+            console.error(`Failed to ${action} user ${userId}:`, err);
         }
-
-        toast({
-            title: "操作成功",
-            description: message,
-        });
     };
 
     const getRoleDisplayName = (role: AuthUser['role']) => {
@@ -147,88 +186,106 @@ export default function PermissionsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {users.map((u) => {
-                                  const statusInfo = getStatusBadgeInfo(u.status);
-                                  return (
-                                    <TableRow key={u.id} className={u.status !== 'active' ? 'bg-muted/50' : ''}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="w-9 h-9 border">
-                                                    <AvatarImage src={u.avatar} alt={u.name} />
-                                                    <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
-                                                </Avatar>
-                                                <span className="font-medium">{u.name}</span>
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-24 text-center">
+                                            <div className="flex justify-center items-center">
+                                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                正在加载用户...
                                             </div>
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <Badge variant={getRoleBadgeVariant(u.role)}>
-                                                    {getRoleDisplayName(u.role)}
-                                                </Badge>
-                                                <Badge variant={statusInfo.variant}>
-                                                    {statusInfo.text}
-                                                </Badge>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <StarRating rating={u.rating} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Select
-                                                value={u.editableRole}
-                                                onValueChange={(newRole: AuthUser['role']) => handleRoleChange(u.id, newRole)}
-                                                disabled={u.id === currentUser.id} // Admin can't change their own role
-                                            >
-                                                <SelectTrigger className="w-[120px]">
-                                                    <SelectValue placeholder="选择角色" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="user">{getRoleDisplayName('user')}</SelectItem>
-                                                    <SelectItem value="creator">{getRoleDisplayName('creator')}</SelectItem>
-                                                    <SelectItem value="supplier">{getRoleDisplayName('supplier')}</SelectItem>
-                                                    <SelectItem value="admin">{getRoleDisplayName('admin')}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" disabled={u.id === currentUser.id}>
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">更多操作</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem 
-                                                      onClick={() => handleAction(u.id, 'saveRole')}
-                                                      disabled={u.role === u.editableRole}
-                                                    >
-                                                        <Save className="mr-2 h-4 w-4" /> 保存角色
-                                                    </DropdownMenuItem>
-                                                    {u.status === 'active' ? (
-                                                      <>
-                                                        <DropdownMenuItem onClick={() => handleAction(u.id, 'suspend')}>
-                                                          <ShieldOff className="mr-2 h-4 w-4" /> 设为暂停
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleAction(u.id, 'blacklist')}>
-                                                          <UserX className="mr-2 h-4 w-4" /> 加入黑名单
-                                                        </DropdownMenuItem>
-                                                      </>
-                                                    ) : (
-                                                      <DropdownMenuItem onClick={() => handleAction(u.id, 'activate')}>
-                                                        <UserCheck className="mr-2 h-4 w-4" /> 重新激活
-                                                      </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleAction(u.id, 'delete')}>
-                                                        <Trash2 className="mr-2 h-4 w-4" /> 删除用户
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
-                                  )
-                                })}
+                                ) : error ? (
+                                     <TableRow>
+                                        <TableCell colSpan={6} className="h-24 text-center text-destructive">
+                                            {error}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    users.map((u) => {
+                                      const statusInfo = getStatusBadgeInfo(u.status);
+                                      const editableRole = editableRoles[u.id] || u.role;
+                                      return (
+                                        <TableRow key={u.id} className={u.status !== 'active' ? 'bg-muted/50' : ''}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="w-9 h-9 border">
+                                                        <AvatarImage src={u.avatar} alt={u.name} />
+                                                        <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="font-medium">{u.name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant={getRoleBadgeVariant(u.role)}>
+                                                        {getRoleDisplayName(u.role)}
+                                                    </Badge>
+                                                    <Badge variant={statusInfo.variant}>
+                                                        {statusInfo.text}
+                                                    </Badge>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <StarRating rating={u.rating} />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select
+                                                    value={editableRole}
+                                                    onValueChange={(newRole: AuthUser['role']) => handleRoleChange(u.id, newRole)}
+                                                    disabled={u.id === currentUser.id} // Admin can't change their own role
+                                                >
+                                                    <SelectTrigger className="w-[120px]">
+                                                        <SelectValue placeholder="选择角色" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="user">{getRoleDisplayName('user')}</SelectItem>
+                                                        <SelectItem value="creator">{getRoleDisplayName('creator')}</SelectItem>
+                                                        <SelectItem value="supplier">{getRoleDisplayName('supplier')}</SelectItem>
+                                                        <SelectItem value="admin">{getRoleDisplayName('admin')}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" disabled={u.id === currentUser.id}>
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">更多操作</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem 
+                                                          onClick={() => handleAction(u.id, 'saveRole')}
+                                                          disabled={u.role === editableRole}
+                                                        >
+                                                            <Save className="mr-2 h-4 w-4" /> 保存角色
+                                                        </DropdownMenuItem>
+                                                        {u.status === 'active' ? (
+                                                          <>
+                                                            <DropdownMenuItem onClick={() => handleAction(u.id, 'suspend')}>
+                                                              <ShieldOff className="mr-2 h-4 w-4" /> 设为暂停
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleAction(u.id, 'blacklist')}>
+                                                              <UserX className="mr-2 h-4 w-4" /> 加入黑名单
+                                                            </DropdownMenuItem>
+                                                          </>
+                                                        ) : (
+                                                          <DropdownMenuItem onClick={() => handleAction(u.id, 'activate')}>
+                                                            <UserCheck className="mr-2 h-4 w-4" /> 重新激活
+                                                          </DropdownMenuItem>
+                                                        )}
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => handleAction(u.id, 'delete')}>
+                                                            <Trash2 className="mr-2 h-4 w-4" /> 删除用户
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                      )
+                                    })
+                                )}
                             </TableBody>
                         </Table>
                     </div>
