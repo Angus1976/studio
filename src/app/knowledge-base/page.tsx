@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -17,77 +17,65 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Database, Search, ListFilter, FilePenLine, Trash2, PlusCircle, Eye } from "lucide-react";
+import { AlertTriangle, Database, Search, ListFilter, FilePenLine, Trash2, PlusCircle, Eye, LoaderCircle } from "lucide-react";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
+import api from "@/lib/api";
 
-// Mock data for the knowledge base
-const knowledgeBaseEntries = [
-  {
-    id: "kb-001",
-    name: "智能家庭中心 Pro",
-    category: "消费电子产品",
-    tags: ["智能家居", "语音助手", "Zigbee"],
-    lastUpdated: "2024-07-28",
-    description: "一款集成了语音助手、智能家居控制和家庭娱乐功能的中心设备。支持 Zigbee、Wi-Fi 和蓝牙连接。",
-    price: "¥1299"
-  },
-  {
-    id: "kb-002",
-    name: "静音大师洗衣机",
-    category: "家用电器",
-    tags: ["节能", "直驱变频", "10公斤"],
-    lastUpdated: "2024-07-27",
-    description: "采用直驱变频电机，实现超静音洗涤。拥有10公斤大容量和多种智能洗涤程序。",
-    price: "¥3499"
-  },
-  {
-    id: "kb-003",
-    name: "云端数据备份服务",
-    category: "软件服务",
-    tags: ["SaaS", "数据安全", "多设备同步"],
-    lastUpdated: "2024-07-26",
-    description: "提供安全可靠的云端数据备份方案，支持多设备同步和文件版本历史记录。",
-    price: "¥99/年"
-  },
-  {
-    id: "kb-004",
-    name: "个性化营养咨询",
-    category: "健康服务",
-    tags: ["在线咨询", "营养师", "定制方案"],
-    lastUpdated: "2024-07-25",
-    description: "由专业营养师提供在线一对一咨询，根据您的身体状况和饮食习惯定制个性化营养方案。",
-    price: "¥499/次"
-  },
-    {
-    id: "kb-005",
-    name: "便携式咖啡机",
-    category: "厨房小电",
-    tags: ["户外", "旅行", "手动"],
-    lastUpdated: "2024-07-24",
-    description: "小巧便携，适合户外旅行使用，手动操作，无需电源。",
-    price: "¥299"
-  },
-];
-
-const categories = [...new Set(knowledgeBaseEntries.map(entry => entry.category))];
-
+type KnowledgeBaseEntry = {
+  id: string;
+  name: string;
+  category: string;
+  tags: string[];
+  last_updated: string;
+  description: string;
+  price: string;
+};
 
 export default function KnowledgeBasePage() {
     const { user } = useAuth();
-    const [selectedEntry, setSelectedEntry] = useState<typeof knowledgeBaseEntries[0] | null>(null);
+    const [entries, setEntries] = useState<KnowledgeBaseEntry[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [categories, setCategories] = useState<string[]>([]);
+    
+    const [selectedEntry, setSelectedEntry] = useState<KnowledgeBaseEntry | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
-    const [categoryFilters, setCategoryFilters] = useState<Record<string, boolean>>(
-        categories.reduce((acc, category) => ({ ...acc, [category]: true }), {})
-    );
+    const [categoryFilters, setCategoryFilters] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        const fetchKnowledgeBase = async () => {
+            if (user?.role !== 'admin') return;
+            try {
+                setIsLoading(true);
+                setError(null);
+                const response = await api.get<KnowledgeBaseEntry[]>('/api/knowledge-base');
+                setEntries(response.data);
+                
+                const fetchedCategories = [...new Set(response.data.map((entry: KnowledgeBaseEntry) => entry.category))];
+                setCategories(fetchedCategories);
+                setCategoryFilters(
+                    fetchedCategories.reduce((acc, category) => ({ ...acc, [category]: true }), {})
+                );
+
+            } catch (err) {
+                console.error("Failed to fetch knowledge base:", err);
+                setError("无法加载知识库条目，请稍后重试。");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchKnowledgeBase();
+    }, [user]);
 
     const filteredEntries = useMemo(() => {
-        return knowledgeBaseEntries.filter(entry => {
+        return entries.filter(entry => {
             const searchMatch = entry.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                entry.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-            const categoryMatch = categoryFilters[entry.category];
+                                (entry.tags && entry.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
+            const categoryMatch = categoryFilters[entry.category] ?? true;
             return searchMatch && categoryMatch;
         });
-    }, [searchTerm, categoryFilters]);
+    }, [searchTerm, categoryFilters, entries]);
 
     if (!user || user.role !== 'admin') {
         return (
@@ -106,16 +94,16 @@ export default function KnowledgeBasePage() {
         );
     }
 
-    const formatEntryForDialog = (entry: typeof knowledgeBaseEntries[0] | null) => {
+    const formatEntryForDialog = (entry: KnowledgeBaseEntry | null) => {
         if (!entry) return null;
         return {
             title: entry.name,
             description: entry.category,
             details: {
                 "描述": entry.description,
-                "标签": entry.tags.join(", "),
+                "标签": entry.tags?.join(", ") ?? '无',
                 "价格": entry.price,
-                "最后更新": entry.lastUpdated,
+                "最后更新": new Date(entry.last_updated).toLocaleDateString(),
                 "ID": entry.id,
             }
         };
@@ -168,7 +156,7 @@ export default function KnowledgeBasePage() {
                                         {categories.map(category => (
                                             <DropdownMenuCheckboxItem
                                                 key={category}
-                                                checked={categoryFilters[category]}
+                                                checked={categoryFilters[category] ?? false}
                                                 onCheckedChange={(checked) => handleFilterChange(category, !!checked)}
                                             >
                                                 {category}
@@ -176,7 +164,7 @@ export default function KnowledgeBasePage() {
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
-                                 <Button>
+                                 <Button disabled>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     新增条目
                                 </Button>
@@ -194,42 +182,61 @@ export default function KnowledgeBasePage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredEntries.map((entry) => (
-                                        <TableRow key={entry.id}>
-                                            <TableCell className="font-medium">{entry.name}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">{entry.category}</Badge>
-                                            </TableCell>
-                                            <TableCell className="space-x-1">
-                                                {entry.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-                                            </TableCell>
-                                            <TableCell>{entry.lastUpdated}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <Button variant="ghost" size="icon" onClick={() => setSelectedEntry(entry)}>
-                                                        <Eye className="h-4 w-4" />
-                                                        <span className="sr-only">查看详情</span>
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon">
-                                                        <FilePenLine className="h-4 w-4" />
-                                                        <span className="sr-only">编辑</span>
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                                        <Trash2 className="h-4 w-4" />
-                                                        <span className="sr-only">删除</span>
-                                                    </Button>
+                                     {isLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">
+                                                <div className="flex justify-center items-center">
+                                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                    正在加载...
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : error ? (
+                                         <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center text-destructive">
+                                                {error}
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : filteredEntries.length > 0 ? (
+                                        filteredEntries.map((entry) => (
+                                            <TableRow key={entry.id}>
+                                                <TableCell className="font-medium">{entry.name}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">{entry.category}</Badge>
+                                                </TableCell>
+                                                <TableCell className="space-x-1">
+                                                    {entry.tags?.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                                                </TableCell>
+                                                <TableCell>{new Date(entry.last_updated).toLocaleDateString()}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="ghost" size="icon" onClick={() => setSelectedEntry(entry)}>
+                                                            <Eye className="h-4 w-4" />
+                                                            <span className="sr-only">查看详情</span>
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" disabled>
+                                                            <FilePenLine className="h-4 w-4" />
+                                                            <span className="sr-only">编辑</span>
+                                                        </Button>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled>
+                                                            <Trash2 className="h-4 w-4" />
+                                                            <span className="sr-only">删除</span>
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                                                <p>未找到匹配的条目。</p>
+                                                <p className="text-sm">请尝试调整您的搜索词或筛选条件。</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
-                         {filteredEntries.length === 0 && (
-                            <div className="text-center py-10 text-muted-foreground">
-                                <p>未找到匹配的条目。请尝试调整您的搜索词或筛选条件。</p>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </main>
