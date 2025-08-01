@@ -109,6 +109,21 @@ app.delete('/api/users/:id', async (req: Request, res: Response) => {
     }
 });
 
+
+// --- Designers API ---
+
+// Get all users with the 'creator' role
+app.get('/api/designers', async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query("SELECT id, name, avatar, description, status, rating, '[]'::text[] as specialties FROM users WHERE role = 'creator'");
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 // --- Knowledge Base API Endpoints ---
 
 // Get all knowledge base entries
@@ -277,8 +292,8 @@ app.post('/api/suppliers/:supplierId/products', async (req: Request, res: Respon
 // Get all demands
 app.get('/api/demands', async (req: Request, res: Response) => {
     try {
-        // In a real app, you'd likely join with users table to get poster's name
-        const result = await pool.query('SELECT d.*, u.name as posted_by FROM demands d JOIN users u ON d.user_id = u.id ORDER BY posted_date DESC');
+        // Join with users table to get poster's name
+        const result = await pool.query('SELECT d.id, d.title, d.description, d.budget, d.category, d.tags, d.status, d.posted_date, u.name as posted_by FROM demands d JOIN users u ON d.user_id = u.id ORDER BY posted_date DESC');
         res.json(result.rows);
     } catch (err) {
         console.error(err);
@@ -295,8 +310,8 @@ app.post('/api/demands', async (req: Request, res: Response) => {
     }
     try {
         const result = await pool.query(
-            `INSERT INTO demands (user_id, title, description, budget, category, tags, status) 
-             VALUES ($1, $2, $3, $4, $5, $6, '开放中') RETURNING *`,
+            `INSERT INTO demands (user_id, title, description, budget, category, tags) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
             [user_id, title, description, budget, category, tags]
         );
         res.status(201).json(result.rows[0]);
@@ -306,9 +321,60 @@ app.post('/api/demands', async (req: Request, res: Response) => {
     }
 });
 
+// Respond to a demand (take an order)
+app.post('/api/demands/:id/respond', async (req: Request, res: Response) => {
+    const { id: demandId } = req.params;
+    // In a real app, supplier_id would come from authenticated session
+    const { supplier_id } = req.body; 
+
+    if (!supplier_id) {
+        return res.status(400).json({ error: 'supplier_id is required to respond to a demand.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Check if the demand is still open
+        const demandResult = await client.query("SELECT * FROM demands WHERE id = $1 AND status = '开放中' FOR UPDATE", [demandId]);
+        if (demandResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Demand not found or is no longer open for responses.' });
+        }
+
+        // Add the response
+        const responseResult = await client.query(
+            'INSERT INTO demand_responses (demand_id, supplier_id) VALUES ($1, $2) RETURNING *',
+            [demandId, supplier_id]
+        );
+
+        // Update the demand status
+        const updateResult = await client.query(
+            "UPDATE demands SET status = '洽谈中' WHERE id = $1 RETURNING *",
+            [demandId]
+        );
+
+        await client.query('COMMIT');
+
+        res.status(201).json({
+            response: responseResult.rows[0],
+            updatedDemand: updateResult.rows[0],
+        });
+
+    } catch (err: any) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        // Handle unique constraint violation (supplier already responded)
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'This supplier has already responded to this demand.' });
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        client.release();
+    }
+});
+
 
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
-
-    
