@@ -21,8 +21,10 @@ import { AlertTriangle, Database, Search, ListFilter, FilePenLine, Trash2, PlusC
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-type KnowledgeBaseEntry = {
+
+export type KnowledgeBaseEntry = {
   id: string;
   name: string;
   category: string;
@@ -234,10 +236,28 @@ export default function KnowledgeBasePage() {
                                                             <FilePenLine className="h-4 w-4" />
                                                             <span className="sr-only">编辑</span>
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(entry.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                            <span className="sr-only">删除</span>
-                                                        </Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                    <span className="sr-only">删除</span>
+                                                                </Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    此操作无法撤销。这将永久删除知识库条目 “{entry.name}”。
+                                                                </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                <AlertDialogCancel>取消</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete(entry.id)}>
+                                                                    继续删除
+                                                                </AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
