@@ -23,6 +23,7 @@ import type { ProcessSupplierDataOutput } from "@/ai/flows/process-supplier-data
 import { useToast } from "@/hooks/use-toast";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 const customFieldSchema = z.object({
   fieldName: z.string().min(1, "字段名不能为空"),
@@ -134,16 +135,77 @@ export default function SuppliersPage() {
     name: "products",
   });
 
-  const onSupplierSubmit = (data: SupplierInfoForm) => {
-    console.log("基本信息提交:", data);
-    toast({ title: "操作成功", description: "供应商基本信息已保存。" });
+  const onSupplierSubmit = async (data: SupplierInfoForm) => {
+    if (!user) {
+        toast({ title: "错误", description: "请先登录", variant: "destructive" });
+        return;
+    }
+    
+    // NOTE: In a real app, file uploads would be handled properly (e.g., to a cloud storage service)
+    // For this demo, we'll just log that they exist and send the other text-based data.
+    const { logo, businessLicense, ...supplierData } = data;
+    console.log("Logo file to upload:", logo);
+    console.log("Business license file to upload:", businessLicense);
+
+    try {
+        await api.put(`/api/suppliers/${user.id}`, {
+            // Mapping frontend camelCase to backend snake_case
+            full_name: supplierData.fullName,
+            short_name: supplierData.shortName,
+            introduction: supplierData.introduction,
+            region: supplierData.region,
+            address: supplierData.address,
+            establishment_date: supplierData.establishmentDate,
+            registered_capital: supplierData.registeredCapital,
+            credit_code: supplierData.creditCode,
+            contact_person: supplierData.contactPerson,
+            contact_title: supplierData.contactTitle,
+            contact_mobile: supplierData.contactMobile,
+            contact_phone: supplierData.contactPhone,
+            contact_email: supplierData.contactEmail,
+            contact_wecom: supplierData.contactWeCom,
+            custom_fields: supplierData.customFields,
+            // logo_url and business_license_url would be set after file upload
+        });
+        toast({ title: "操作成功", description: "供应商基本信息已保存。" });
+    } catch (err) {
+        console.error("Failed to save supplier info:", err);
+        toast({ title: "保存失败", description: "无法保存供应商信息，请稍后重试。", variant: "destructive" });
+    }
   };
 
-  const onProductSubmit = (data: ProductServiceForm) => {
-    // In a real app, you would also handle the media files.
-    // For this DEMO, we just log the form data.
-    console.log("商品服务信息提交:", data);
-    toast({ title: "操作成功", description: "商品/服务信息已保存。" });
+  const onProductSubmit = async (data: ProductServiceForm) => {
+    if (!user) {
+        toast({ title: "错误", description: "请先登录", variant: "destructive" });
+        return;
+    }
+
+    // In a real app, you would handle the media files.
+    // For this DEMO, we just log the form data and send text-based fields.
+    try {
+        for (const product of data.products) {
+            const { mediaPanoramic, mediaTop, mediaBottom, mediaLeft, mediaRight, mediaFront, mediaBack, ...productData } = product;
+
+            // Log files that would be uploaded
+            console.log(`Files for product "${productData.name}":`, { mediaPanoramic, mediaTop, mediaBottom, mediaLeft, mediaRight, mediaFront, mediaBack });
+
+            await api.post(`/api/suppliers/${user.id}/products`, {
+                // Mapping frontend camelCase to backend snake_case
+                name: productData.name,
+                category: productData.category,
+                sku: productData.sku,
+                description: productData.description,
+                price: productData.price,
+                purchase_url: productData.purchaseLink,
+                custom_fields: productData.customFields,
+                // media_... urls would be set after file uploads
+            });
+        }
+        toast({ title: "操作成功", description: "商品/服务信息已保存。" });
+    } catch (err) {
+        console.error("Failed to save product(s):", err);
+        toast({ title: "保存失败", description: "无法保存商品/服务信息，请稍后重试。", variant: "destructive" });
+    }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>, fieldName: any, setPreview: (url: string | null) => void) => {
@@ -486,7 +548,10 @@ export default function SuppliersPage() {
                     </Button>
                   </div>
 
-                  <Button type="submit">保存基本信息</Button>
+                  <Button type="submit" disabled={supplierForm.formState.isSubmitting}>
+                    {supplierForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/>}
+                    保存基本信息
+                  </Button>
                 </form>
               </Form>
             </CardContent>
@@ -528,7 +593,10 @@ export default function SuppliersPage() {
                       <PlusCircle className="mr-2 h-4 w-4" />
                       增加一项
                     </Button>
-                    <Button type="submit">保存商品/服务</Button>
+                    <Button type="submit" disabled={productServiceForm.formState.isSubmitting}>
+                        {productServiceForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/>}
+                        保存商品/服务
+                    </Button>
                   </div>
                 </form>
               </Form>
@@ -846,5 +914,7 @@ function ProductServiceItem({ form, index, remove }: {
         </Card>
     );
 }
+
+    
 
     

@@ -238,22 +238,37 @@ app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Supplier full name is required' });
     }
     
+    // In a real app, you'd check if a supplier with this ID exists before inserting.
+    // Here we use ON CONFLICT to handle both creation (if not exists) and update.
     try {
         const result = await pool.query(
-            `UPDATE suppliers SET 
-                full_name = $1, short_name = $2, logo_url = $3, introduction = $4, region = $5, address = $6, establishment_date = $7,
-                registered_capital = $8, credit_code = $9, business_license_url = $10, contact_person = $11, contact_title = $12,
-                contact_mobile = $13, contact_phone = $14, contact_email = $15, contact_wecom = $16, custom_fields = $17
-            WHERE id = $18 RETURNING *`,
+            `INSERT INTO suppliers (id, full_name, short_name, logo_url, introduction, region, address, establishment_date, registered_capital, credit_code, business_license_url, contact_person, contact_title, contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+             ON CONFLICT (id) DO UPDATE SET
+                full_name = EXCLUDED.full_name,
+                short_name = EXCLUDED.short_name,
+                logo_url = EXCLUDED.logo_url,
+                introduction = EXCLUDED.introduction,
+                region = EXCLUDED.region,
+                address = EXCLUDED.address,
+                establishment_date = EXCLUDED.establishment_date,
+                registered_capital = EXCLUDED.registered_capital,
+                credit_code = EXCLUDED.credit_code,
+                business_license_url = EXCLUDED.business_license_url,
+                contact_person = EXCLUDED.contact_person,
+                contact_title = EXCLUDED.contact_title,
+                contact_mobile = EXCLUDED.contact_mobile,
+                contact_phone = EXCLUDED.contact_phone,
+                contact_email = EXCLUDED.contact_email,
+                contact_wecom = EXCLUDED.contact_wecom,
+                custom_fields = EXCLUDED.custom_fields
+             RETURNING *`,
             [
-                full_name, short_name, logo_url, introduction, region, address, establishment_date,
+                id, full_name, short_name, logo_url, introduction, region, address, establishment_date,
                 registered_capital, credit_code, business_license_url, contact_person, contact_title,
-                contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields, id
+                contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields
             ]
         );
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Supplier not found' });
-        }
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
@@ -310,8 +325,8 @@ app.post('/api/demands', async (req: Request, res: Response) => {
     }
     try {
         const result = await pool.query(
-            `INSERT INTO demands (user_id, title, description, budget, category, tags) 
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            `INSERT INTO demands (user_id, title, description, budget, category, tags, status) 
+             VALUES ($1, $2, $3, $4, $5, $6, '开放中') RETURNING *`,
             [user_id, title, description, budget, category, tags]
         );
         res.status(201).json(result.rows[0]);
@@ -378,3 +393,5 @@ app.post('/api/demands/:id/respond', async (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
+
+    
