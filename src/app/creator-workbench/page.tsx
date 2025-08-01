@@ -7,28 +7,98 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, User, Wand2, GalleryVerticalEnd, ToyBrick, Send, Hand, CheckCircle } from "lucide-react";
+import { AlertTriangle, Wand2, GalleryVerticalEnd, ToyBrick, Send, Hand, CheckCircle, LoaderCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
+import type { KnowledgeBaseEntry } from "../knowledge-base/page";
+import { useToast } from "@/hooks/use-toast";
 
 
-// Mock data
-const tasks = [
-    { id: 'task-01', title: '设计一款未来城市风格的无人机', type: '模型设计', reward: '¥2,000', status: '开放中' },
-    { id: 'task-02', title: '为游戏角色创作一套科幻盔甲', type: '角色资产', reward: '¥3,500', status: '开放中' },
-    { id: 'task-03', title: '制作一个古董花瓶的写实3D模型', type: '数字藏品', reward: '¥1,800', status: '已接受' },
-];
+type Demand = {
+  id: string;
+  title: string;
+  budget: string;
+  category: string;
+  status: string;
+};
 
-const submissions = [
-    { id: 'sub-01', name: '赛博朋克飞行摩托', submittedDate: '2024-07-30', status: '审核中', type: '载具' },
-    { id: 'sub-02', name: '魔法森林精灵小屋', submittedDate: '2024-07-28', status: '已入库', type: '场景' },
-    { id: 'sub-03', name: 'Q版宇航员手办', submittedDate: '2024-07-25', status: '已入库', type: '角色' },
-];
+type Submission = KnowledgeBaseEntry;
 
 
 export default function CreatorWorkbenchPage() {
     const { user } = useAuth();
+    const { toast } = useToast();
+    const [tasks, setTasks] = useState<Demand[]>([]);
+    const [submissions, setSubmissions] = useState<Submission[]>([]);
+    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
+
+    const fetchTasks = async () => {
+        setIsLoadingTasks(true);
+        try {
+            const response = await api.get('/api/demands');
+            const openDemands = response.data.filter((d: any) => d.status === '开放中');
+            setTasks(openDemands);
+        } catch (error) {
+            console.error("Failed to fetch tasks (demands):", error);
+            toast({ title: "加载任务失败", variant: "destructive" });
+        } finally {
+            setIsLoadingTasks(false);
+        }
+    };
+
+    const fetchSubmissions = async () => {
+        setIsLoadingSubmissions(true);
+        try {
+            const response = await api.get('/api/knowledge-base');
+            // For now, we assume all knowledge base entries can be submissions
+            setSubmissions(response.data);
+        } catch (error) {
+            console.error("Failed to fetch submissions (knowledge base):", error);
+            toast({ title: "加载提交记录失败", variant: "destructive" });
+        } finally {
+            setIsLoadingSubmissions(false);
+        }
+    };
+    
+    useEffect(() => {
+        if (user?.role === 'creator') {
+            fetchTasks();
+            fetchSubmissions();
+        }
+    }, [user]);
+
+    const handleTakeOrder = async (demandId: string) => {
+        if (!user) {
+            toast({ title: "请先登录", description: "登录后才能响应需求。", variant: "destructive" });
+            return;
+        }
+        
+        setIsSubmitting(demandId);
+        try {
+            await api.post(`/api/demands/${demandId}/respond`, { supplier_id: user.id });
+            toast({
+                title: "接受成功",
+                description: "您已成功接受此任务，状态已更新。",
+            });
+            await fetchTasks(); // Refresh list to show updated status
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.error || "操作失败，请稍后重试。";
+            toast({
+                title: "接受失败",
+                description: errorMessage,
+                variant: "destructive",
+            });
+            console.error("Failed to respond to demand:", error);
+        } finally {
+            setIsSubmitting(null);
+        }
+    };
+
 
     if (!user || user.role !== 'creator') {
         return (
@@ -77,30 +147,49 @@ export default function CreatorWorkbenchPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>任务标题</TableHead>
-                                        <TableHead>类型</TableHead>
-                                        <TableHead>报酬</TableHead>
+                                        <TableHead>类别</TableHead>
+                                        <TableHead>预算/报酬</TableHead>
                                         <TableHead>状态</TableHead>
                                         <TableHead className="text-right">操作</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {tasks.map((task) => (
-                                        <TableRow key={task.id}>
-                                            <TableCell className="font-medium">{task.title}</TableCell>
-                                            <TableCell><Badge variant="outline">{task.type}</Badge></TableCell>
-                                            <TableCell className="font-semibold text-primary">{task.reward}</TableCell>
-                                            <TableCell>
-                                                 <Badge variant={task.status === '开放中' ? 'default' : 'secondary'}>{task.status}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {task.status === '开放中' ? (
-                                                    <Button size="sm"><Hand className="mr-2 h-4 w-4" />接受任务</Button>
-                                                ) : (
-                                                    <Button size="sm" disabled><CheckCircle className="mr-2 h-4 w-4" />已接受</Button>
-                                                )}
+                                    {isLoadingTasks ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">
+                                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin inline-block"/> 正在加载任务...
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : tasks.length > 0 ? (
+                                        tasks.map((task) => (
+                                            <TableRow key={task.id}>
+                                                <TableCell className="font-medium">{task.title}</TableCell>
+                                                <TableCell><Badge variant="outline">{task.category}</Badge></TableCell>
+                                                <TableCell className="font-semibold text-primary">{task.budget}</TableCell>
+                                                <TableCell>
+                                                     <Badge variant={task.status === '开放中' ? 'default' : 'secondary'}>{task.status}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {task.status === '开放中' ? (
+                                                        <Button 
+                                                            size="sm"
+                                                            onClick={() => handleTakeOrder(task.id)}
+                                                            disabled={isSubmitting === task.id}
+                                                        >
+                                                            {isSubmitting === task.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <Hand className="mr-2 h-4 w-4" />}
+                                                            接受任务
+                                                        </Button>
+                                                    ) : (
+                                                        <Button size="sm" disabled><CheckCircle className="mr-2 h-4 w-4" />已接受</Button>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">暂无可接受的任务。</TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                            </div>
@@ -148,22 +237,32 @@ export default function CreatorWorkbenchPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>作品名称</TableHead>
-                                            <TableHead>类型</TableHead>
-                                            <TableHead>提交日期</TableHead>
-                                            <TableHead>状态</TableHead>
+                                            <TableHead>类别</TableHead>
+                                            <TableHead>价格</TableHead>
+                                            <TableHead>最后更新</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {submissions.map((sub) => (
-                                            <TableRow key={sub.id}>
-                                                <TableCell className="font-medium">{sub.name}</TableCell>
-                                                <TableCell><Badge variant="outline">{sub.type}</Badge></TableCell>
-                                                <TableCell>{sub.submittedDate}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={sub.status === '已入库' ? 'default' : 'secondary'}>{sub.status}</Badge>
+                                        {isLoadingSubmissions ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="h-24 text-center">
+                                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin inline-block"/> 正在加载提交记录...
                                                 </TableCell>
                                             </TableRow>
-                                        ))}
+                                        ) : submissions.length > 0 ? (
+                                            submissions.map((sub) => (
+                                                <TableRow key={sub.id}>
+                                                    <TableCell className="font-medium">{sub.name}</TableCell>
+                                                    <TableCell><Badge variant="outline">{sub.category}</Badge></TableCell>
+                                                    <TableCell>{sub.price || 'N/A'}</TableCell>
+                                                    <TableCell>{new Date(sub.last_updated).toLocaleDateString()}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">暂无提交记录。</TableCell>
+                                            </TableRow>
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>
