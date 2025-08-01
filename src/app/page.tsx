@@ -17,7 +17,6 @@ import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
-import { knowledgeBase, publicResources, supplierDatabases } from "@/lib/data";
 
 export default function Home() {
   const { toast } = useToast();
@@ -69,9 +68,6 @@ export default function Home() {
       const aiResult = await getAiResponse({
           textInput: input,
           imageDataUri: imageDataUri ?? undefined,
-          knowledgeBase,
-          publicResources,
-          supplierDatabases,
       });
 
       if (!aiResult || !aiResult.userProfile || !aiResult.recommendations) {

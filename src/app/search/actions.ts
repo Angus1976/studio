@@ -2,7 +2,8 @@
 'use server';
 
 import { intelligentSearch } from '@/ai/flows/intelligent-search';
-import { knowledgeBase } from '@/lib/data';
+import api from '@/lib/api';
+import type { KnowledgeBaseEntry } from '@/app/knowledge-base/page';
 
 export async function performSearch(query: string) {
   if (!query) {
@@ -10,6 +11,10 @@ export async function performSearch(query: string) {
   }
 
   try {
+    // Fetch latest knowledge base from backend
+    const knowledgeBaseRes = await api.get<KnowledgeBaseEntry[]>('/api/knowledge-base');
+    const knowledgeBase = JSON.stringify(knowledgeBaseRes.data);
+
     const searchResult = await intelligentSearch({
       query,
       knowledgeBase: knowledgeBase,
