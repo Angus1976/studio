@@ -1,53 +1,56 @@
 
 "use client";
 
-import { useAuth } from "@/lib/auth";
+import { useState, useEffect } from "react";
+import { useAuth, User } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Users, Briefcase, PlusCircle, CheckCircle, Circle, MessageSquare } from "lucide-react";
+import { Users, Briefcase, CheckCircle, Circle, MessageSquare, LoaderCircle } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import api from "@/lib/api";
 
-// Mock data for creative designers
-const designers = [
-  {
-    id: "designer-001",
-    name: "Alex Chen",
-    avatar: "https://placehold.co/100x100.png",
-    specialties: ["赛博朋克", "未来主义", "3D角色"],
-    status: "online",
-    description: "专注于创造沉浸式赛博朋克世界的资深3D艺术家。"
-  },
-  {
-    id: "designer-002",
-    name: "Emily Wang",
-    avatar: "https://placehold.co/100x100.png",
-    specialties: ["有机建模", "自然场景", "写实渲染"],
-    status: "online",
-    description: "擅长用细腻的笔触雕刻出栩栩如生的动植物和自然景观。"
-  },
-  {
-    id: "designer-003",
-    name: "David Li",
-    avatar: "https://placehold.co/100x100.png",
-    specialties: ["硬表面建模", "科幻载具", "机械设计"],
-    status: "offline",
-    description: "对复杂的机械结构和科幻载具有着无限的热情和创造力。"
-  },
-  {
-    id: "designer-004",
-    name: "Sophia Zhang",
-    avatar: "https://placehold.co/100x100.png",
-    specialties: ["可爱风", "手办原型", "潮流玩具"],
-    status: "online",
-    description: "将可爱的想象变为现实，创造能温暖人心的角色和玩具。"
-  },
-];
-
+type Designer = Pick<User, 'id' | 'name' | 'avatar' | 'status' | 'description'> & {
+  specialties: string[];
+};
 
 export default function DesignersPage() {
     const { user } = useAuth();
+    const [designers, setDesigners] = useState<Designer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchDesigners = async () => {
+            try {
+                setIsLoading(true);
+                const response = await api.get('/api/designers');
+                // The backend currently returns a bare user object. 
+                // We'll map it to the Designer type, adding mock specialties for now.
+                const fetchedDesigners = response.data.map((d: User) => ({
+                    ...d,
+                    // Mocking specialties as they are not in the user table yet
+                    specialties: d.name.includes("Alex") 
+                        ? ["赛博朋克", "未来主义", "3D角色"] 
+                        : d.name.includes("Emily") 
+                        ? ["有机建模", "自然场景", "写实渲染"]
+                        : d.name.includes("David")
+                        ? ["硬表面建模", "科幻载具", "机械设计"]
+                        : ["可爱风", "手办原型", "潮流玩具"]
+                }));
+                setDesigners(fetchedDesigners);
+            } catch (err) {
+                console.error("Failed to fetch designers:", err);
+                setError("无法加载设计师列表，请稍后重试。");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDesigners();
+    }, []);
     
     return (
         <main className="p-4 md:p-6">
@@ -74,7 +77,13 @@ export default function DesignersPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
-                {designers.map(designer => (
+                {isLoading && Array.from({ length: 4 }).map((_, index) => <DesignerCardSkeleton key={index} />)}
+                {!isLoading && error && (
+                    <div className="col-span-full text-center py-10">
+                        <p className="text-destructive">{error}</p>
+                    </div>
+                )}
+                {!isLoading && !error && designers.map(designer => (
                     <Card key={designer.id} className="flex flex-col">
                         <CardHeader className="items-center text-center">
                             <div className="relative">
@@ -82,7 +91,7 @@ export default function DesignersPage() {
                                   <AvatarImage src={designer.avatar} alt={designer.name} />
                                   <AvatarFallback>{designer.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                {designer.status === 'online' ? (
+                                {designer.status === 'active' ? ( // Changed from 'online'
                                     <Badge className="absolute bottom-4 right-0 flex items-center gap-1 border-2 border-background" variant="default">
                                         <CheckCircle className="h-3 w-3" /> 在线
                                     </Badge>
@@ -103,7 +112,7 @@ export default function DesignersPage() {
                             </div>
                         </CardContent>
                         <div className="p-4 pt-0">
-                           {designer.status === 'online' ? (
+                           {designer.status === 'active' ? ( // Changed from 'online'
                                <div className="flex gap-2">
                                    <Button className="w-full">
                                        预约
@@ -124,5 +133,30 @@ export default function DesignersPage() {
             </div>
 
         </main>
+    );
+}
+
+function DesignerCardSkeleton() {
+    return (
+        <Card className="flex flex-col">
+            <CardHeader className="items-center text-center">
+                <Skeleton className="w-24 h-24 rounded-full mb-4" />
+                <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="flex-grow space-y-4 text-center">
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6 mx-auto" />
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-6 w-12" />
+                </div>
+            </CardContent>
+            <div className="p-4 pt-0">
+                <Skeleton className="h-10 w-full" />
+            </div>
+        </Card>
     );
 }
