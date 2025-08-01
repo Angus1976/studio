@@ -55,11 +55,16 @@ const initialTenants: Tenant[] = [
     { id: "tenant-3", companyName: "Future Dynamics", adminEmail: "ceo@futuredynamics.io", registeredDate: "2024-07-15", status: "待审核" },
 ];
 
-function TenantForm({ tenant, onSubmit }: { tenant?: Tenant | null, onSubmit: (values: z.infer<typeof tenantSchema>) => void }) {
+function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, onSubmit: (values: z.infer<typeof tenantSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof tenantSchema>>({
         resolver: zodResolver(tenantSchema),
         defaultValues: tenant || { companyName: "", adminEmail: "", status: "待审核" },
     });
+     
+    React.useEffect(() => {
+        form.reset(tenant || { companyName: "", adminEmail: "", status: "待审核" });
+    }, [tenant, form]);
+
 
     const handleSubmit = (values: z.infer<typeof tenantSchema>) => {
         onSubmit(values);
@@ -113,11 +118,10 @@ function TenantForm({ tenant, onSubmit }: { tenant?: Tenant | null, onSubmit: (v
                         </FormItem>
                     )}
                 />
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="submit">保存</Button>
-                    </DialogClose>
-                </DialogFooter>
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
+                    <Button type="submit">保存</Button>
+                </div>
             </form>
         </Form>
     );
@@ -165,6 +169,11 @@ function TenantManagementDialog() {
     toast({ title: "租户已删除", variant: "destructive" });
   };
   
+  const handleCancelForm = () => {
+      setEditingTenant(null);
+      setIsFormOpen(false);
+  }
+
   return (
     <Dialog>
         <DialogTrigger asChild>
@@ -219,12 +228,16 @@ function TenantManagementDialog() {
                 <div className="md:col-span-1">
                     <Card>
                          <CardHeader>
-                            <CardTitle className="text-lg">{editingTenant ? '编辑租户' : '添加新租户'}</CardTitle>
-                            <CardDescription>{editingTenant ? '修改租户信息。' : '添加一个新企业到平台。'}</CardDescription>
+                            <CardTitle className="text-lg">{editingTenant ? '编辑租户' : (isFormOpen ? '添加新租户' : '管理')}</CardTitle>
+                            <CardDescription>{editingTenant ? '修改租户信息。' : (isFormOpen ? '添加一个新企业到平台。' : '选择或添加租户')}</CardDescription>
                         </CardHeader>
                         <CardContent>
                            {isFormOpen || editingTenant ? (
-                                <TenantForm tenant={editingTenant} onSubmit={handleAddOrUpdateTenant} />
+                                <TenantForm 
+                                    tenant={editingTenant} 
+                                    onSubmit={handleAddOrUpdateTenant} 
+                                    onCancel={handleCancelForm}
+                                />
                             ) : (
                                 <div className="text-center text-sm text-muted-foreground py-10">
                                     <p>点击“添加新租户”或选择一个现有租户进行编辑。</p>
@@ -533,6 +546,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
         const onSubmit = (data: any) => {
             setLlmModels(prev => [...prev, {...data, id: `llm-${Date.now()}`}]);
             toast({title: "LLM 模型已添加"});
+            form.reset();
         };
         return (
             <Form {...form}>
@@ -551,6 +565,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
         const onSubmit = (data: any) => {
             setTokens(prev => [...prev, {...data, id: `token-${Date.now()}`, used: 0}]);
             toast({title: "Token 已分配"});
+            form.reset();
         };
         return (
             <Form {...form}>
@@ -569,6 +584,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
         const onSubmit = (data: any) => {
             setSoftwareAssets(prev => [...prev, {...data, id: `asset-${Date.now()}`}]);
             toast({title: "软件资产已添加"});
+            form.reset();
         };
         return (
             <Form {...form}>
