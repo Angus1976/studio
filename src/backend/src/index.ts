@@ -178,6 +178,132 @@ app.delete('/api/knowledge-base/:id', async (req: Request, res: Response) => {
 });
 
 
+// --- Supplier API Endpoints ---
+
+// Get all suppliers
+app.get('/api/suppliers', async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query('SELECT * FROM suppliers');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get a single supplier with their products
+app.get('/api/suppliers/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const supplierRes = await pool.query('SELECT * FROM suppliers WHERE id = $1', [id]);
+        if (supplierRes.rowCount === 0) {
+            return res.status(404).json({ error: 'Supplier not found' });
+        }
+        const productsRes = await pool.query('SELECT * FROM products WHERE supplier_id = $1', [id]);
+        res.json({
+            ...supplierRes.rows[0],
+            products: productsRes.rows,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update a supplier's info (we will use PUT for simplicity to replace the whole record)
+app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const {
+        full_name, short_name, logo_url, introduction, region, address, establishment_date,
+        registered_capital, credit_code, business_license_url, contact_person, contact_title,
+        contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields
+    } = req.body;
+
+    if (!full_name) {
+        return res.status(400).json({ error: 'Supplier full name is required' });
+    }
+    
+    try {
+        const result = await pool.query(
+            `UPDATE suppliers SET 
+                full_name = $1, short_name = $2, logo_url = $3, introduction = $4, region = $5, address = $6, establishment_date = $7,
+                registered_capital = $8, credit_code = $9, business_license_url = $10, contact_person = $11, contact_title = $12,
+                contact_mobile = $13, contact_phone = $14, contact_email = $15, contact_wecom = $16, custom_fields = $17
+            WHERE id = $18 RETURNING *`,
+            [
+                full_name, short_name, logo_url, introduction, region, address, establishment_date,
+                registered_capital, credit_code, business_license_url, contact_person, contact_title,
+                contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields, id
+            ]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Supplier not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// --- Product API Endpoints ---
+
+// Create a product for a supplier
+app.post('/api/suppliers/:supplierId/products', async (req: Request, res: Response) => {
+    const { supplierId } = req.params;
+    // Note: This is a simplified version. A real app would have more robust validation
+    const { name, description, price, category, sku, purchase_url, custom_fields } = req.body;
+    if (!name) {
+        return res.status(400).json({ error: 'Product name is required' });
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO products (supplier_id, name, description, price, category, sku, purchase_url, custom_fields) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [supplierId, name, description, price, category, sku, purchase_url, custom_fields]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// --- Demand Pool API Endpoints ---
+
+// Get all demands
+app.get('/api/demands', async (req: Request, res: Response) => {
+    try {
+        // In a real app, you'd likely join with users table to get poster's name
+        const result = await pool.query('SELECT * FROM demands ORDER BY posted_date DESC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Create a new demand
+app.post('/api/demands', async (req: Request, res: Response) => {
+    // In a real app, user_id would come from authenticated session
+    const { user_id, title, description, budget, category, tags } = req.body;
+    if (!user_id || !title || !description) {
+        return res.status(400).json({ error: 'user_id, title, and description are required' });
+    }
+    try {
+        const result = await pool.query(
+            `INSERT INTO demands (user_id, title, description, budget, category, tags) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [user_id, title, description, budget, category, tags]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
