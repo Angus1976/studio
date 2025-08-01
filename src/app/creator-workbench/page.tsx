@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/lib/auth";
@@ -15,6 +14,9 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import type { KnowledgeBaseEntry } from "../knowledge-base/page";
 import { useToast } from "@/hooks/use-toast";
+import { generate3dModel } from "@/ai/flows/generate-3d-model";
+import Image from "next/image";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 type Demand = {
@@ -35,7 +37,13 @@ export default function CreatorWorkbenchPage() {
     const [submissions, setSubmissions] = useState<Submission[]>([]);
     const [isLoadingTasks, setIsLoadingTasks] = useState(true);
     const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
+    const [isAcceptingTask, setIsAcceptingTask] = useState<string | null>(null);
+
+    // State for 3D creation
+    const [prompt, setPrompt] = useState("");
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedModelUri, setGeneratedModelUri] = useState<string | null>(null);
+
 
     const fetchTasks = async () => {
         setIsLoadingTasks(true);
@@ -78,7 +86,7 @@ export default function CreatorWorkbenchPage() {
             return;
         }
         
-        setIsSubmitting(demandId);
+        setIsAcceptingTask(demandId);
         try {
             await api.post(`/api/demands/${demandId}/respond`, { supplier_id: user.id });
             toast({
@@ -95,7 +103,27 @@ export default function CreatorWorkbenchPage() {
             });
             console.error("Failed to respond to demand:", error);
         } finally {
-            setIsSubmitting(null);
+            setIsAcceptingTask(null);
+        }
+    };
+    
+    const handleGenerateModel = async () => {
+        if (!prompt.trim()) {
+            toast({ title: "请输入描述", description: "需要一个创意描述来生成模型。", variant: "destructive" });
+            return;
+        }
+
+        setIsGenerating(true);
+        setGeneratedModelUri(null);
+        try {
+            const result = await generate3dModel({ prompt });
+            setGeneratedModelUri(result.modelDataUri);
+            toast({ title: "生成成功！", description: "您的3D模型概念图已生成。" });
+        } catch (error) {
+            console.error("Failed to generate 3D model:", error);
+            toast({ title: "生成失败", description: "AI生成模型时发生错误，请稍后再试。", variant: "destructive" });
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -174,9 +202,9 @@ export default function CreatorWorkbenchPage() {
                                                         <Button 
                                                             size="sm"
                                                             onClick={() => handleTakeOrder(task.id)}
-                                                            disabled={isSubmitting === task.id}
+                                                            disabled={isAcceptingTask === task.id}
                                                         >
-                                                            {isSubmitting === task.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <Hand className="mr-2 h-4 w-4" />}
+                                                            {isAcceptingTask === task.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <Hand className="mr-2 h-4 w-4" />}
                                                             接受任务
                                                         </Button>
                                                     ) : (
@@ -201,10 +229,10 @@ export default function CreatorWorkbenchPage() {
                         <CardHeader>
                             <CardTitle>3D AI 创作引擎</CardTitle>
                             <CardDescription>
-                                基于 Tripo Studio 的下一代 AI 3D 生成技术。请在下方输入您的创意描述。
+                                输入您的创意描述，AI将为您生成3D模型的概念预览图。
                             </CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div className="grid w-full gap-1.5">
                                     <Label htmlFor="prompt-input">创意描述 (Prompt)</Label>
@@ -213,14 +241,34 @@ export default function CreatorWorkbenchPage() {
                                         placeholder="例如：一只正在看书的赛博朋克风格的猫，戴着眼镜，背景是下雨的东京街头。"
                                         rows={4}
                                         className="text-base"
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        disabled={isGenerating}
                                     />
                                 </div>
                                 <div className="flex justify-end">
-                                    <Button size="lg">
-                                        <Wand2 className="mr-2 h-5 w-5" />
-                                        生成 3D 模型
+                                    <Button size="lg" onClick={handleGenerateModel} disabled={isGenerating}>
+                                        {isGenerating ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
+                                        {isGenerating ? '生成中...' : '生成 3D 模型'}
                                     </Button>
                                 </div>
+                            </div>
+                            <div className="flex items-center justify-center bg-muted/50 rounded-lg border-2 border-dashed aspect-square">
+                                {isGenerating && (
+                                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                                        <LoaderCircle className="w-8 h-8 animate-spin" />
+                                        <p>AI正在努力创作中...</p>
+                                    </div>
+                                )}
+                                {!isGenerating && generatedModelUri && (
+                                     <Image src={generatedModelUri} alt="Generated 3D model" width={512} height={512} className="object-contain rounded-lg"/>
+                                )}
+                                 {!isGenerating && !generatedModelUri && (
+                                    <div className="text-center text-muted-foreground p-4">
+                                        <ToyBrick className="w-12 h-12 mx-auto mb-2"/>
+                                        <p>生成的模型将在此处显示</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

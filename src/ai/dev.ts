@@ -8,3 +8,4 @@ import '@/ai/flows/intelligent-search.ts';
 import '@/ai/flows/process-supplier-data.ts';
 import '@/ai/flows/get-recommendations.ts';
 import '@/ai/flows/identify-image-objects.ts';
+import '@/ai/flows/generate-3d-model.ts';
