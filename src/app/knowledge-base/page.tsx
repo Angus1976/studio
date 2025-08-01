@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Database, Search, ListFilter, FilePenLine, Trash2, PlusCircle, Eye, LoaderCircle } from "lucide-react";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 type KnowledgeBaseEntry = {
   id: string;
@@ -33,6 +34,7 @@ type KnowledgeBaseEntry = {
 
 export default function KnowledgeBasePage() {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [entries, setEntries] = useState<KnowledgeBaseEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -42,29 +44,32 @@ export default function KnowledgeBasePage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [categoryFilters, setCategoryFilters] = useState<Record<string, boolean>>({});
 
+    const fetchKnowledgeBase = async () => {
+        if (user?.role !== 'admin') {
+            setIsLoading(false);
+            return;
+        }
+        try {
+            setIsLoading(true);
+            setError(null);
+            const response = await api.get<KnowledgeBaseEntry[]>('/api/knowledge-base');
+            setEntries(response.data);
+            
+            const fetchedCategories = [...new Set(response.data.map((entry: KnowledgeBaseEntry) => entry.category))];
+            setCategories(fetchedCategories);
+            setCategoryFilters(
+                fetchedCategories.reduce((acc, category) => ({ ...acc, [category]: true }), {})
+            );
+
+        } catch (err) {
+            console.error("Failed to fetch knowledge base:", err);
+            setError("无法加载知识库条目，请稍后重试。");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
     useEffect(() => {
-        const fetchKnowledgeBase = async () => {
-            if (user?.role !== 'admin') return;
-            try {
-                setIsLoading(true);
-                setError(null);
-                const response = await api.get<KnowledgeBaseEntry[]>('/api/knowledge-base');
-                setEntries(response.data);
-                
-                const fetchedCategories = [...new Set(response.data.map((entry: KnowledgeBaseEntry) => entry.category))];
-                setCategories(fetchedCategories);
-                setCategoryFilters(
-                    fetchedCategories.reduce((acc, category) => ({ ...acc, [category]: true }), {})
-                );
-
-            } catch (err) {
-                console.error("Failed to fetch knowledge base:", err);
-                setError("无法加载知识库条目，请稍后重试。");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         fetchKnowledgeBase();
     }, [user]);
 
@@ -76,6 +81,17 @@ export default function KnowledgeBasePage() {
             return searchMatch && categoryMatch;
         });
     }, [searchTerm, categoryFilters, entries]);
+    
+    const handleDelete = async (entryId: string) => {
+        try {
+            await api.delete(`/api/knowledge-base/${entryId}`);
+            toast({ title: "删除成功", description: "条目已从知识库中移除。" });
+            await fetchKnowledgeBase(); // Refresh list
+        } catch (error) {
+            console.error("Failed to delete entry:", error);
+            toast({ title: "删除失败", description: "无法删除该条目，请稍后重试。", variant: "destructive" });
+        }
+    };
 
     if (!user || user.role !== 'admin') {
         return (
@@ -164,7 +180,7 @@ export default function KnowledgeBasePage() {
                                         ))}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
-                                 <Button disabled>
+                                 <Button>
                                     <PlusCircle className="mr-2 h-4 w-4" />
                                     新增条目
                                 </Button>
@@ -214,11 +230,11 @@ export default function KnowledgeBasePage() {
                                                             <Eye className="h-4 w-4" />
                                                             <span className="sr-only">查看详情</span>
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" disabled>
+                                                        <Button variant="ghost" size="icon">
                                                             <FilePenLine className="h-4 w-4" />
                                                             <span className="sr-only">编辑</span>
                                                         </Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled>
+                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(entry.id)}>
                                                             <Trash2 className="h-4 w-4" />
                                                             <span className="sr-only">删除</span>
                                                         </Button>

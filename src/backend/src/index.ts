@@ -336,6 +336,23 @@ app.post('/api/demands', async (req: Request, res: Response) => {
     }
 });
 
+// Delete a demand
+app.delete('/api/demands/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        // Also delete related responses first to maintain referential integrity
+        await pool.query('DELETE FROM demand_responses WHERE demand_id = $1', [id]);
+        const deleteResult = await pool.query('DELETE FROM demands WHERE id = $1 RETURNING *', [id]);
+        if (deleteResult.rowCount === 0) {
+            return res.status(404).json({ error: 'Demand not found' });
+        }
+        res.status(200).json({ message: 'Demand deleted successfully', demand: deleteResult.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Respond to a demand (take an order)
 app.post('/api/demands/:id/respond', async (req: Request, res: Response) => {
     const { id: demandId } = req.params;
@@ -393,5 +410,3 @@ app.post('/api/demands/:id/respond', async (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
-
-    

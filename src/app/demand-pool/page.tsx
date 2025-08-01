@@ -17,10 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Search, ListFilter, PlusCircle, Hand, MessageSquare, Briefcase, LoaderCircle } from "lucide-react";
+import { AlertTriangle, Search, ListFilter, PlusCircle, Hand, MessageSquare, Briefcase, LoaderCircle, Trash2 } from "lucide-react";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 
 type Demand = {
   id: string;
@@ -145,6 +147,24 @@ export default function DemandPoolPage() {
             console.error("Failed to respond to demand:", error);
         } finally {
             setIsSubmitting(null);
+        }
+    };
+    
+     const handleDeleteDemand = async (demandId: string) => {
+        try {
+            await api.delete(`/api/demands/${demandId}`);
+            toast({
+                title: "删除成功",
+                description: "该需求已从系统中删除。",
+            });
+            await fetchDemands();
+        } catch (error) {
+            toast({
+                title: "删除失败",
+                description: "无法删除该需求，请稍后重试。",
+                variant: "destructive",
+            });
+            console.error("Failed to delete demand:", error);
         }
     };
     
@@ -290,6 +310,30 @@ export default function DemandPoolPage() {
                                                         )}
                                                         {demand.status === '已完成' && (
                                                             <Button size="sm" variant="outline" disabled>已完成</Button>
+                                                        )}
+                                                         {user?.role === 'admin' && (
+                                                             <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                     <Button variant="destructive" size="sm">
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        删除
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                    <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        此操作无法撤销。这将永久删除此需求。
+                                                                    </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteDemand(demand.id)}>
+                                                                        继续删除
+                                                                    </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
                                                         )}
                                                     </div>
                                                 </TableCell>
