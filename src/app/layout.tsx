@@ -1,26 +1,36 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { AppLayout } from '@/components/app-layout';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/lib/auth';
+import type { Metadata } from 'next'
+import './globals.css'
+import { AppLayout } from '@/components/app-layout'
+import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: 'AI 智能匹配',
   description: '智能产品与服务推荐',
-};
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
@@ -29,5 +39,5 @@ export default function RootLayout({
         </AuthProvider>
       </body>
     </html>
-  );
+  )
 }
