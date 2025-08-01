@@ -240,7 +240,7 @@ app.get('/api/suppliers/:id', async (req: Request, res: Response) => {
     }
 });
 
-// Update a supplier's info (we will use PUT for simplicity to replace the whole record)
+// Create or update a supplier's info using "upsert" logic
 app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
@@ -253,8 +253,6 @@ app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Supplier full name is required' });
     }
     
-    // In a real app, you'd check if a supplier with this ID exists before inserting.
-    // Here we use ON CONFLICT to handle both creation (if not exists) and update.
     try {
         const result = await pool.query(
             `INSERT INTO suppliers (id, full_name, short_name, logo_url, introduction, region, address, establishment_date, registered_capital, credit_code, business_license_url, contact_person, contact_title, contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields)
@@ -286,9 +284,9 @@ app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
             ]
         );
         res.json(result.rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Internal server error' });
+    } catch (err: any) {
+        console.error('Supplier Upsert Error:', err.message);
+        res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 });
 

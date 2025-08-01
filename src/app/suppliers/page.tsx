@@ -64,7 +64,7 @@ const productServiceSchema = z.object({
     mediaTop: z.any().optional(),
     mediaBottom: z.any().optional(),
     mediaLeft: z.any().optional(),
-    mediaRight: z.any().optional,
+    mediaRight: z.any().optional(),
     mediaFront: z.any().optional(),
     mediaBack: z.any().optional(),
     customFields: z.array(customFieldSchema).optional(),
@@ -255,6 +255,8 @@ export default function SuppliersPage() {
             // Log files that would be uploaded
             console.log(`Files for product "${productData.name}":`, { mediaPanoramic, mediaTop, mediaBottom, mediaLeft, mediaRight, mediaFront, mediaBack });
 
+            // This currently only supports ADDING new products. A full implementation
+            // would need to check if a product exists and perform an UPDATE (PUT) instead.
             await api.post(`/api/suppliers/${user.id}/products`, {
                 // Mapping frontend camelCase to backend snake_case
                 name: productData.name,
@@ -267,7 +269,7 @@ export default function SuppliersPage() {
                 // media_... urls would be set after file uploads
             });
         }
-        toast({ title: "操作成功", description: "商品/服务信息已保存。" });
+        toast({ title: "操作成功", description: "商品/服务信息已提交保存。新项目将添加，现有项目请联系管理员修改。" });
     } catch (err) {
         console.error("Failed to save product(s):", err);
         toast({ title: "保存失败", description: "无法保存商品/服务信息，请稍后重试。", variant: "destructive" });
