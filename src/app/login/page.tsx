@@ -28,6 +28,10 @@ export default function LoginPage() {
         setIsLoading(true);
         try {
             const response = await api.get<User[]>('/api/users');
+            // Add a small delay to allow backend to fully start in dev mode
+            if (process.env.NODE_ENV === 'development') {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
             setLoginOptions(response.data);
         } catch (error) {
             console.error("Failed to fetch login options from API, falling back to mock data.", error);
