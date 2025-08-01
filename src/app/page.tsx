@@ -2,21 +2,23 @@
 "use client";
 
 import { useState, useRef, useEffect, type ChangeEvent } from "react";
-import type { Message, Product } from "@/lib/types";
+import type { Message, Product, IdentificationResult } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { getAiResponse } from "@/app/actions";
+import { identifyImage, getRecommendationsFromText } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2, ExternalLink, Eye } from "lucide-react";
+import { Bot, User, Image as ImageIcon, Send, ArrowRight, CornerDownLeft, Star, Briefcase, Diamond, CheckCircle, Wand2, ExternalLink, Eye, Sparkles, Search } from "lucide-react";
 import Image from "next/image";
 import type { GenerateUserProfileOutput } from "@/ai/flows/generate-user-profile";
 import type { RecommendProductsOrServicesOutput } from "@/ai/flows/recommend-products-or-services";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+
 
 export default function Home() {
   const { toast } = useToast();
@@ -26,6 +28,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [imageDataUri, setImageDataUri] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [identificationResult, setIdentificationResult] = useState<IdentificationResult | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -34,67 +38,98 @@ export default function Home() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+  
+  const clearImageState = () => {
+    setPreviewImage(null);
+    setImageDataUri(null);
+    setIdentificationResult(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      clearImageState(); // Clear previous image state
       setPreviewImage(URL.createObjectURL(file));
+      setIsLoading(true); // Start loading spinner for identification
+
       const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        setImageDataUri(loadEvent.target?.result as string);
+      reader.onload = async (loadEvent) => {
+        const dataUri = loadEvent.target?.result as string;
+        setImageDataUri(dataUri);
+
+        try {
+          const result = await identifyImage(dataUri);
+          setIdentificationResult(result);
+        } catch (error) {
+           console.error(error);
+          toast({
+            title: "AI识图失败",
+            description: "无法识别图片中的物体，请稍后再试或换一张图片。",
+            variant: "destructive",
+          });
+          clearImageState();
+        } finally {
+            setIsLoading(false); // Stop loading spinner
+        }
       };
       reader.readAsDataURL(file);
     }
   };
+  
+  const processRequest = async (text: string) => {
+      setIsLoading(true);
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: "user",
+        content: text,
+      };
+      setMessages((prev) => [...prev, userMessage]);
+      
+      try {
+        const aiResult = await getRecommendationsFromText({ textInput: text });
+
+        if (!aiResult || !aiResult.userProfile || !aiResult.recommendations) {
+          throw new Error("AI response is incomplete.");
+        }
+        
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "这是我为您找到的结果：",
+          aiContent: aiResult,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+
+      } catch (error) {
+        console.error(error);
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+          title: "发生错误",
+          description: `从 AI 获取回应失败: ${errorMessage}. 请稍后重试。`,
+          variant: "destructive",
+        });
+        setMessages((prev) => prev.filter((msg) => msg.id !== userMessage.id));
+      } finally {
+        setIsLoading(false);
+        clearImageState();
+      }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() && !imageDataUri) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      imageDataUri: previewImage || undefined,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+    if (!input.trim()) return;
+    const textToSend = input;
     setInput("");
-    setPreviewImage(null);
-    setImageDataUri(null);
-
-    try {
-      const aiResult = await getAiResponse({
-          textInput: input,
-          imageDataUri: imageDataUri ?? undefined,
-      });
-
-      if (!aiResult || !aiResult.userProfile || !aiResult.recommendations) {
-        throw new Error("AI response is incomplete.");
-      }
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "这是我为您找到的结果：",
-        aiContent: aiResult,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error(error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        title: "发生错误",
-        description: `从 AI 获取回应失败: ${errorMessage}. 请稍后重试。`,
-        variant: "destructive",
-      });
-      setMessages((prev) =>
-        prev.filter((msg) => msg.id !== userMessage.id)
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    await processRequest(textToSend);
+  };
+  
+  const handleRecommendationClick = async (text: string) => {
+    setInput("");
+    await processRequest(text);
   };
   
   if (!user) {
@@ -131,13 +166,13 @@ export default function Home() {
                     <CardDescription>告诉我您的想法,我会为您找到完美的作品。</CardDescription>
                 </CardHeader>
                 <CardContent ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 p-6">
-                     {messages.length === 0 && !isLoading && (
+                     {messages.length === 0 && !isLoading && !identificationResult && (
                         <div className="flex items-start gap-3">
                            <Avatar className="w-9 h-9 border-2 border-primary/50">
                               <AvatarFallback className="bg-primary/20 text-primary"><Bot className="w-5 h-5" /></AvatarFallback>
                            </Avatar>
                            <div className="rounded-2xl p-4 bg-card max-w-2xl">
-                              <p className="whitespace-pre-wrap">您好!我是您的专属购物助手。请问您在寻找什么?比如,是为自己选购,还是为朋友挑选</p>
+                              <p className="whitespace-pre-wrap">您好!我是您的专属购物助手。请问您在寻找什么?您可以直接描述，或者上传一张图片让我看看。 </p>
                            </div>
                         </div>
                     )}
@@ -145,18 +180,19 @@ export default function Home() {
                       <ChatMessage key={message.id} message={message} />
                     ))}
                     {isLoading && <LoadingMessage />}
+                    {identificationResult && !isLoading && <IdentificationResultCard result={identificationResult} onRecommendClick={handleRecommendationClick}/>}
                 </CardContent>
                 <div className="border-t bg-background/80 backdrop-blur-sm p-4 rounded-b-lg">
                    <form onSubmit={handleSendMessage} className="relative">
                         {previewImage && (
                             <div className="absolute bottom-full mb-2 left-0 p-2 bg-card border rounded-lg shadow-sm">
                                 <Image src={previewImage} alt="图片预览" width={64} height={64} className="rounded-md object-cover"/>
-                                <button type="button" onClick={() => { setPreviewImage(null); setImageDataUri(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 text-xs">&times;</button>
+                                <button type="button" onClick={clearImageState} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 text-xs">&times;</button>
                             </div>
                         )}
                       <div className="flex items-center gap-2">
                         <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden"/>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-primary">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="text-muted-foreground hover:text-primary" disabled={isLoading}>
                           <ImageIcon className="w-5 h-5" />
                         </Button>
                         <Textarea
@@ -172,7 +208,7 @@ export default function Home() {
                           }}
                           rows={1}
                         />
-                        <Button type="submit" size="icon" disabled={isLoading}>
+                        <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
                           <Send className="w-5 h-5" />
                           <span className="sr-only">发送</span>
                         </Button>
@@ -243,10 +279,7 @@ function ChatMessage({ message }: { message: Message }) {
                 </Avatar>
             )}
             <div className={`flex flex-col gap-2 max-w-2xl ${isAssistant ? '' : 'items-end'}`}>
-                <div className={`rounded-2xl p-4 ${isAssistant ? 'bg-card' : 'bg-primary text-primary-foreground'}`}>
-                    {message.imageDataUri && (
-                        <Image src={message.imageDataUri} alt="用户上传" width={200} height={200} className="rounded-lg mb-2"/>
-                    )}
+                <div className={cn("rounded-2xl p-4", isAssistant ? 'bg-card' : 'bg-primary text-primary-foreground')}>
                     {message.content && <p className="whitespace-pre-wrap">{message.content}</p>}
                     {message.aiContent?.userProfile && <UserProfileDisplay profile={message.aiContent.userProfile} />}
                     {message.aiContent?.recommendations && <RecommendationsDisplay recommendations={message.aiContent.recommendations} />}
@@ -366,4 +399,44 @@ function RecommendationsDisplay({ recommendations }: { recommendations: Recommen
             )}
         </div>
     );
+}
+
+function IdentificationResultCard({ result, onRecommendClick }: { result: IdentificationResult; onRecommendClick: (text: string) => void; }) {
+  const recommendationText = `找一找“${result.identifiedObject}”`;
+  return (
+    <div className="flex items-start gap-3">
+       <Avatar className="w-9 h-9 border-2 border-primary/50">
+            <AvatarFallback className="bg-primary/20 text-primary"><Bot className="w-5 h-5" /></AvatarFallback>
+        </Avatar>
+      <div className="flex flex-col gap-2 max-w-2xl">
+        <div className="rounded-2xl p-4 bg-card">
+          <Card className="bg-background/50 border-primary/20">
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-lg font-headline flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                AI识图结果
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <p className="text-sm text-muted-foreground mb-3">
+                我猜您图片里的主要物品是：<strong className="text-foreground">{result.identifiedObject}</strong>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {result.tags.map(tag => (
+                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+           <div className="mt-2 p-1">
+                <p className="text-sm text-muted-foreground mb-3">您是想找这个吗？或者，您可以告诉我更多细节。</p>
+                 <Button onClick={() => onRecommendClick(recommendationText)} size="lg" className="w-full">
+                    <Search className="mr-2 h-4 w-4" />
+                    {recommendationText}
+                </Button>
+            </div>
+        </div>
+      </div>
+    </div>
+  );
 }
