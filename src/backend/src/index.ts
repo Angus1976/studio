@@ -421,6 +421,30 @@ app.post('/api/demands/:id/respond', async (req: Request, res: Response) => {
     }
 });
 
+// --- Public Resources API Endpoints ---
+
+// Get all external links
+app.get('/api/external-links', async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query('SELECT * FROM external_links ORDER BY name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get all API interfaces
+app.get('/api/api-interfaces', async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query('SELECT * FROM api_interfaces ORDER BY name ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
