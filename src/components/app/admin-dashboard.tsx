@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -128,7 +128,7 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 }
 
 
-function TenantManagementDialog() {
+function TenantManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
   const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -177,12 +177,12 @@ function TenantManagementDialog() {
   return (
     <Dialog>
         <DialogTrigger asChild>
-            <Button>增、改、删企业注册租户</Button>
+            <Button>{buttonText}</Button>
         </DialogTrigger>
         <DialogContent className="max-w-4xl">
             <DialogHeader>
-                <DialogTitle>多租户企业管理</DialogTitle>
-                <DialogDescription>管理平台上的所有企业租户账户。在这里可以增、改、删企业注册租户。</DialogDescription>
+                <DialogTitle>{title}</DialogTitle>
+                <DialogDescription>{description}</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                 <div className="md:col-span-2">
@@ -232,7 +232,7 @@ function TenantManagementDialog() {
                             <CardDescription>{editingTenant ? '修改租户信息。' : (isFormOpen ? '添加一个新企业到平台。' : '选择或添加租户')}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                           {isFormOpen || editingTenant ? (
+                           {isFormOpen ? (
                                 <TenantForm 
                                     tenant={editingTenant} 
                                     onSubmit={handleAddOrUpdateTenant} 
@@ -739,7 +739,7 @@ const managementPanels = [
         title: "多租户企业管理",
         description: "管理平台上的所有企业租户账户。",
         icon: Building,
-        buttonText: "增、改、删企业注册租户",
+        buttonText: "管理企业用户",
     },
     {
         id: "users",
@@ -799,7 +799,11 @@ export function AdminDashboard() {
                         </CardContent>
                         <CardFooter>
                             {panel.id === 'tenants' ? (
-                                <TenantManagementDialog />
+                                <TenantManagementDialog 
+                                    buttonText={panel.buttonText}
+                                    title={panel.title}
+                                    description={panel.description}
+                                />
                             ) : panel.id === 'users' ? (
                                 <UserManagementDialog 
                                     buttonText={panel.buttonText}
@@ -860,6 +864,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
-    
