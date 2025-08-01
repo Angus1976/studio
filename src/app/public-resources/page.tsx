@@ -12,9 +12,20 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Library, PlusCircle, Upload, Download, FilePenLine, Trash2, ExternalLink, KeyRound, LoaderCircle } from "lucide-react";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
-type ExternalLink = {
+type ExternalLinkType = {
   id: number;
   name: string;
   url: string;
@@ -36,7 +47,7 @@ type ApiInterface = {
 export default function PublicResourcesPage() {
     const { user } = useAuth();
     const { toast } = useToast();
-    const [links, setLinks] = useState<ExternalLink[]>([]);
+    const [links, setLinks] = useState<ExternalLinkType[]>([]);
     const [apis, setApis] = useState<ApiInterface[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -68,6 +79,18 @@ export default function PublicResourcesPage() {
         fetchData();
     }, [user]);
 
+    const handleDelete = async (type: 'link' | 'api', id: number) => {
+        const url = type === 'link' ? `/api/external-links/${id}` : `/api/api-interfaces/${id}`;
+        try {
+            await api.delete(url);
+            toast({ title: "删除成功", description: "资源已从库中移除。" });
+            await fetchData(); // Refresh data
+        } catch (error) {
+            console.error(`Failed to delete ${type}:`, error);
+            toast({ title: "删除失败", description: "无法删除该资源，请稍后重试。", variant: "destructive" });
+        }
+    };
+
     if (!user || user.role !== 'admin') {
         return (
             <div className="flex h-[calc(100svh-4rem)] w-full flex-col items-center justify-center text-center">
@@ -87,8 +110,8 @@ export default function PublicResourcesPage() {
 
     const renderTableContent = (
         type: 'links' | 'apis',
-        data: ExternalLink[] | ApiInterface[],
-        columns: TableHead[],
+        data: ExternalLinkType[] | ApiInterface[],
+        columns: any[],
         renderRow: (item: any) => React.ReactNode
     ) => {
         if (isLoading) {
@@ -185,7 +208,7 @@ export default function PublicResourcesPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {renderTableContent('links', links, linkColumns as any, (link: ExternalLink) => (
+                                        {renderTableContent('links', links, linkColumns as any, (link: ExternalLinkType) => (
                                             <TableRow key={link.id}>
                                                 <TableCell className="font-medium">{link.name}</TableCell>
                                                 <TableCell><a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">{link.url} <ExternalLink className="h-3 w-3"/></a></TableCell>
@@ -195,7 +218,23 @@ export default function PublicResourcesPage() {
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <Button variant="ghost" size="icon" disabled><FilePenLine className="h-4 w-4" /><span className="sr-only">编辑</span></Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled><Trash2 className="h-4 w-4" /><span className="sr-only">删除</span></Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /><span className="sr-only">删除</span></Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                        此操作无法撤销。这将永久删除 “{link.name}”。
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete('link', link.id)}>继续删除</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -234,7 +273,23 @@ export default function PublicResourcesPage() {
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <Button variant="ghost" size="icon" disabled><FilePenLine className="h-4 w-4" /><span className="sr-only">编辑</span></Button>
-                                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled><Trash2 className="h-4 w-4" /><span className="sr-only">删除</span></Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /><span className="sr-only">删除</span></Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>确定要删除吗？</AlertDialogTitle>
+                                                                    <AlertDialogDescription>
+                                                                         此操作无法撤销。这将永久删除 “{api.name}”。
+                                                                    </AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>取消</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete('api', api.id)}>继续删除</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -249,5 +304,3 @@ export default function PublicResourcesPage() {
         </main>
     );
 }
-
-    

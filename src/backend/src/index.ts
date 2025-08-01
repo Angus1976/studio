@@ -434,6 +434,22 @@ app.get('/api/external-links', async (req: Request, res: Response) => {
     }
 });
 
+// Delete an external link
+app.delete('/api/external-links/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM external_links WHERE id = $1 RETURNING *', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'External link not found' });
+        }
+        res.status(200).json({ message: 'External link deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 // Get all API interfaces
 app.get('/api/api-interfaces', async (req: Request, res: Response) => {
     try {
@@ -445,9 +461,22 @@ app.get('/api/api-interfaces', async (req: Request, res: Response) => {
     }
 });
 
+// Delete an API interface
+app.delete('/api/api-interfaces/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query('DELETE FROM api_interfaces WHERE id = $1 RETURNING *', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'API interface not found' });
+        }
+        res.status(200).json({ message: 'API interface deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
-
-    
