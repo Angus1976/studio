@@ -183,7 +183,7 @@ app.delete('/api/knowledge-base/:id', async (req: Request, res: Response) => {
 // Get all suppliers
 app.get('/api/suppliers', async (req: Request, res: Response) => {
     try {
-        const result = await pool.query('SELECT * FROM suppliers');
+        const result = await pool.query('SELECT id, full_name, short_name, logo_url, region, address FROM suppliers');
         res.json(result.rows);
     } catch (err) {
         console.error(err);
@@ -252,15 +252,18 @@ app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
 app.post('/api/suppliers/:supplierId/products', async (req: Request, res: Response) => {
     const { supplierId } = req.params;
     // Note: This is a simplified version. A real app would have more robust validation
-    const { name, description, price, category, sku, purchase_url, custom_fields } = req.body;
+    const { name, description, price, category, sku, purchase_url, custom_fields,
+            media_panoramic, media_top, media_bottom, media_left, media_right, media_front, media_back 
+    } = req.body;
+
     if (!name) {
         return res.status(400).json({ error: 'Product name is required' });
     }
     try {
         const result = await pool.query(
-            `INSERT INTO products (supplier_id, name, description, price, category, sku, purchase_url, custom_fields) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [supplierId, name, description, price, category, sku, purchase_url, custom_fields]
+            `INSERT INTO products (supplier_id, name, description, price, category, sku, purchase_url, custom_fields, media_panoramic, media_top, media_bottom, media_left, media_right, media_front, media_back) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
+            [supplierId, name, description, price, category, sku, purchase_url, custom_fields, media_panoramic, media_top, media_bottom, media_left, media_right, media_front, media_back]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -275,7 +278,7 @@ app.post('/api/suppliers/:supplierId/products', async (req: Request, res: Respon
 app.get('/api/demands', async (req: Request, res: Response) => {
     try {
         // In a real app, you'd likely join with users table to get poster's name
-        const result = await pool.query('SELECT * FROM demands ORDER BY posted_date DESC');
+        const result = await pool.query('SELECT d.*, u.name as posted_by FROM demands d JOIN users u ON d.user_id = u.id ORDER BY posted_date DESC');
         res.json(result.rows);
     } catch (err) {
         console.error(err);
@@ -292,8 +295,8 @@ app.post('/api/demands', async (req: Request, res: Response) => {
     }
     try {
         const result = await pool.query(
-            `INSERT INTO demands (user_id, title, description, budget, category, tags) 
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            `INSERT INTO demands (user_id, title, description, budget, category, tags, status) 
+             VALUES ($1, $2, $3, $4, $5, $6, '开放中') RETURNING *`,
             [user_id, title, description, budget, category, tags]
         );
         res.status(201).json(result.rows[0]);
@@ -307,3 +310,5 @@ app.post('/api/demands', async (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Backend server is running on http://localhost:${port}`);
 });
+
+    
