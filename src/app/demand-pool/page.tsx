@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -17,78 +17,78 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Search, ListFilter, PlusCircle, Hand, MessageSquare, Briefcase } from "lucide-react";
+import { AlertTriangle, Search, ListFilter, PlusCircle, Hand, MessageSquare, Briefcase, LoaderCircle } from "lucide-react";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
+import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
-// Mock data for the demand pool
-const demands = [
-  {
-    id: "demand-001",
-    title: "寻找一款适合送给女友的生日礼物",
-    budget: "¥500 - ¥1000",
-    category: "礼品定制",
-    tags: ["生日礼物", "设计感", "女性"],
-    status: "开放中",
-    postedBy: "张伟",
-    postedDate: "2024-08-01",
-    description: "希望找到一款有设计感、不那么大众化的生日礼物送给女友，她喜欢艺术和手工艺品。预算在500到1000元之间。",
-  },
-  {
-    id: "demand-002",
-    title: "需要为新公司的LOGO设计一个3D动画",
-    budget: "¥3000 - ¥5000",
-    category: "3D设计",
-    tags: ["Logo动画", "赛博朋克", "创意者"],
-    status: "开放中",
-    postedBy: "李明",
-    postedDate: "2024-07-30",
-    description: "我们是一家科技初创公司，logo已经有了，需要一位创意者为其制作一个5-10秒的赛博朋克风格3D开场动画。",
-  },
-  {
-    id: "demand-003",
-    title: "批量采购一批智能办公插座",
-    budget: "¥10000+",
-    category: "智能硬件",
-    tags: ["智能家居", "企业采购", "供应商"],
-    status: "洽谈中",
-    postedBy: "王芳",
-    postedDate: "2024-07-29",
-    description: "公司装修，需要采购约200个智能插座，要求支持远程控制和电量统计，希望有实力的供应商报价。",
-  },
-  {
-    id: "demand-004",
-    title: "为宠物狗定制一个智能项圈",
-    budget: "¥300 - ¥600",
-    category: "宠物用品",
-    tags: ["智能穿戴", "宠物", "GPS"],
-    status: "已完成",
-    postedBy: "赵强",
-    postedDate: "2024-07-25",
-    description: "希望能定制一款带有GPS定位、活动量监测功能的宠物项圈，外观希望能个性化一点。",
-  },
-];
-
-const categories = [...new Set(demands.map(demand => demand.category))];
-const statuses = [...new Set(demands.map(demand => demand.status))];
+type Demand = {
+  id: string;
+  title: string;
+  budget: string;
+  category: string;
+  tags: string[];
+  status: string;
+  posted_by: string;
+  posted_date: string;
+  description: string;
+};
 
 export default function DemandPoolPage() {
     const { user } = useAuth();
-    const [selectedDemand, setSelectedDemand] = useState<typeof demands[0] | null>(null);
+    const { toast } = useToast();
+    const [demands, setDemands] = useState<Demand[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState<string | null>(null); // To track which demand is being submitted
+    const [error, setError] = useState<string | null>(null);
+
+    const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [filters, setFilters] = useState<Record<string, Record<string, boolean>>>({
-        category: categories.reduce((acc, category) => ({ ...acc, [category]: true }), {}),
-        status: statuses.reduce((acc, status) => ({ ...acc, [status]: true }), {}),
+        category: {},
+        status: {},
     });
 
+    const fetchDemands = async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get('/api/demands');
+            setDemands(response.data);
+            
+            // Dynamically set up filters based on fetched data
+            const fetchedCategories = [...new Set(response.data.map((d: Demand) => d.category))];
+            const fetchedStatuses = [...new Set(response.data.map((d: Demand) => d.status))];
+            setFilters({
+                category: fetchedCategories.reduce((acc, category) => ({ ...acc, [category]: true }), {}),
+                status: fetchedStatuses.reduce((acc, status) => ({ ...acc, [status]: true }), {}),
+            });
+
+        } catch (err) {
+            console.error("Failed to fetch demands:", err);
+            setError("无法加载需求列表，请稍后重试。");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchDemands();
+    }, []);
+
     const filteredDemands = useMemo(() => {
+        if (isLoading) return [];
         return demands.filter(demand => {
             const searchMatch = demand.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                 demand.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-            const categoryMatch = filters.category[demand.category];
-            const statusMatch = filters.status[demand.status];
+            const categoryMatch = filters.category[demand.category] ?? true;
+            const statusMatch = filters.status[demand.status] ?? true;
             return searchMatch && categoryMatch && statusMatch;
         });
-    }, [searchTerm, filters]);
+    }, [searchTerm, filters, demands, isLoading]);
+    
+    const categories = useMemo(() => Object.keys(filters.category), [filters.category]);
+    const statuses = useMemo(() => Object.keys(filters.status), [filters.status]);
+
 
     const handleFilterChange = (filterType: 'category' | 'status', value: string, checked: boolean) => {
         setFilters(prev => ({
@@ -100,8 +100,9 @@ export default function DemandPoolPage() {
         }));
     };
     
-    const formatDemandForDialog = (demand: typeof demands[0] | null) => {
+    const formatDemandForDialog = (demand: Demand | null) => {
         if (!demand) return null;
+        const postedDate = new Date(demand.posted_date).toLocaleDateString();
         return {
             title: demand.title,
             description: `预算: ${demand.budget}`,
@@ -110,13 +111,43 @@ export default function DemandPoolPage() {
                 "类别": demand.category,
                 "标签": demand.tags.join(", "),
                 "状态": demand.status,
-                "发布者": demand.postedBy,
-                "发布日期": demand.postedDate,
+                "发布者": demand.posted_by,
+                "发布日期": postedDate,
                 "需求ID": demand.id,
             }
         };
     };
 
+    const handleTakeOrder = async (demandId: string) => {
+        if (!user) {
+            toast({ title: "请先登录", description: "登录后才能响应需求。", variant: "destructive" });
+            return;
+        }
+        
+        setIsSubmitting(demandId);
+        try {
+            // Note: In a real app, supplier_id would come from the user session.
+            // Here, we're using the logged-in user's ID, assuming they are a supplier/creator.
+            await api.post(`/api/demands/${demandId}/respond`, { supplier_id: user.id });
+            toast({
+                title: "抢单成功",
+                description: "您已成功响应此需求，状态已更新为“洽谈中”。",
+            });
+            // Refresh the list to show the updated status
+            await fetchDemands();
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.error || "操作失败，请稍后重试。";
+            toast({
+                title: "抢单失败",
+                description: errorMessage,
+                variant: "destructive",
+            });
+            console.error("Failed to respond to demand:", error);
+        } finally {
+            setIsSubmitting(null);
+        }
+    };
+    
     const canTakeOrder = user?.role === 'supplier' || user?.role === 'creator';
     
     const getStatusBadgeVariant = (status: string): "default" | "secondary" | "outline" | "destructive" => {
@@ -212,47 +243,69 @@ export default function DemandPoolPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredDemands.map((demand) => (
-                                        <TableRow key={demand.id} onDoubleClick={() => setSelectedDemand(demand)} className="cursor-pointer">
-                                            <TableCell className="font-medium">{demand.title}</TableCell>
-                                            <TableCell>{demand.budget}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">{demand.category}</Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant={getStatusBadgeVariant(demand.status)}>{demand.status}</Badge>
-                                            </TableCell>
-                                            <TableCell>{demand.postedDate}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {canTakeOrder && demand.status === '开放中' && (
-                                                        <Button size="sm">
-                                                            <Hand className="mr-2 h-4 w-4" />
-                                                            抢单
-                                                        </Button>
-                                                    )}
-                                                     {demand.status === '洽谈中' && (
-                                                         <Button size="sm" variant="secondary">
-                                                            <MessageSquare className="mr-2 h-4 w-4" />
-                                                            开始沟通
-                                                        </Button>
-                                                     )}
-                                                      {demand.status === '已完成' && (
-                                                         <Button size="sm" variant="outline" disabled>已完成</Button>
-                                                     )}
+                                    {isLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center">
+                                                <div className="flex justify-center items-center">
+                                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                    正在加载需求...
                                                 </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    ) : error ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="h-24 text-center text-destructive">
+                                                {error}
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : filteredDemands.length > 0 ? (
+                                        filteredDemands.map((demand) => (
+                                            <TableRow key={demand.id} onDoubleClick={() => setSelectedDemand(demand)} className="cursor-pointer">
+                                                <TableCell className="font-medium">{demand.title}</TableCell>
+                                                <TableCell>{demand.budget}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline">{demand.category}</Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={getStatusBadgeVariant(demand.status)}>{demand.status}</Badge>
+                                                </TableCell>
+                                                <TableCell>{new Date(demand.posted_date).toLocaleDateString()}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        {canTakeOrder && demand.status === '开放中' && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                onClick={() => handleTakeOrder(demand.id)}
+                                                                disabled={isSubmitting === demand.id}
+                                                            >
+                                                                {isSubmitting === demand.id ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/> : <Hand className="mr-2 h-4 w-4" />}
+                                                                抢单
+                                                            </Button>
+                                                        )}
+                                                        {demand.status === '洽谈中' && (
+                                                            <Button size="sm" variant="secondary">
+                                                                <MessageSquare className="mr-2 h-4 w-4" />
+                                                                开始沟通
+                                                            </Button>
+                                                        )}
+                                                        {demand.status === '已完成' && (
+                                                            <Button size="sm" variant="outline" disabled>已完成</Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                                                <p>未找到匹配的需求。</p>
+                                                <p className="text-sm">请尝试调整您的搜索词或筛选条件。</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
-                         {filteredDemands.length === 0 && (
-                            <div className="text-center py-10 text-muted-foreground">
-                                <p>未找到匹配的需求。</p>
-                                <p className="text-sm">请尝试调整您的搜索词或筛选条件。</p>
-                            </div>
-                        )}
                     </CardContent>
                 </Card>
             </main>

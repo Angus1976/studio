@@ -91,7 +91,7 @@ export default function DesignersPage() {
                                   <AvatarImage src={designer.avatar} alt={designer.name} />
                                   <AvatarFallback>{designer.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                {designer.status === 'active' ? ( // Changed from 'online'
+                                {designer.status === 'active' ? ( 
                                     <Badge className="absolute bottom-4 right-0 flex items-center gap-1 border-2 border-background" variant="default">
                                         <CheckCircle className="h-3 w-3" /> 在线
                                     </Badge>
@@ -112,7 +112,7 @@ export default function DesignersPage() {
                             </div>
                         </CardContent>
                         <div className="p-4 pt-0">
-                           {designer.status === 'active' ? ( // Changed from 'online'
+                           {designer.status === 'active' ? ( 
                                <div className="flex gap-2">
                                    <Button className="w-full">
                                        预约
