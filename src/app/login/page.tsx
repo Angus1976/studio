@@ -25,12 +25,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     const fetchLoginOptions = async () => {
+        setIsLoading(true);
         try {
-            setIsLoading(true);
             const response = await api.get<User[]>('/api/users');
             setLoginOptions(response.data);
         } catch (error) {
-            console.error("Failed to fetch login options, using mock data.", error);
+            console.error("Failed to fetch login options from API, falling back to mock data.", error);
             setLoginOptions(mockUsers);
         } finally {
             setIsLoading(false);
