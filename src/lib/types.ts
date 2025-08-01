@@ -15,6 +15,7 @@ export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  imagePreview?: string;
   aiContent?: {
     userProfile: GenerateUserProfileOutput;
     recommendations: RecommendProductsOrServicesOutput;

@@ -10,10 +10,11 @@ import { z } from "zod";
 
 interface GetRecommendationsParams {
     textInput: string;
+    imageDataUri?: string | null;
 }
 
 export async function getRecommendationsFromText(params: GetRecommendationsParams) {
-  const { textInput } = params;
+  const { textInput, imageDataUri } = params;
     
   // Fetch latest data from backend instead of using static file
   const knowledgeBaseRes = await api.get<KnowledgeBaseEntry[]>('/api/knowledge-base');
@@ -26,10 +27,14 @@ export async function getRecommendationsFromText(params: GetRecommendationsParam
 
   const userProfile = await generateUserProfile({
     textInput,
+    imageDataUri: imageDataUri || undefined,
   });
+  
+  // Construct a refined query for recommendations based on profile
+  const recommendationQuery = `User profile: ${userProfile.profileSummary}. Tags: ${userProfile.tags.join(', ')}. Original request: ${textInput}`;
 
   const recommendations = await getRecommendations({
-      userNeeds: textInput,
+      userNeeds: recommendationQuery,
       userProfile: JSON.stringify(userProfile),
       knowledgeBase,
       publicResources,
