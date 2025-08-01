@@ -22,6 +22,7 @@ import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import api from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DemandFormDialog, type DemandFormValues } from "./demand-form";
 
 
 type Demand = {
@@ -41,8 +42,9 @@ export default function DemandPoolPage() {
     const { toast } = useToast();
     const [demands, setDemands] = useState<Demand[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState<string | null>(null); // To track which demand is being submitted
+    const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [isFormOpen, setIsFormOpen] = useState(false);
 
     const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -119,6 +121,27 @@ export default function DemandPoolPage() {
             }
         };
     };
+
+    const handleFormSubmit = async (data: DemandFormValues) => {
+        if (!user) {
+            toast({ title: "请先登录", description: "登录后才能发布需求。", variant: "destructive" });
+            return;
+        }
+
+        try {
+            await api.post('/api/demands', {
+                ...data,
+                user_id: user.id // Pass the logged-in user's ID
+            });
+            toast({ title: "发布成功", description: "您的需求已成功发布到需求池。" });
+            setIsFormOpen(false);
+            await fetchDemands(); // Refresh list
+        } catch (error) {
+            console.error("Failed to create demand:", error);
+            toast({ title: "发布失败", description: "无法发布您的需求，请稍后重试。", variant: "destructive" });
+        }
+    };
+
 
     const handleTakeOrder = async (demandId: string) => {
         if (!user) {
@@ -243,7 +266,7 @@ export default function DemandPoolPage() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                                  {user?.role === 'user' && (
-                                     <Button>
+                                     <Button onClick={() => setIsFormOpen(true)}>
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                         发布新需求
                                     </Button>
@@ -357,6 +380,11 @@ export default function DemandPoolPage() {
                 isOpen={!!selectedDemand}
                 onClose={() => setSelectedDemand(null)}
                 item={formatDemandForDialog(selectedDemand)}
+            />
+            <DemandFormDialog
+                isOpen={isFormOpen}
+                onClose={() => setIsFormOpen(false)}
+                onSubmit={handleFormSubmit}
             />
         </>
     );
