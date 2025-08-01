@@ -588,9 +588,15 @@ export default function SuppliersPage() {
                     </div>
                     
                     <div className="space-y-4">
-                      <h3 className="font-headline text-lg font-semibold">补充内容</h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-headline text-lg font-semibold">补充内容</h3>
+                        <Button type="button" size="sm" variant="outline" onClick={() => appendSupplierCustomField({ fieldName: "", fieldValue: "" })}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            增加字段
+                        </Button>
+                      </div>
                       {supplierCustomFields.map((item, index) => (
-                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end p-4 border rounded-md">
                           <FormField
                             control={supplierForm.control}
                             name={`customFields.${index}.fieldName`}
@@ -618,10 +624,6 @@ export default function SuppliersPage() {
                           </Button>
                         </div>
                       ))}
-                      <Button type="button" variant="outline" onClick={() => appendSupplierCustomField({ fieldName: "", fieldValue: "" })}>
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          增加补充内容
-                      </Button>
                     </div>
 
                     <Button type="submit" disabled={supplierForm.formState.isSubmitting}>
@@ -959,9 +961,15 @@ function ProductServiceItem({ form, index, remove }: {
             </Card>
 
             <div className="space-y-4 mt-6">
-                <h4 className="font-headline text-md font-semibold">补充内容</h4>
+                <div className="flex items-center justify-between">
+                    <h4 className="font-headline text-md font-semibold">补充内容</h4>
+                    <Button type="button" variant="outline" size="sm" onClick={() => appendCustomField({ fieldName: "", fieldValue: "" })}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        增加字段
+                    </Button>
+                </div>
                 {customFields.map((customField, k) => (
-                  <div key={customField.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                  <div key={customField.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end p-4 border rounded-md">
                     <FormField
                       control={control}
                       name={`products.${index}.customFields.${k}.fieldName`}
@@ -990,10 +998,6 @@ function ProductServiceItem({ form, index, remove }: {
                     </Button>
                   </div>
                 ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => appendCustomField({ fieldName: "", fieldValue: "" })}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    增加补充内容
-                </Button>
             </div>
         </Card>
     );

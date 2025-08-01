@@ -280,7 +280,7 @@ app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
             [
                 id, full_name, short_name, logo_url, introduction, region, address, establishment_date,
                 registered_capital, credit_code, business_license_url, contact_person, contact_title,
-                contact_mobile, contact_phone, contact_email, contact_wecom, custom_fields
+                contact_mobile, contact_phone, contact_email, contact_wecom, JSON.stringify(custom_fields || [])
             ]
         );
         res.json(result.rows[0]);
@@ -307,7 +307,7 @@ app.post('/api/suppliers/:supplierId/products', async (req: Request, res: Respon
         const result = await pool.query(
             `INSERT INTO products (supplier_id, name, description, price, category, sku, purchase_url, custom_fields, media_panoramic, media_top, media_bottom, media_left, media_right, media_front, media_back) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
-            [supplierId, name, description, price, category, sku, purchase_url, custom_fields, media_panoramic, media_top, media_bottom, media_left, media_right, media_front, media_back]
+            [supplierId, name, description, price, category, sku, purchase_url, JSON.stringify(custom_fields || []), media_panoramic, media_top, media_bottom, media_left, media_right, media_front, media_back]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
