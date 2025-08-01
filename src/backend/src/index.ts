@@ -229,7 +229,7 @@ app.get('/api/suppliers/:id', async (req: Request, res: Response) => {
         if (supplierRes.rowCount === 0) {
             return res.status(404).json({ error: 'Supplier not found' });
         }
-        const productsRes = await pool.query('SELECT * FROM products WHERE supplier_id = $1', [id]);
+        const productsRes = await pool.query('SELECT * FROM products WHERE supplier_id = $1 ORDER BY id', [id]);
         res.json({
             ...supplierRes.rows[0],
             products: productsRes.rows,
@@ -276,7 +276,8 @@ app.put('/api/suppliers/:id', async (req: Request, res: Response) => {
                 contact_phone = EXCLUDED.contact_phone,
                 contact_email = EXCLUDED.contact_email,
                 contact_wecom = EXCLUDED.contact_wecom,
-                custom_fields = EXCLUDED.custom_fields
+                custom_fields = EXCLUDED.custom_fields,
+                last_updated = NOW()
              RETURNING *`,
             [
                 id, full_name, short_name, logo_url, introduction, region, address, establishment_date,

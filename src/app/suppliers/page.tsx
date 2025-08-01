@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useRef, ChangeEvent, DragEvent } from "react";
+import { useState, useRef, ChangeEvent, DragEvent, useEffect } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ItemDetailsDialog } from "@/components/item-details-dialog";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const customFieldSchema = z.object({
   fieldName: z.string().min(1, "字段名不能为空"),
@@ -63,7 +64,7 @@ const productServiceSchema = z.object({
     mediaTop: z.any().optional(),
     mediaBottom: z.any().optional(),
     mediaLeft: z.any().optional(),
-    mediaRight: z.any().optional(),
+    mediaRight: z.any().optional,
     mediaFront: z.any().optional(),
     mediaBack: z.any().optional(),
     customFields: z.array(customFieldSchema).optional(),
@@ -81,6 +82,7 @@ export default function SuppliersPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [licensePreview, setLicensePreview] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   
   // State for bulk processing
   const [isUploading, setIsUploading] = useState(false);
@@ -113,17 +115,81 @@ export default function SuppliersPage() {
   const productServiceForm = useForm<ProductServiceForm>({
     resolver: zodResolver(productServiceSchema),
     defaultValues: {
-      products: [{ 
-        name: "", 
-        category: "", 
-        sku: "", 
-        description: "", 
-        price: "", 
-        purchaseLink: "", 
-        customFields: [] 
-      }]
+      products: []
     }
   });
+
+  useEffect(() => {
+    const loadSupplierData = async () => {
+        if (!user) return;
+        setIsDataLoading(true);
+        try {
+            const response = await api.get(`/api/suppliers/${user.id}`);
+            const data = response.data;
+            
+            // Populate basic info form
+            supplierForm.reset({
+                fullName: data.full_name || "",
+                shortName: data.short_name || "",
+                introduction: data.introduction || "",
+                region: data.region || "",
+                address: data.address || "",
+                establishmentDate: data.establishment_date ? new Date(data.establishment_date).toISOString().split('T')[0] : "",
+                registeredCapital: data.registered_capital || "",
+                creditCode: data.credit_code || "",
+                contactPerson: data.contact_person || "",
+                contactTitle: data.contact_title || "",
+                contactMobile: data.contact_mobile || "",
+                contactPhone: data.contact_phone || "",
+                contactEmail: data.contact_email || "",
+                contactWeCom: data.contact_wecom || "",
+                customFields: data.custom_fields || [],
+            });
+            if (data.logo_url) setLogoPreview(data.logo_url);
+            if (data.business_license_url) setLicensePreview(data.business_license_url);
+
+            // Populate products/services form
+            if (data.products && data.products.length > 0) {
+                productServiceForm.reset({
+                    products: data.products.map((p: any) => ({
+                        name: p.name || "",
+                        category: p.category || "",
+                        sku: p.sku || "",
+                        description: p.description || "",
+                        price: p.price || "",
+                        purchaseLink: p.purchase_url || "",
+                        customFields: p.custom_fields || [],
+                    }))
+                });
+            } else {
+                 productServiceForm.reset({
+                     products: [{ 
+                        name: "", category: "", sku: "", description: "", 
+                        price: "", purchaseLink: "", customFields: [] 
+                    }]
+                 })
+            }
+
+        } catch (error: any) {
+            // It's okay if it's a 404, means they are a new supplier.
+            if (error.response?.status !== 404) {
+              console.error("Failed to load supplier data:", error);
+              toast({ title: "加载失败", description: "无法加载您的供应商信息。", variant: "destructive" });
+            }
+             productServiceForm.reset({
+                 products: [{ 
+                    name: "", category: "", sku: "", description: "", 
+                    price: "", purchaseLink: "", customFields: [] 
+                }]
+             })
+        } finally {
+            setIsDataLoading(false);
+        }
+    };
+    if (user) {
+        loadSupplierData();
+    }
+  }, [user, supplierForm, productServiceForm, toast]);
   
   const { fields: supplierCustomFields, append: appendSupplierCustomField, remove: removeSupplierCustomField } = useFieldArray({
     control: supplierForm.control,
@@ -429,131 +495,140 @@ export default function SuppliersPage() {
               <CardDescription>请填写准确、完整的公司信息。</CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...supplierForm}>
-                <form onSubmit={supplierForm.handleSubmit(onSupplierSubmit)} className="space-y-8">
-                  <div className="space-y-4">
-                    <h3 className="font-headline text-lg font-semibold">公司资料</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <FormField
-                        control={supplierForm.control}
-                        name="fullName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>供应商全称</FormLabel>
-                            <FormControl>
-                              <Input placeholder="例如：创新科技（深圳）有限公司" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField
-                        control={supplierForm.control}
-                        name="shortName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>供应商简称</FormLabel>
-                            <FormControl>
-                              <Input placeholder="例如：创新科技" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                       <FormField control={supplierForm.control} name="region" render={({ field }) => ( <FormItem><FormLabel>所在区域</FormLabel><FormControl><Input placeholder="例如：广东省深圳市" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="address" render={({ field }) => ( <FormItem><FormLabel>详细地址</FormLabel><FormControl><Input placeholder="例如：南山区科技园" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="establishmentDate" render={({ field }) => ( <FormItem><FormLabel>成立日期</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="registeredCapital" render={({ field }) => ( <FormItem><FormLabel>注册资本</FormLabel><FormControl><Input placeholder="例如：1000万元" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="creditCode" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>统一社会信用代码</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    </div>
-                     <FormField
-                        control={supplierForm.control}
-                        name="introduction"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>供应商简介</FormLabel>
-                            <FormControl>
-                              <Textarea placeholder="简单介绍一下您的公司..." {...field} />
-                            </FormControl>
-                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormItem>
-                        <FormLabel>供应商LOGO</FormLabel>
-                        <div className="flex items-center gap-4">
-                        {logoPreview && <Image src={logoPreview} alt="logo 预览" width={64} height={64} className="rounded-md object-cover" />}
-                        <Input id="logo-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, "logo", setLogoPreview)} className="hidden" />
-                        <Button type="button" variant="outline" onClick={() => document.getElementById('logo-upload')?.click()}><FileUp className="mr-2"/>上传图片</Button>
-                        </div>
-                      </FormItem>
-                      <FormItem>
-                        <FormLabel>营业执照</FormLabel>
-                        <div className="flex items-center gap-4">
-                        {licensePreview && <Image src={licensePreview} alt="营业执照预览" width={64} height={64} className="rounded-md object-cover" />}
-                        <Input id="license-upload" type="file" accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, "businessLicense", setLicensePreview)} className="hidden" />
-                        <Button type="button" variant="outline" onClick={() => document.getElementById('license-upload')?.click()}><FileUp className="mr-2"/>上传文件</Button>
-                        </div>
-                      </FormItem>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-headline text-lg font-semibold">联系人信息</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <FormField control={supplierForm.control} name="contactPerson" render={({ field }) => ( <FormItem><FormLabel>联系人</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactTitle" render={({ field }) => ( <FormItem><FormLabel>职务</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactMobile" render={({ field }) => ( <FormItem><FormLabel>手机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactPhone" render={({ field }) => ( <FormItem><FormLabel>座机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactWeCom" render={({ field }) => ( <FormItem><FormLabel>企微/客服</FormLabel><FormControl><Input placeholder="企业微信号或其它客服联系方式" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                       <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="font-headline text-lg font-semibold">补充内容</h3>
-                     {supplierCustomFields.map((item, index) => (
-                      <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+             {isDataLoading && user.role === 'supplier' ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-10 w-1/2" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-10 w-1/4" />
+                </div>
+              ) : (
+                <Form {...supplierForm}>
+                  <form onSubmit={supplierForm.handleSubmit(onSupplierSubmit)} className="space-y-8">
+                    <div className="space-y-4">
+                      <h3 className="font-headline text-lg font-semibold">公司资料</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                           control={supplierForm.control}
-                          name={`customFields.${index}.fieldName`}
+                          name="fullName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>字段名</FormLabel>
-                              <FormControl><Input placeholder="例如：官方网站" {...field} /></FormControl>
+                              <FormLabel>供应商全称</FormLabel>
+                              <FormControl>
+                                <Input placeholder="例如：创新科技（深圳）有限公司" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                         <FormField
+                        <FormField
                           control={supplierForm.control}
-                          name={`customFields.${index}.fieldValue`}
+                          name="shortName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>字段值</FormLabel>
-                              <FormControl><Input placeholder="例如：https://example.com" {...field} /></FormControl>
+                              <FormLabel>供应商简称</FormLabel>
+                              <FormControl>
+                                <Input placeholder="例如：创新科技" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSupplierCustomField(index)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <FormField control={supplierForm.control} name="region" render={({ field }) => ( <FormItem><FormLabel>所在区域</FormLabel><FormControl><Input placeholder="例如：广东省深圳市" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="address" render={({ field }) => ( <FormItem><FormLabel>详细地址</FormLabel><FormControl><Input placeholder="例如：南山区科技园" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="establishmentDate" render={({ field }) => ( <FormItem><FormLabel>成立日期</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="registeredCapital" render={({ field }) => ( <FormItem><FormLabel>注册资本</FormLabel><FormControl><Input placeholder="例如：1000万元" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="creditCode" render={({ field }) => ( <FormItem className="md:col-span-2"><FormLabel>统一社会信用代码</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
                       </div>
-                    ))}
-                    <Button type="button" variant="outline" onClick={() => appendSupplierCustomField({ fieldName: "", fieldValue: "" })}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        增加补充内容
-                    </Button>
-                  </div>
+                      <FormField
+                          control={supplierForm.control}
+                          name="introduction"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>供应商简介</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="简单介绍一下您的公司..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormItem>
+                          <FormLabel>供应商LOGO</FormLabel>
+                          <div className="flex items-center gap-4">
+                          {logoPreview && <Image src={logoPreview} alt="logo 预览" width={64} height={64} className="rounded-md object-cover" />}
+                          <Input id="logo-upload" type="file" accept="image/*" onChange={(e) => handleFileChange(e, "logo", setLogoPreview)} className="hidden" />
+                          <Button type="button" variant="outline" onClick={() => document.getElementById('logo-upload')?.click()}><FileUp className="mr-2"/>上传图片</Button>
+                          </div>
+                        </FormItem>
+                        <FormItem>
+                          <FormLabel>营业执照</FormLabel>
+                          <div className="flex items-center gap-4">
+                          {licensePreview && <Image src={licensePreview} alt="营业执照预览" width={64} height={64} className="rounded-md object-cover" />}
+                          <Input id="license-upload" type="file" accept="image/*,application/pdf" onChange={(e) => handleFileChange(e, "businessLicense", setLicensePreview)} className="hidden" />
+                          <Button type="button" variant="outline" onClick={() => document.getElementById('license-upload')?.click()}><FileUp className="mr-2"/>上传文件</Button>
+                          </div>
+                        </FormItem>
+                      </div>
+                    </div>
 
-                  <Button type="submit" disabled={supplierForm.formState.isSubmitting}>
-                    {supplierForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/>}
-                    保存基本信息
-                  </Button>
-                </form>
-              </Form>
+                    <div className="space-y-4">
+                      <h3 className="font-headline text-lg font-semibold">联系人信息</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField control={supplierForm.control} name="contactPerson" render={({ field }) => ( <FormItem><FormLabel>联系人</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="contactTitle" render={({ field }) => ( <FormItem><FormLabel>职务</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="contactMobile" render={({ field }) => ( <FormItem><FormLabel>手机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="contactPhone" render={({ field }) => ( <FormItem><FormLabel>座机</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="contactWeCom" render={({ field }) => ( <FormItem><FormLabel>企微/客服</FormLabel><FormControl><Input placeholder="企业微信号或其它客服联系方式" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={supplierForm.control} name="contactEmail" render={({ field }) => ( <FormItem><FormLabel>邮箱</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-headline text-lg font-semibold">补充内容</h3>
+                      {supplierCustomFields.map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                          <FormField
+                            control={supplierForm.control}
+                            name={`customFields.${index}.fieldName`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>字段名</FormLabel>
+                                <FormControl><Input placeholder="例如：官方网站" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={supplierForm.control}
+                            name={`customFields.${index}.fieldValue`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>字段值</FormLabel>
+                                <FormControl><Input placeholder="例如：https://example.com" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeSupplierCustomField(index)} className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => appendSupplierCustomField({ fieldName: "", fieldValue: "" })}>
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          增加补充内容
+                      </Button>
+                    </div>
+
+                    <Button type="submit" disabled={supplierForm.formState.isSubmitting}>
+                      {supplierForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/>}
+                      保存基本信息
+                    </Button>
+                  </form>
+                </Form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -564,42 +639,49 @@ export default function SuppliersPage() {
               <CardDescription>添加和管理贵公司提供的商品或服务。</CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...productServiceForm}>
-                <form onSubmit={productServiceForm.handleSubmit(onProductSubmit)} className="space-y-6">
-                  <div className="space-y-4">
-                    {fields.map((item, index) => (
-                       <ProductServiceItem 
-                            key={item.id} 
-                            form={productServiceForm}
-                            index={index} 
-                            remove={() => remove(index)}
-                        />
-                    ))}
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => append({ 
-                        name: "", 
-                        category: "", 
-                        sku: "", 
-                        description: "", 
-                        price: "", 
-                        purchaseLink: "", 
-                        customFields: [] 
-                      })}
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      增加一项
-                    </Button>
-                    <Button type="submit" disabled={productServiceForm.formState.isSubmitting}>
-                        {productServiceForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/>}
-                        保存商品/服务
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+             {isDataLoading && user.role === 'supplier' ? (
+                 <div className="space-y-4">
+                  <Skeleton className="h-40 w-full" />
+                  <Skeleton className="h-10 w-1/4" />
+                </div>
+              ) : (
+                <Form {...productServiceForm}>
+                  <form onSubmit={productServiceForm.handleSubmit(onProductSubmit)} className="space-y-6">
+                    <div className="space-y-4">
+                      {fields.map((item, index) => (
+                        <ProductServiceItem 
+                              key={item.id} 
+                              form={productServiceForm}
+                              index={index} 
+                              remove={() => remove(index)}
+                          />
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => append({ 
+                          name: "", 
+                          category: "", 
+                          sku: "", 
+                          description: "", 
+                          price: "", 
+                          purchaseLink: "", 
+                          customFields: [] 
+                        })}
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        增加一项
+                      </Button>
+                      <Button type="submit" disabled={productServiceForm.formState.isSubmitting}>
+                          {productServiceForm.formState.isSubmitting && <LoaderCircle className="mr-2 h-4 w-4 animate-spin"/>}
+                          保存商品/服务
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -914,5 +996,3 @@ function ProductServiceItem({ form, index, remove }: {
         </Card>
     );
 }
-
-    
