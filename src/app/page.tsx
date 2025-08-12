@@ -152,7 +152,7 @@ export default function Home() {
             
             toast({
                 title: "需求分析完成！",
-                description: `我们已经理解您的需求，并为您推荐了以下解决方案。`,
+                description: "我们已经理解您的需求，并为您推荐了以下解决方案。",
             });
         }
       }
