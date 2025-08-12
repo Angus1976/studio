@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput } from "@/ai/flows/ai-requirements-navigator";
+import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIRequirementsNavigatorInput } from "@/ai/flows/ai-requirements-navigator";
 import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
 
 import { AppHeader } from "@/components/app/header";
@@ -92,12 +92,13 @@ export default function Home() {
     const newUserMessage: ConversationMessage = { role: "user", content: currentInput };
     const newHistory = [...conversationHistory, newUserMessage];
     setConversationHistory(newHistory);
+    const latestUserInput = currentInput;
     setCurrentInput("");
     setIsLoading(true);
 
     try {
-      const result: AIRequirementsNavigatorOutput = await aiRequirementsNavigator({
-        userInput: currentInput,
+      const result = await aiRequirementsNavigator({
+        userInput: latestUserInput,
         conversationHistory: conversationHistory,
       });
 
@@ -119,7 +120,9 @@ export default function Home() {
         title: "发生错误。",
         description: "从 AI 获取响应失败。请重试。",
       });
-      setConversationHistory(conversationHistory); // Revert to previous history on error
+      // Revert to previous history on error and put user's message back in input
+      setConversationHistory(conversationHistory); 
+      setCurrentInput(latestUserInput);
     } finally {
       setIsLoading(false);
     }
