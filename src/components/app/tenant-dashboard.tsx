@@ -859,7 +859,7 @@ function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: 
 }
 
 
-function RoleManagementDialog({ roles, setRoles }: { roles: Role[]; setRoles: React.Dispatch<React.SetStateAction<Role[]>> }) {
+function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { roles: Role[]; setRoles: React.Dispatch<React.SetStateAction<Role[]>>; children: React.ReactNode; triggerAsChild?: boolean }) {
   const { toast } = useToast();
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -903,8 +903,8 @@ function RoleManagementDialog({ roles, setRoles }: { roles: Role[]; setRoles: Re
   }
 
   return (
-    <Dialog>
-      <DialogTrigger asChild><Button>配置角色</Button></DialogTrigger>
+    <Dialog onOpenChange={(open) => { if (!open) setIsFormOpen(false); }}>
+      <DialogTrigger asChild={triggerAsChild}>{children}</DialogTrigger>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>权限角色配置</DialogTitle>
@@ -1235,6 +1235,9 @@ export function TenantDashboard() {
                                 导出列表
                             </Button>
                            <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
+                           <RoleManagementDialog roles={roles} setRoles={setRoles}>
+                               <Button variant="outline"><Palette className="mr-2 h-4 w-4" />配置角色</Button>
+                           </RoleManagementDialog>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -1296,7 +1299,9 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
-                            <RoleManagementDialog roles={roles} setRoles={setRoles} />
+                            <RoleManagementDialog roles={roles} setRoles={setRoles}>
+                                <Button>配置角色</Button>
+                            </RoleManagementDialog>
                         </CardContent>
                     </Card>
                 </div>
