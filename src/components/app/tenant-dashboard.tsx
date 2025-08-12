@@ -981,6 +981,84 @@ function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { r
   );
 }
 
+function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (users: User[]) => void }) {
+  const { toast } = useToast();
+  const [textValue, setTextValue] = useState("");
+  const [open, setOpen] = useState(false);
+  
+  const handleImport = () => {
+    if (!textValue.trim()) {
+      toast({
+        variant: "destructive",
+        title: "导入失败",
+        description: "粘贴内容不能为空。",
+      });
+      return;
+    }
+
+    const lines = textValue.trim().split('\n');
+    const newUsers: User[] = [];
+    const existingRoleNames = roles.map(r => r.name);
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const [name, email, role] = line.split(',').map(item => item.trim());
+
+        if (!name || !email || !role) {
+            toast({ variant: "destructive", title: `第 ${i+1} 行错误`, description: "数据格式不正确，应为：姓名,邮箱,角色" });
+            return;
+        }
+
+        if (!z.string().email().safeParse(email).success) {
+            toast({ variant: "destructive", title: `第 ${i+1} 行错误`, description: `邮箱格式不正确: ${email}` });
+            return;
+        }
+        
+        if (!existingRoleNames.includes(role)) {
+            toast({ variant: "destructive", title: `第 ${i+1} 行错误`, description: `角色 "${role}" 不存在。请先创建该角色。` });
+            return;
+        }
+
+        newUsers.push({ name, email, role, status: '邀请中' });
+    }
+
+    onImport(newUsers);
+    toast({ title: "导入成功", description: `成功导入 ${newUsers.length} 名新成员。` });
+    setTextValue("");
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Upload className="mr-2 h-4 w-4" />
+          批量导入
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>批量导入成员</DialogTitle>
+          <DialogDescription>
+            请将成员信息粘贴到下方文本框中。每行一个成员，格式为：<code className="bg-muted px-1 py-0.5 rounded text-muted-foreground">姓名,邮箱,角色</code>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Textarea
+            placeholder={`张三,zhangsan@example.com,成员\n李四,lisi@example.com,管理员`}
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            rows={10}
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="ghost">取消</Button></DialogClose>
+          <Button onClick={handleImport}>确认导入</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export function TenantDashboard() {
   const { toast } = useToast();
@@ -1033,6 +1111,10 @@ export function TenantDashboard() {
       title: "成员已更新",
       description: `成员 ${values.name} 的信息已更新。`,
     });
+  };
+  
+  const handleBatchImport = (newUsers: User[]) => {
+    setUsers(prev => [...prev, ...newUsers]);
   };
   
   const handlePlaceholderClick = (title: string) => {
@@ -1226,10 +1308,7 @@ export function TenantDashboard() {
                             <CardDescription>管理您企业下的成员账户和权限。</CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
-                           <Button variant="outline" onClick={() => handlePlaceholderClick('批量导入')}>
-                                <Upload className="mr-2 h-4 w-4" />
-                                批量导入
-                            </Button>
+                           <BatchImportDialog roles={roles} onImport={handleBatchImport} />
                              <Button variant="outline" onClick={() => handlePlaceholderClick('导出列表')}>
                                 <Download className="mr-2 h-4 w-4" />
                                 导出列表
@@ -1314,3 +1393,4 @@ export function TenantDashboard() {
     
 
     
+
