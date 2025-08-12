@@ -49,8 +49,10 @@ const digitalEmployeeFlow = ai.defineFlow(
       finalPromptContent = retrievedContent;
     }
 
+    // By removing the dynamic 'name' property, we let Genkit handle the internal
+    // naming, which is safer and avoids potential collisions or invalid names,
+    // especially when testing new, unsaved prompts with temporary IDs.
     const dynamicPrompt = ai.definePrompt({
-        name: `dynamicPromptFor_${promptId.replace(/[^a-zA-Z0-9]/g, '_')}`, // Sanitize name
         prompt: `${finalPromptContent}
 
 User Context:
