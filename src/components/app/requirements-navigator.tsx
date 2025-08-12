@@ -103,8 +103,8 @@ export function RequirementsNavigator({
 
         <form onSubmit={onFormSubmit} className="mt-auto pt-4 border-t">
           {isFinished ? (
-            <div className="text-center text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
-              需求已敲定！请在场景面板中查看结果。
+             <div className="text-center text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
+               需求分析完成！请在右侧查看为您推荐的解决方案。
             </div>
           ) : (
             <div className="relative">
