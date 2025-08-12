@@ -1117,11 +1117,28 @@ export function TenantDashboard() {
     setUsers(prev => [...prev, ...newUsers]);
   };
   
-  const handlePlaceholderClick = (title: string) => {
+  const handleExport = () => {
     toast({
-      title: '功能待开发',
-      description: `${title} 功能正在开发中。`
+      title: "正在导出成员列表...",
     });
+
+    const headers = ["姓名", "邮箱", "角色", "状态"];
+    const csvContent = [
+      headers.join(","),
+      ...users.map(user => [user.name, user.email, user.role, user.status].join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "members.csv");
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
   };
   
   const getStatusBadgeVariant = (status: OrderStatus) => {
@@ -1309,7 +1326,7 @@ export function TenantDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                            <BatchImportDialog roles={roles} onImport={handleBatchImport} />
-                             <Button variant="outline" onClick={() => handlePlaceholderClick('导出列表')}>
+                             <Button variant="outline" onClick={handleExport}>
                                 <Download className="mr-2 h-4 w-4" />
                                 导出列表
                             </Button>
@@ -1393,4 +1410,5 @@ export function TenantDashboard() {
     
 
     
+
 
