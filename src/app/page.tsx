@@ -377,7 +377,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       <AppHeader userRole={userRole} onLogout={logout} />
-      <main className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
         {renderContent()}
       </main>
     </div>
