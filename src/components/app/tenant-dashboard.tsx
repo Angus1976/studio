@@ -5,7 +5,7 @@
 import * as LucideReact from "lucide-react";
 import React, { useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
+import { Checkbox } from "../ui/checkbox";
 
 
 const usageData = [
@@ -726,6 +727,258 @@ function ApiKeyManagementDialog() {
 }
 
 
+// --- Role Management ---
+const permissionsList = [
+  { id: 'view_dashboard', label: '查看仪表盘' },
+  { id: 'manage_procurement', label: '管理集采' },
+  { id: 'view_orders', label: '查看订单' },
+  { id: 'manage_users', label: '管理成员' },
+  { id: 'manage_roles', label: '管理角色' },
+  { id: 'manage_api_keys', label: '管理API密钥' },
+];
+
+const roleSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2, { message: "角色名称至少需要2个字符。" }),
+  description: z.string().min(5, { message: "角色描述至少需要5个字符。" }),
+  permissions: z.array(z.string()).refine(value => value.some(item => item), {
+    message: "您必须至少选择一项权限。",
+  }),
+});
+
+type Role = z.infer<typeof roleSchema> & { id: string };
+
+const initialRoles: Role[] = [
+  { id: 'role-admin', name: '管理员', description: '拥有所有权限的超级用户。', permissions: permissionsList.map(p => p.id) },
+  { id: 'role-member', name: '成员', description: '可以查看仪表盘和自己的订单。', permissions: ['view_dashboard', 'view_orders'] },
+  { id: 'role-purchaser', name: '采购员', description: '可以管理集采和查看订单。', permissions: ['manage_procurement', 'view_orders'] },
+];
+
+function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: (values: Role) => void; onCancel: () => void }) {
+  const form = useForm<z.infer<typeof roleSchema>>({
+    resolver: zodResolver(roleSchema),
+    defaultValues: role || { name: "", description: "", permissions: [] },
+  });
+
+  React.useEffect(() => {
+    form.reset(role || { name: "", description: "", permissions: [] });
+  }, [role, form]);
+
+  const handleSubmit = (values: z.infer<typeof roleSchema>) => {
+    const fullData: Role = {
+      ...values,
+      id: role?.id || `role-${Date.now()}`,
+    };
+    onSubmit(fullData);
+    form.reset();
+  };
+  
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>角色名称</FormLabel>
+              <FormControl><Input placeholder="例如：财务专员" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>角色描述</FormLabel>
+              <FormControl><Textarea placeholder="描述此角色的主要职责..." {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="permissions"
+          render={() => (
+            <FormItem>
+              <div className="mb-4">
+                <FormLabel className="text-base">权限</FormLabel>
+              </div>
+              <div className="space-y-2">
+                {permissionsList.map((item) => (
+                  <FormField
+                    key={item.id}
+                    control={form.control}
+                    name="permissions"
+                    render={({ field }) => {
+                      return (
+                        <FormItem
+                          key={item.id}
+                          className="flex flex-row items-start space-x-3 space-y-0"
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(item.id)}
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([...field.value, item.id])
+                                  : field.onChange(
+                                      field.value?.filter(
+                                        (value) => value !== item.id
+                                      )
+                                    );
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            {item.label}
+                          </FormLabel>
+                        </FormItem>
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
+          <Button type="submit">保存角色</Button>
+        </div>
+      </form>
+    </Form>
+  )
+}
+
+
+function RoleManagementDialog() {
+  const { toast } = useToast();
+  const [roles, setRoles] = useState<Role[]>(initialRoles);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleSaveRole = (values: Role) => {
+    if (editingRole) {
+      // Update
+      setRoles(prev => prev.map(r => r.id === values.id ? values : r));
+      toast({ title: "角色已更新" });
+    } else {
+      // Add
+      setRoles(prev => [...prev, values]);
+      toast({ title: "角色已创建" });
+    }
+    setEditingRole(null);
+    setIsFormOpen(false);
+  };
+
+  const handleDeleteRole = (roleId: string) => {
+    if(roles.length <= 1){
+        toast({ title: "删除失败", description: "至少需要保留一个角色。", variant: "destructive" });
+        return;
+    }
+    setRoles(prev => prev.filter(r => r.id !== roleId));
+    toast({ title: "角色已删除", variant: "destructive" });
+  };
+  
+  const handleEdit = (role: Role) => {
+    setEditingRole(role);
+    setIsFormOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingRole(null);
+    setIsFormOpen(true);
+  };
+
+  const handleCancelForm = () => {
+      setEditingRole(null);
+      setIsFormOpen(false);
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild><Button>配置角色</Button></DialogTrigger>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>权限角色配置</DialogTitle>
+          <DialogDescription>
+            自定义企业内部的角色及其权限。更改将影响分配了该角色的所有成员。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">角色列表</CardTitle>
+                <Button size="sm" onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4"/> 添加新角色</Button>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>角色名称</TableHead>
+                        <TableHead>权限数量</TableHead>
+                        <TableHead className="text-right">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {roles.map(role => (
+                        <TableRow key={role.id}>
+                          <TableCell>
+                            <div className="font-medium">{role.name}</div>
+                            <div className="text-xs text-muted-foreground">{role.description}</div>
+                          </TableCell>
+                          <TableCell>{role.permissions.length} / {permissionsList.length}</TableCell>
+                          <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(role)}><Pencil className="h-4 w-4"/></Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDeleteRole(role.id)}><Trash2 className="h-4 w-4"/></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{editingRole ? '编辑角色' : (isFormOpen ? '创建新角色' : '角色管理')}</CardTitle>
+                <CardDescription>{editingRole ? '修改角色信息和权限。' : (isFormOpen ? '定义一个新角色及其权限。' : '选择或添加角色')}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isFormOpen ? (
+                  <ScrollArea className="h-[400px]">
+                    <RoleForm
+                      role={editingRole}
+                      onSubmit={handleSaveRole}
+                      onCancel={handleCancelForm}
+                    />
+                  </ScrollArea>
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground py-10 h-[400px] flex items-center justify-center">
+                    <p>点击“添加新角色”或从左侧列表中选择一个现有角色进行编辑。</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button variant="outline">关闭</Button></DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export function TenantDashboard() {
   const { toast } = useToast();
   const [users, setUsers] = useState(initialUsers);
@@ -1028,8 +1281,8 @@ export function TenantDashboard() {
                             <CardDescription>自定义企业内部的角色及其权限。</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm text-muted-foreground mb-4">功能待开发：创建新角色、配置权限矩阵。</p>
-                            <Button onClick={() => handlePlaceholderClick('配置角色')}>配置角色</Button>
+                            <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
+                            <RoleManagementDialog />
                         </CardContent>
                     </Card>
                 </div>
