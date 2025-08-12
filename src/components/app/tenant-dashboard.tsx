@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as LucideReact from "lucide-react";
@@ -13,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil, Trash2, Copy } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -534,6 +535,197 @@ function ViewOrderDialog({ order }: { order: Order }) {
     )
 }
 
+// --- API Key Management ---
+const apiKeySchema = z.object({
+  name: z.string().min(2, { message: "名称至少需要2个字符。" }),
+});
+
+type ApiKey = {
+  id: string;
+  name: string;
+  key: string;
+  createdAt: string;
+  status: "活跃" | "已撤销";
+};
+
+const generateApiKey = () => `sk_live_${[...Array(32)].map(() => Math.random().toString(36)[2]).join('')}`;
+
+const initialApiKeys: ApiKey[] = [
+  { id: 'key-1', name: '默认密钥', key: generateApiKey(), createdAt: '2024-06-15', status: '活跃' },
+  { id: 'key-2', name: '营销活动专用', key: generateApiKey(), createdAt: '2024-05-20', status: '已撤销' },
+];
+
+function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeof apiKeySchema>) => void; onCancel: () => void }) {
+  const form = useForm<z.infer<typeof apiKeySchema>>({
+    resolver: zodResolver(apiKeySchema),
+    defaultValues: { name: "" },
+  });
+
+  const onSubmit = (values: z.infer<typeof apiKeySchema>) => {
+    onSave(values);
+    form.reset();
+  };
+  
+  return (
+     <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>密钥名称</FormLabel>
+                        <FormControl><Input placeholder="例如：我的网站集成" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <div className="flex justify-end gap-2 pt-4">
+                <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
+                <Button type="submit">创建密钥</Button>
+            </div>
+        </form>
+    </Form>
+  )
+}
+
+function ApiKeyManagementDialog() {
+  const { toast } = useToast();
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>(initialApiKeys);
+  const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateKey = (values: z.infer<typeof apiKeySchema>) => {
+      const newKey: ApiKey = {
+          id: `key-${Date.now()}`,
+          name: values.name,
+          key: generateApiKey(),
+          createdAt: new Date().toISOString().split('T')[0],
+          status: '活跃'
+      };
+      setApiKeys(prev => [newKey, ...prev]);
+      setNewlyCreatedKey(newKey);
+      setIsCreating(false);
+  };
+  
+  const handleRevokeKey = (keyId: string) => {
+    setApiKeys(prev => prev.map(key => key.id === keyId ? {...key, status: "已撤销"} : key));
+    toast({
+        title: "API 密钥已撤销",
+        variant: "destructive"
+    });
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "已复制到剪贴板" });
+  };
+  
+  if (newlyCreatedKey) {
+      return (
+           <Dialog open={!!newlyCreatedKey} onOpenChange={() => setNewlyCreatedKey(null)}>
+              <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>API 密钥已创建</DialogTitle>
+                    <DialogDescription>
+                       请复制此密钥并妥善保管。为了安全，您将无法再次查看完整的密钥。
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="my-4">
+                  <div className="flex items-center space-x-2 rounded-md bg-secondary p-3">
+                    <Input readOnly value={newlyCreatedKey.key} className="flex-1" />
+                    <Button variant="ghost" size="icon" onClick={() => copyToClipboard(newlyCreatedKey.key)}>
+                        <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    密钥名称: {newlyCreatedKey.name}
+                  </p>
+                </div>
+                 <DialogFooter>
+                    <Button onClick={() => setNewlyCreatedKey(null)}>我已保存密钥</Button>
+                </DialogFooter>
+              </DialogContent>
+           </Dialog>
+      )
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>管理 API 密钥</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>API 密钥管理</DialogTitle>
+          <DialogDescription>管理用于调用平台服务的 API 密钥。</DialogDescription>
+        </DialogHeader>
+        
+        {isCreating ? (
+            <Card className="mt-4">
+                <CardHeader>
+                    <CardTitle>创建新密钥</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CreateApiKeyForm onSave={handleCreateKey} onCancel={() => setIsCreating(false)} />
+                </CardContent>
+            </Card>
+        ) : (
+            <div className="mt-4">
+                <Card>
+                    <CardHeader className="flex-row items-center justify-between">
+                        <CardTitle>现有密钥</CardTitle>
+                        <Button onClick={() => setIsCreating(true)}><PlusCircle className="mr-2 h-4 w-4" />创建新密钥</Button>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[40vh]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>名称</TableHead>
+                                        <TableHead>密钥 (部分)</TableHead>
+                                        <TableHead>创建于</TableHead>
+                                        <TableHead>状态</TableHead>
+                                        <TableHead className="text-right">操作</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {apiKeys.map(key => (
+                                        <TableRow key={key.id}>
+                                            <TableCell className="font-medium">{key.name}</TableCell>
+                                            <TableCell className="font-mono text-xs">{key.key.substring(0, 12)}...</TableCell>
+                                            <TableCell>{key.createdAt}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={key.status === '活跃' ? 'default' : 'destructive'}>
+                                                    {key.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {key.status === '活跃' && (
+                                                     <Button variant="destructive" size="sm" onClick={() => handleRevokeKey(key.id)}>
+                                                        <Trash2 className="mr-2 h-3 w-3" />
+                                                        撤销
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </div>
+        )}
+         <DialogFooter className="mt-2">
+            <DialogClose asChild><Button variant="outline">关闭</Button></DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export function TenantDashboard() {
   const { toast } = useToast();
   const [users, setUsers] = useState(initialUsers);
@@ -826,8 +1018,8 @@ export function TenantDashboard() {
                             <CardDescription>管理用于调用平台服务的 API 密钥。</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-sm text-muted-foreground mb-4">功能待开发：创建、吊销、轮换密钥。</p>
-                            <Button onClick={() => handlePlaceholderClick('管理 API 密钥')}>管理 API 密钥</Button>
+                            <p className="text-sm text-muted-foreground mb-4">创建、吊销和管理您的 API 密钥。</p>
+                            <ApiKeyManagementDialog />
                         </CardContent>
                     </Card>
                      <Card>
@@ -846,5 +1038,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-    
