@@ -63,7 +63,7 @@ const procurementItems = [
 ]
 
 type ProcurementItem = typeof procurementItems[0];
-type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成";
+type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
 
 type Order = {
     id: string;
@@ -290,7 +290,7 @@ export function TenantDashboard() {
     toast({
         title: "支付成功！",
         description: "订单支付成功，平台将尽快为您完成资源配置。"
-    })
+    });
   };
 
   const handleInviteUser = (values: z.infer<typeof inviteUserSchema>) => {
@@ -306,7 +306,7 @@ export function TenantDashboard() {
     toast({
       title: '功能待开发',
       description: `${title} 功能正在开发中。`
-    })
+    });
   };
   
   const getStatusBadgeVariant = (status: OrderStatus) => {
@@ -319,6 +319,8 @@ export function TenantDashboard() {
             return "default";
         case "已完成":
             return "outline";
+        case "已取消": 
+            return "destructive";
         default:
             return "default";
     }
@@ -541,7 +543,7 @@ export function TenantDashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><ShieldCheck/> 权限角色配置</CardTitle>
                             <CardDescription>自定义企业内部的角色及其权限。</CardDescription>
-                        </Header>
+                        </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">功能待开发：创建新角色、配置权限矩阵。</p>
                             <Button onClick={() => handlePlaceholderClick('配置角色')}>配置角色</Button>
