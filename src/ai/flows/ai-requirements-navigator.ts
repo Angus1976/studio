@@ -35,6 +35,10 @@ const AIRequirementsNavigatorOutputSchema = z.object({
     .string()
     .optional()
     .describe('The extracted key requirements from the conversation.'),
+  suggestedPromptId: z
+    .string()
+    .optional()
+    .describe('The suggested prompt ID for the expert agent based on user needs.'),
   isFinished: z
     .boolean()
     .describe(
@@ -75,8 +79,9 @@ Follow these steps:
     - Core Need: Can you describe your core requirements for this scenario in a bit more detail?
 3.  Based on the user input, keep the conversation going until you have a clear picture of all the points above.
 4.  Once you have gathered all the necessary information, summarize it as the "extractedRequirements".
-5.  After summarizing, ask the user for confirmation. If the user confirms the requirements are complete and accurate, set isFinished to true. If not, continue the conversation to refine the details.
-6.  Mention that a fee evaluation can be performed once the requirements are finalized.
+5.  After summarizing, ask the user for confirmation. If the user confirms the requirements are complete and accurate, set isFinished to true.
+6.  When isFinished is true, analyze the user's core need and suggest the most appropriate expert agent to route them to. Set the 'suggestedPromptId' field to one of the following values based on the user's primary goal: 'recruitment-expert', 'marketing-guru', or 'code-optimizer'.
+7.  Mention that a fee evaluation can be performed once the requirements are finalized.
 
 Conversation History:
 {{{formattedHistory}}}

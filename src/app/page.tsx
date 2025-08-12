@@ -106,6 +106,15 @@ export default function Home() {
       if (result.isFinished && result.extractedRequirements) {
         setIsConversationFinished(true);
         setExtractedRequirements(result.extractedRequirements);
+
+        if (result.suggestedPromptId) {
+            setPromptId(result.suggestedPromptId);
+            toast({
+                title: "智能路由成功！",
+                description: `已为您连接到最匹配的专家，请在右侧与他沟通。`,
+            });
+        }
+
         toast({
           title: "需求已敲定！",
           description: "正在为您生成优化的工作场景...",
