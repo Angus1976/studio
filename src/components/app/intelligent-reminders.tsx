@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 
 type ReminderTag = {
   text: string;
-  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+  variant: 'default' | 'secondary' | 'destructive' | 'outline' | 'primary';
 };
 
 export type Reminder = {
@@ -48,7 +48,7 @@ const initialReminders: Reminder[] = [
         title: '周报提交通知',
         description: '今天是本周周报的截止日，请在下午6点前提交。',
         timestamp: '2小时前',
-        tags: [{ text: '日程提醒', variant: 'default' }]
+        tags: [{ text: '日程提醒', variant: 'primary' }]
     },
     {
         id: 'reminder-2',
@@ -60,9 +60,9 @@ const initialReminders: Reminder[] = [
     },
     {
         id: 'reminder-3',
-        icon: 'Info',
-        title: '关注项目A进展',
-        description: '项目A最近有重要更新，建议您及时关注。',
+        icon: 'TrendingUp',
+        title: '销售线索高价值提醒',
+        description: '系统分析发现客户“未来动力公司”有强烈购买意向，建议立即跟进。',
         timestamp: '昨天',
         tags: [{ text: '智能建议', variant: 'secondary' }]
     },
@@ -91,9 +91,12 @@ export function IntelligentReminders({ reminders, setReminders }: { reminders: R
     setReminders(currentReminders => {
         const reminderIds = new Set(currentReminders.map(r => r.id));
         const remindersToAdd = initialReminders.filter(r => !reminderIds.has(r.id));
-        return [...currentReminders, ...remindersToAdd];
+        // Put dynamic reminders first
+        const dynamicReminders = currentReminders.filter(r => !initialReminders.some(ir => ir.id === r.id));
+        return [...dynamicReminders, ...initialReminders];
     });
   }, [setReminders]);
+
 
   const handleAddToCalendar = (reminder: Reminder) => {
     // This is a mock function. In a real app, it would generate an .ics file or use a calendar API.

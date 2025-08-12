@@ -127,7 +127,7 @@ export default function Home() {
             title: reminderDetails.title,
             description: `截止时间: ${reminderDetails.dateTime}`,
             timestamp: '刚刚',
-            tags: [{ text: '日程提醒', variant: 'default' }]
+            tags: [{ text: '日程提醒', variant: 'primary' }]
         };
         setReminders(prev => [newReminder, ...prev]);
         setPendingReminder(null);
