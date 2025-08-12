@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -719,6 +719,126 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     );
 }
 
+
+// --- Transaction Management ---
+type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
+type Order = {
+    id: string;
+    tenantName: string;
+    items: { title: string; quantity: number }[];
+    totalAmount: number;
+    status: OrderStatus;
+    createdAt: string;
+};
+
+const initialOrders: Order[] = [
+    {
+        id: "PO-12345",
+        tenantName: "Tech Innovators Inc.",
+        items: [{ title: "企业邮箱服务", quantity: 10 }],
+        totalAmount: 500,
+        status: "待平台确认",
+        createdAt: "2024-07-25",
+    },
+    {
+        id: "PO-12346",
+        tenantName: "Future Dynamics",
+        items: [{ title: "LLM Token 包", quantity: 5 }],
+        totalAmount: 500,
+        status: "待支付",
+        createdAt: "2024-07-24",
+    },
+     {
+        id: "PO-12347",
+        tenantName: "Tech Innovators Inc.",
+        items: [{ title: "RPA 流程设计", quantity: 1 }],
+        totalAmount: 10000,
+        status: "已完成",
+        createdAt: "2024-07-20",
+    }
+];
+
+function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
+    const [orders, setOrders] = useState<Order[]>(initialOrders);
+    const { toast } = useToast();
+
+    const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
+        setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
+        toast({ title: "订单状态已更新", description: `订单 ${orderId} 的状态已更新为 ${newStatus}。` });
+    };
+
+    const getStatusBadgeVariant = (status: OrderStatus) => {
+        switch (status) {
+            case "待支付": return "destructive";
+            case "待平台确认": return "secondary";
+            case "配置中": return "default";
+            case "已完成": return "outline";
+            case "已取消": return "destructive";
+            default: return "default";
+        }
+    };
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button>{buttonText}</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-5xl">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>{description}</DialogDescription>
+                </DialogHeader>
+                <Card className="mt-4">
+                    <CardHeader><CardTitle>所有订单</CardTitle></CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[50vh]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>订单号</TableHead>
+                                        <TableHead>租户</TableHead>
+                                        <TableHead>金额</TableHead>
+                                        <TableHead>状态</TableHead>
+                                        <TableHead className="text-right">操作</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {orders.map(order => (
+                                        <TableRow key={order.id}>
+                                            <TableCell className="font-medium">{order.id}</TableCell>
+                                            <TableCell>{order.tenantName}</TableCell>
+                                            <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {order.status === '待平台确认' && (
+                                                     <Button size="sm" onClick={() => handleUpdateStatus(order.id, '待支付')}>确认订单</Button>
+                                                )}
+                                                {order.status === '待支付' && (
+                                                     <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(order.id, '配置中')}>确认收款</Button>
+                                                )}
+                                                {order.status === '配置中' && (
+                                                     <Button size="sm" onClick={() => handleUpdateStatus(order.id, '已完成')}>完成配置</Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+                 <DialogFooter className="mt-4">
+                    <DialogClose asChild>
+                        <Button variant="outline">关闭</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 const kpiData = [
     { title: "总收入", value: "¥1,250,345", change: "+12.5%", icon: BarChart3 },
     { title: "活跃租户", value: "1,402", change: "+30", icon: Building },
@@ -748,12 +868,12 @@ const managementPanels = [
         icon: User,
         buttonText: "管理个人用户",
     },
-    {
-        id: "engineers",
-        title: "技术工程师管理",
-        description: "审核、认证和管理平台的技术工程师。",
-        icon: Code,
-        buttonText: "管理技术工程师",
+     {
+        id: "transactions",
+        title: "交易管理",
+        description: "审核订单、确认支付并管理平台交易。",
+        icon: FileText,
+        buttonText: "管理交易",
     },
     {
         id: "permissions",
@@ -806,6 +926,12 @@ export function AdminDashboard() {
                                 />
                             ) : panel.id === 'users' ? (
                                 <UserManagementDialog 
+                                    buttonText={panel.buttonText}
+                                    title={panel.title}
+                                    description={panel.description}
+                                />
+                             ) : panel.id === 'transactions' ? (
+                                <TransactionManagementDialog
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
@@ -864,3 +990,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    

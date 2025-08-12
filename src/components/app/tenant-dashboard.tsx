@@ -318,7 +318,7 @@ export function TenantDashboard() {
         case "配置中":
             return "default";
         case "已完成":
-            return "outline"
+            return "outline";
         default:
             return "default";
     }
@@ -553,3 +553,5 @@ export function TenantDashboard() {
     </div>
   );
 }
+
+    
