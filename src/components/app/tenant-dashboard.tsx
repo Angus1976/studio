@@ -124,6 +124,31 @@ const editUserSchema = z.object({
   role: z.string().min(1, { message: "请为用户选择一个角色。" }),
 });
 
+const permissionsList = [
+  { id: 'view_dashboard', label: '查看仪表盘' },
+  { id: 'manage_procurement', label: '管理集采' },
+  { id: 'view_orders', label: '查看订单' },
+  { id: 'manage_users', label: '管理成员' },
+  { id: 'manage_roles', label: '管理角色' },
+  { id: 'manage_api_keys', label: '管理API密钥' },
+];
+
+const roleSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2, { message: "角色名称至少需要2个字符。" }),
+  description: z.string().min(5, { message: "角色描述至少需要5个字符。" }),
+  permissions: z.array(z.string()).refine(value => value.some(item => item), {
+    message: "您必须至少选择一项权限。",
+  }),
+});
+
+type Role = z.infer<typeof roleSchema> & { id: string };
+
+const initialRoles: Role[] = [
+  { id: 'role-admin', name: '管理员', description: '拥有所有权限的超级用户。', permissions: permissionsList.map(p => p.id) },
+  { id: 'role-member', name: '成员', description: '可以查看仪表盘和自己的订单。', permissions: ['view_dashboard', 'view_orders'] },
+  { id: 'role-purchaser', name: '采购员', description: '可以管理集采和查看订单。', permissions: ['manage_procurement', 'view_orders'] },
+];
 
 
 const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
@@ -208,7 +233,7 @@ function CreatePreOrderDialog({ item, onConfirm }: { item: ProcurementItem, onCo
     );
 }
 
-function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof inviteUserSchema>) => void }) {
+function InviteUserDialog({ roles, onInvite }: { roles: Role[]; onInvite: (values: z.infer<typeof inviteUserSchema>) => void }) {
   const form = useForm<z.infer<typeof inviteUserSchema>>({
     resolver: zodResolver(inviteUserSchema),
     defaultValues: { email: "", role: "" },
@@ -259,9 +284,11 @@ function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof invi
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="成员">成员</SelectItem>
-                      <SelectItem value="管理员">管理员</SelectItem>
-                      <SelectItem value="访客">访客</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.name}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -278,7 +305,7 @@ function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof invi
   );
 }
 
-function EditUserDialog({ user, onUpdate, children }: { user: User, onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
+function EditUserDialog({ user, roles, onUpdate, children }: { user: User, roles: Role[], onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
     defaultValues: user,
@@ -345,9 +372,11 @@ function EditUserDialog({ user, onUpdate, children }: { user: User, onUpdate: (v
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="成员">成员</SelectItem>
-                      <SelectItem value="管理员">管理员</SelectItem>
-                      <SelectItem value="访客">访客</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.name}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -728,31 +757,6 @@ function ApiKeyManagementDialog() {
 
 
 // --- Role Management ---
-const permissionsList = [
-  { id: 'view_dashboard', label: '查看仪表盘' },
-  { id: 'manage_procurement', label: '管理集采' },
-  { id: 'view_orders', label: '查看订单' },
-  { id: 'manage_users', label: '管理成员' },
-  { id: 'manage_roles', label: '管理角色' },
-  { id: 'manage_api_keys', label: '管理API密钥' },
-];
-
-const roleSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(2, { message: "角色名称至少需要2个字符。" }),
-  description: z.string().min(5, { message: "角色描述至少需要5个字符。" }),
-  permissions: z.array(z.string()).refine(value => value.some(item => item), {
-    message: "您必须至少选择一项权限。",
-  }),
-});
-
-type Role = z.infer<typeof roleSchema> & { id: string };
-
-const initialRoles: Role[] = [
-  { id: 'role-admin', name: '管理员', description: '拥有所有权限的超级用户。', permissions: permissionsList.map(p => p.id) },
-  { id: 'role-member', name: '成员', description: '可以查看仪表盘和自己的订单。', permissions: ['view_dashboard', 'view_orders'] },
-  { id: 'role-purchaser', name: '采购员', description: '可以管理集采和查看订单。', permissions: ['manage_procurement', 'view_orders'] },
-];
 
 function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: (values: Role) => void; onCancel: () => void }) {
   const form = useForm<z.infer<typeof roleSchema>>({
@@ -855,20 +859,19 @@ function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: 
 }
 
 
-function RoleManagementDialog() {
+function RoleManagementDialog({ roles, setRoles }: { roles: Role[]; setRoles: (roles: Role[]) => void }) {
   const { toast } = useToast();
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const handleSaveRole = (values: Role) => {
     if (editingRole) {
       // Update
-      setRoles(prev => prev.map(r => r.id === values.id ? values : r));
+      setRoles(roles.map(r => r.id === values.id ? values : r));
       toast({ title: "角色已更新" });
     } else {
       // Add
-      setRoles(prev => [...prev, values]);
+      setRoles([...roles, values]);
       toast({ title: "角色已创建" });
     }
     setEditingRole(null);
@@ -880,7 +883,7 @@ function RoleManagementDialog() {
         toast({ title: "删除失败", description: "至少需要保留一个角色。", variant: "destructive" });
         return;
     }
-    setRoles(prev => prev.filter(r => r.id !== roleId));
+    setRoles(roles.filter(r => r.id !== roleId));
     toast({ title: "角色已删除", variant: "destructive" });
   };
   
@@ -983,6 +986,7 @@ export function TenantDashboard() {
   const { toast } = useToast();
   const [users, setUsers] = useState(initialUsers);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [activeTab, setActiveTab] = useState("overview");
 
   const handleCreatePreOrder = (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
@@ -1221,7 +1225,7 @@ export function TenantDashboard() {
                             <CardTitle>成员管理</CardTitle>
                             <CardDescription>管理您企业下的成员账户和权限。</CardDescription>
                         </div>
-                        <InviteUserDialog onInvite={handleInviteUser} />
+                        <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
                     </CardHeader>
                     <CardContent>
                        <Table>
@@ -1248,7 +1252,7 @@ export function TenantDashboard() {
                                           </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <EditUserDialog user={user} onUpdate={handleUpdateUser}>
+                                            <EditUserDialog user={user} roles={roles} onUpdate={handleUpdateUser}>
                                                 <Button variant="outline" size="sm">
                                                     <Pencil className="mr-2 h-3 w-3" />
                                                     编辑
@@ -1282,7 +1286,7 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
-                            <RoleManagementDialog />
+                            <RoleManagementDialog roles={roles} setRoles={setRoles} />
                         </CardContent>
                     </Card>
                 </div>
@@ -1291,3 +1295,5 @@ export function TenantDashboard() {
     </div>
   );
 }
+
+    
