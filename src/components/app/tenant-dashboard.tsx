@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -21,6 +21,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "../ui/textarea";
+import { ScrollArea } from "../ui/scroll-area";
+import { cn } from "@/lib/utils";
+
 
 const usageData = [
   { month: "一月", tokens: 120000 },
@@ -257,6 +260,111 @@ function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof invi
   );
 }
 
+type ChatMessage = {
+  role: 'user' | 'manager';
+  content: string;
+};
+
+function LiveChatDialog() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setTimeout(() => {
+        setMessages([
+          { role: 'manager', content: '您好！我是您的客户成功经理李经理，请问有什么可以帮助您的吗？' }
+        ]);
+      }, 500);
+    }
+  }, [isOpen, messages]);
+
+  React.useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userMessage: ChatMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+
+    setTimeout(() => {
+      const managerResponse: ChatMessage = { role: 'manager', content: '感谢您的提问。我正在查看相关信息，请稍候...' };
+      setMessages(prev => [...prev, managerResponse]);
+    }, 1200);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button className="mt-2">发起在线会话</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>与客户成功经理在线沟通</DialogTitle>
+          <DialogDescription>
+            您正在与客户经理 <b>李经理</b> 对话。
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4">
+          <ScrollArea className="h-80 w-full pr-4" ref={scrollAreaRef}>
+            <div className="space-y-4">
+              {messages.map((msg, index) => (
+                <div key={index} className={cn("flex items-end gap-2", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                  {msg.role === 'manager' && (
+                    <Avatar className="h-8 w-8">
+                       <AvatarImage src="https://placehold.co/128x128.png" data-ai-hint="manager portrait" />
+                       <AvatarFallback>李</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={cn(
+                      "max-w-xs rounded-lg px-3 py-2 text-sm",
+                      msg.role === 'user'
+                        ? "bg-primary text-primary-foreground rounded-br-none"
+                        : "bg-secondary text-secondary-foreground rounded-bl-none"
+                    )}>
+                    {msg.content}
+                  </div>
+                  {msg.role === 'user' && (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>您</AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+        <form onSubmit={handleSendMessage} className="mt-4">
+          <div className="relative">
+            <Textarea
+              placeholder="输入您想咨询的问题..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+              className="pr-14"
+            />
+            <Button type="submit" size="icon" className="absolute right-2 bottom-2 h-8 w-10">
+              <Send className="h-4 w-4"/>
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function TenantDashboard() {
   const { toast } = useToast();
@@ -319,7 +427,7 @@ export function TenantDashboard() {
             return "default";
         case "已完成":
             return "outline";
-        case "已取消": 
+        case "已取消":
             return "destructive";
         default:
             return "default";
@@ -389,7 +497,7 @@ export function TenantDashboard() {
                                         <span>li.manager@example.com</span>
                                     </div>
                                 </div>
-                                <Button className="mt-2" onClick={() => handlePlaceholderClick('在线会话')}>发起在线会话</Button>
+                                <LiveChatDialog />
                             </CardContent>
                         </Card>
                     </div>
@@ -555,5 +663,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-    
