@@ -3,13 +3,14 @@
 
 import type { FormEvent } from "react";
 import { useEffect, useRef } from "react";
-import { Bot, User, Send, LoaderCircle } from "lucide-react";
+import { Bot, User, Send, LoaderCircle, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { type CreateReminderOutput } from "@/ai/flows/create-reminder-flow";
 
 type Message = {
   role: "user" | "assistant";
@@ -23,6 +24,9 @@ type RequirementsNavigatorProps = {
   currentInput: string;
   setCurrentInput: (value: string) => void;
   onFormSubmit: (e: FormEvent) => Promise<void>;
+  pendingReminder: CreateReminderOutput | null;
+  onConfirmReminder: (reminderDetails: CreateReminderOutput) => void;
+  onCancelReminder: () => void;
 };
 
 export function RequirementsNavigator({
@@ -32,6 +36,9 @@ export function RequirementsNavigator({
   currentInput,
   setCurrentInput,
   onFormSubmit,
+  pendingReminder,
+  onConfirmReminder,
+  onCancelReminder,
 }: RequirementsNavigatorProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +93,7 @@ export function RequirementsNavigator({
                 )}
               </div>
             ))}
-            {isLoading && (
+            {isLoading && !pendingReminder && (
               <div className="flex items-start gap-3 justify-start">
                  <Avatar className="h-8 w-8 border border-accent/20">
                     <AvatarFallback className="bg-accent/10 text-accent">
@@ -101,6 +108,23 @@ export function RequirementsNavigator({
           </div>
         </ScrollArea>
 
+        {pendingReminder && (
+          <Card className="border-accent/50 bg-accent/5 mt-4">
+              <CardHeader className="p-4">
+                  <CardTitle className="text-base">确认提醒</CardTitle>
+                  <CardDescription className="text-xs">请确认以下提醒信息是否正确。</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 text-sm">
+                  <p><strong>事项:</strong> {pendingReminder.title}</p>
+                  <p><strong>时间:</strong> {pendingReminder.dateTime}</p>
+              </CardContent>
+              <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={onCancelReminder}><X className="mr-1 h-4 w-4" />取消</Button>
+                  <Button size="sm" onClick={() => onConfirmReminder(pendingReminder)}><Check className="mr-1 h-4 w-4" />确认</Button>
+              </CardFooter>
+          </Card>
+        )}
+
         <form onSubmit={onFormSubmit} className="mt-auto pt-4 border-t">
           {isFinished ? (
              <div className="text-center text-sm text-green-600 bg-green-50 p-3 rounded-md border border-green-200">
@@ -109,7 +133,7 @@ export function RequirementsNavigator({
           ) : (
             <div className="relative">
               <Textarea
-                placeholder="在此输入您的消息..."
+                placeholder="在此输入您的消息或提醒..."
                 className="pr-16 resize-none"
                 value={currentInput}
                 onChange={(e) => setCurrentInput(e.target.value)}
@@ -120,13 +144,13 @@ export function RequirementsNavigator({
                   }
                 }}
                 rows={2}
-                disabled={isLoading}
+                disabled={isLoading || !!pendingReminder}
               />
               <Button
                 type="submit"
                 size="icon"
                 className="absolute right-2 top-1/2 -translate-y-1/2"
-                disabled={isLoading || !currentInput.trim()}
+                disabled={isLoading || !currentInput.trim() || !!pendingReminder}
               >
                 <Send className="h-4 w-4" />
               </Button>

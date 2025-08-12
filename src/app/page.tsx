@@ -10,17 +10,17 @@ import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIReq
 import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
 import type { Scenario } from "@/components/app/designer";
 import { sampleScenarios } from "@/components/app/designer";
+import { createReminderFlow, type CreateReminderOutput } from "@/ai/flows/create-reminder-flow";
 
 
 import { AppHeader } from "@/components/app/header";
 import { RequirementsNavigator } from "@/components/app/requirements-navigator";
 import { ScenarioArchitectView } from "@/components/app/scenario-architect-view";
-import { WorkflowViewer } from "@/components/app/workflow-viewer";
 import { Designer } from "@/components/app/designer";
 import { AdminDashboard } from "@/components/app/admin-dashboard";
 import { TenantDashboard } from "@/components/app/tenant-dashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText } from "lucide-react";
+import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText, CalendarPlus, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
@@ -28,11 +28,16 @@ import { Input } from "@/components/ui/input";
 import { SystemCapabilities } from "@/components/app/system-capabilities";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogClose } from "@/components/ui/alert-dialog";
 import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer";
+import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
+import { IntelligentReminders, type Reminder } from "@/components/app/intelligent-reminders";
 
 
 type ConversationMessage = {
   role: "user" | "assistant";
   content: string;
+  metadata?: {
+    reminder?: CreateReminderOutput;
+  }
 };
 
 // 模拟检查用户是否已登录
@@ -70,7 +75,6 @@ const useAuth = () => {
 export default function Home() {
   const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
-  const [extractedRequirements, setExtractedRequirements] = useState<string | undefined>(undefined);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
   const [scenarioOutput, setScenarioOutput] = useState<AIScenarioArchitectOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +84,8 @@ export default function Home() {
   
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
   const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
-
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [pendingReminder, setPendingReminder] = useState<CreateReminderOutput | null>(null);
 
   useEffect(() => {
     if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员', '用户方 - 企业租户'].includes(userRole || '')) {
@@ -88,13 +93,12 @@ export default function Home() {
         setConversationHistory([
         {
             role: "assistant",
-            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求。首先，您能描述一下您希望自动化或改进的任务或流程吗？",
+            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求，或者您可以直接告诉我需要创建什么提醒。首先，您能描述一下您的需求吗？",
         },
         ]);
     }
   }, [isAuthenticated, userRole]);
   
-  // New handler for when a scenario is selected for fine-tuning
   const handleEditScenario = (scenario: Scenario) => {
     setEditingScenario(scenario);
     setScenarioOutput({
@@ -116,6 +120,37 @@ export default function Home() {
     });
   };
   
+    const handleConfirmReminder = (reminderDetails: CreateReminderOutput) => {
+        const newReminder: Reminder = {
+            id: `reminder-${Date.now()}`,
+            icon: 'CalendarClock',
+            title: reminderDetails.title,
+            description: `截止时间: ${reminderDetails.dateTime}`,
+            timestamp: '刚刚',
+            tags: [{ text: '日程提醒', variant: 'default' }]
+        };
+        setReminders(prev => [newReminder, ...prev]);
+        setPendingReminder(null);
+        toast({
+            title: '提醒已创建',
+            description: `“${reminderDetails.title}”已添加到您的智能提醒面板。`,
+            action: (
+              <div className="flex items-center gap-2">
+                <CalendarPlus className="h-4 w-4" />
+                <span>添加到日历</span>
+              </div>
+            )
+        });
+    };
+
+    const handleCancelReminder = () => {
+        setPendingReminder(null);
+        toast({
+            title: '操作已取消',
+            description: '创建提醒的操作已被取消。',
+            variant: 'destructive',
+        });
+    };
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -129,35 +164,44 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const result = await aiRequirementsNavigator({
-        userInput: latestUserInput,
-        conversationHistory: conversationHistory,
-      });
-
-      setConversationHistory([...newHistory, { role: "assistant", content: result.aiResponse }]);
-      
-      if (result.isFinished && result.extractedRequirements) {
-        setIsConversationFinished(true);
-        setExtractedRequirements(result.extractedRequirements);
-
-        if (result.suggestedPromptId) {
-            setPromptId(result.suggestedPromptId);
-             // Based on the suggestedPromptId, filter the scenarios to recommend to the user.
-            let recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
-            if (recommendations.length === 0) {
-              // If no specific recommendations found, show all sample scenarios.
-              recommendations = sampleScenarios;
-            }
-            setRecommendedScenarios(recommendations);
-            
-            toast({
-                title: "需求分析完成！",
-                description: "我们已经理解您的需求，并为您推荐了以下解决方案。",
+        // Simple heuristic to detect if the user wants to create a reminder
+        if (latestUserInput.includes('提醒') || latestUserInput.includes('安排')) {
+             const result = await createReminderFlow({ userInput: latestUserInput });
+             const assistantMessage: ConversationMessage = {
+                role: 'assistant',
+                content: `好的，我将为您创建一个提醒：\n**${result.title}**\n时间：${result.dateTime}\n\n请确认信息是否正确。`,
+             };
+             setConversationHistory([...newHistory, assistantMessage]);
+             setPendingReminder(result);
+        } else {
+            // Fallback to requirements navigator
+            const result = await aiRequirementsNavigator({
+                userInput: latestUserInput,
+                conversationHistory: conversationHistory,
             });
+
+            setConversationHistory([...newHistory, { role: "assistant", content: result.aiResponse }]);
+            
+            if (result.isFinished) {
+                setIsConversationFinished(true);
+
+                if (result.suggestedPromptId) {
+                    setPromptId(result.suggestedPromptId);
+                    let recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
+                    if (recommendations.length === 0) {
+                      recommendations = sampleScenarios;
+                    }
+                    setRecommendedScenarios(recommendations);
+                    
+                    toast({
+                        title: "需求分析完成！",
+                        description: "我们已经理解您的需求，并为您推荐了以下解决方案。",
+                    });
+                }
+            }
         }
-      }
     } catch (error) {
-      console.error("AI 需求导航器出错:", error);
+      console.error("AI flow error:", error);
       toast({
         variant: "destructive",
         title: "发生错误。",
@@ -171,22 +215,6 @@ export default function Home() {
     }
   };
 
-  const generateScenario = async (requirements: string) => {
-    setIsLoading(true);
-    try {
-      const result = await aiScenarioArchitect({ userRequirements: requirements });
-      setScenarioOutput(result);
-    } catch (error) {
-      console.error("AI 场景架构师出错:", error);
-      toast({
-        variant: "destructive",
-        title: "发生错误。",
-        description: "生成 AI 场景失败。请重试。",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   const handleTaskOrderGeneration = () => {
     toast({
@@ -212,7 +240,6 @@ export default function Home() {
             title: "提示已连接",
             description: `成功获取提示: "${result.promptTitle}"`,
         });
-        console.log("获取的提示内容:", result.promptContent);
     } catch (error) {
         console.error("连接提示库出错:", error);
         toast({
@@ -263,125 +290,126 @@ export default function Home() {
   }
 
   const renderUserView = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
-        {/* Left Column: Requirements Navigator */}
-        <div className="lg:col-span-4 xl:col-span-3 h-full">
-        <RequirementsNavigator
-            history={conversationHistory}
-            isLoading={isLoading}
-            isFinished={isConversationFinished}
-            currentInput={currentInput}
-            setCurrentInput={setCurrentInput}
-            onFormSubmit={handleFormSubmit}
-        />
-        </div>
+     <ThreeColumnLayout>
+        <ThreeColumnLayout.Left>
+             <IntelligentReminders reminders={reminders} setReminders={setReminders}/>
+        </ThreeColumnLayout.Left>
+        
+        <ThreeColumnLayout.Main>
+            <RequirementsNavigator
+                history={conversationHistory}
+                isLoading={isLoading}
+                isFinished={isConversationFinished}
+                currentInput={currentInput}
+                setCurrentInput={setCurrentInput}
+                onFormSubmit={handleFormSubmit}
+                pendingReminder={pendingReminder}
+                onConfirmReminder={handleConfirmReminder}
+                onCancelReminder={handleCancelReminder}
+            />
+        </ThreeColumnLayout.Main>
 
-        {/* Right Columns: Scenario & Actions */}
-        <div className="lg:col-span-8 xl:col-span-9 h-full flex flex-col gap-6 overflow-y-auto">
+        <ThreeColumnLayout.Right>
         {isConversationFinished ? (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 flex flex-col gap-6">
-                     <ScenarioLibraryViewer 
-                        scenarios={recommendedScenarios}
-                        onSelect={handleSelectScenario}
-                        onEdit={handleEditScenario}
-                    />
+            <div className="space-y-6">
+                 <ScenarioLibraryViewer 
+                    scenarios={recommendedScenarios}
+                    onSelect={handleSelectScenario}
+                    onEdit={handleEditScenario}
+                />
 
-                    {editingScenario && scenarioOutput && (
-                        <ScenarioArchitectView
-                            scenario={scenarioOutput}
-                            onScenarioChange={setScenarioOutput}
-                        />
-                    )}
-                </div>
-                <div className="xl:col-span-1">
-                     <Card className="flex-grow flex flex-col">
-                        <CardHeader>
-                        <CardTitle className="font-headline flex items-center gap-2">
-                            <ClipboardCheck className="h-6 w-6 text-accent" />
-                            <span>操作</span>
-                        </CardTitle>
-                        <CardDescription>
-                            管理您的工作流、能力和付款。
-                        </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow flex flex-col justify-between gap-6">
-                        <div className="space-y-6">
-                            <SystemCapabilities />
-                            <Separator />
-                            <div>
-                            <Label htmlFor="prompt-id" className="text-sm font-medium flex items-center gap-2 mb-2">
-                                <LinkIcon className="h-4 w-4" />
-                                提示库连接器
-                            </Label>
-                            <div className="flex items-center gap-2">
-                                <Input 
-                                id="prompt-id" 
-                                placeholder="选用场景或输入ID" 
-                                value={promptId}
-                                onChange={(e) => setPromptId(e.target.value)}
-                                />
-                                <Button variant="outline" size="icon" onClick={handleConnectPrompt} disabled={isLoading}>
-                                <ArrowRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            </div>
-                            <Separator />
-                            <div>
-                            <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
-                                <ShieldCheck className="h-4 w-4" />
-                                安全支付
-                            </h4>
-                            <p className="text-xs text-muted-foreground mb-3">通过可信的第三方平台（如天猫）担保交易，保障资金安全。</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button variant="outline" onClick={() => window.open('https://www.alipay.com', '_blank')}>
-                                支付定金
-                                <ExternalLink className="h-4 w-4 ml-2" />
-                                </Button>
-                                <Button variant="outline" onClick={() => window.open('https://www.alipay.com', '_blank')}>
-                                支付尾款
-                                <ExternalLink className="h-4 w-4 ml-2" />
-                                </Button>
-                            </div>
-                            </div>
+                {editingScenario && scenarioOutput && (
+                    <ScenarioArchitectView
+                        scenario={scenarioOutput}
+                        onScenarioChange={setScenarioOutput}
+                    />
+                )}
+                 <Card className="flex-grow flex flex-col">
+                    <CardHeader>
+                    <CardTitle className="font-headline flex items-center gap-2">
+                        <ClipboardCheck className="h-6 w-6 text-accent" />
+                        <span>操作</span>
+                    </CardTitle>
+                    <CardDescription>
+                        管理您的工作流、能力和付款。
+                    </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow flex flex-col justify-between gap-6">
+                    <div className="space-y-6">
+                        <SystemCapabilities />
+                        <Separator />
+                        <div>
+                        <Label htmlFor="prompt-id" className="text-sm font-medium flex items-center gap-2 mb-2">
+                            <LinkIcon className="h-4 w-4" />
+                            提示库连接器
+                        </Label>
+                        <div className="flex items-center gap-2">
+                            <Input 
+                            id="prompt-id" 
+                            placeholder="选用场景或输入ID" 
+                            value={promptId}
+                            onChange={(e) => setPromptId(e.target.value)}
+                            />
+                            <Button variant="outline" size="icon" onClick={handleConnectPrompt} disabled={isLoading}>
+                            <ArrowRight className="h-4 w-4" />
+                            </Button>
                         </div>
-                        
-                        <div className="mt-auto">
-                            <Separator className="mb-6" />
-                             {scenarioOutput && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                                            确认并生成任务订单
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>确认您的任务订单</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                请检查以下根据您的需求生成的任务订单摘要。确认后，此订单将被创建。
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <Card>
-                                            <CardHeader>
-                                                <CardTitle className="text-lg flex items-center gap-2"><FileText /> 任务摘要</CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="text-sm space-y-2">
-                                                <p><strong className="font-medium">优化场景:</strong> {scenarioOutput.optimizedScenario.substring(0, 100)}...</p>
-                                                <p><strong className="font-medium">自动化任务:</strong> {scenarioOutput.aiAutomatableTasks.split('\n')[0]}...</p>
-                                            </CardContent>
-                                        </Card>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>返回修改</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleTaskOrderGeneration}>确认生成</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
                         </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                        <Separator />
+                        <div>
+                        <h4 className="text-sm font-medium flex items-center gap-2 mb-2">
+                            <ShieldCheck className="h-4 w-4" />
+                            安全支付
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-3">通过可信的第三方平台（如天猫）担保交易，保障资金安全。</p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" onClick={() => window.open('https://www.alipay.com', '_blank')}>
+                            支付定金
+                            <ExternalLink className="h-4 w-4 ml-2" />
+                            </Button>
+                            <Button variant="outline" onClick={() => window.open('https://www.alipay.com', '_blank')}>
+                            支付尾款
+                            <ExternalLink className="h-4 w-4 ml-2" />
+                            </Button>
+                        </div>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-auto">
+                        <Separator className="mb-6" />
+                         {scenarioOutput && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                                        确认并生成任务订单
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>确认您的任务订单</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            请检查以下根据您的需求生成的任务订单摘要。确认后，此订单将被创建。
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-lg flex items-center gap-2"><FileText /> 任务摘要</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="text-sm space-y-2">
+                                            <p><strong className="font-medium">优化场景:</strong> {scenarioOutput.optimizedScenario.substring(0, 100)}...</p>
+                                            <p><strong className="font-medium">自动化任务:</strong> {scenarioOutput.aiAutomatableTasks.split('\n')[0]}...</p>
+                                        </CardContent>
+                                    </Card>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>返回修改</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleTaskOrderGeneration}>确认生成</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
+                    </CardContent>
+                </Card>
             </div>
         ) : (
             <Card className="h-full flex flex-col items-center justify-center bg-card/50 border-dashed">
@@ -389,7 +417,7 @@ export default function Home() {
                 <Wand2 className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-medium text-foreground">AI 场景架构师</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                完成左侧的需求导航后，这里将为您展示推荐的解决方案。
+                完成中间部分的需求导航后，这里将为您展示推荐的解决方案。
                 </p>
                 {isLoading && (
                     <div className="flex items-center justify-center gap-2 mt-4 text-primary">
@@ -400,8 +428,8 @@ export default function Home() {
             </div>
             </Card>
         )}
-        </div>
-    </div>
+        </ThreeColumnLayout.Right>
+     </ThreeColumnLayout>
   );
 
   const renderEngineerView = () => (
@@ -432,7 +460,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       <AppHeader userRole={userRole} onLogout={logout} />
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+      <main className="flex-1 overflow-y-auto">
         {renderContent()}
       </main>
     </div>
