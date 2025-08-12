@@ -9,58 +9,72 @@
  * - DigitalEmployeeOutput - The return type for the digitalEmployee function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-import { promptLibraryConnector } from './prompt-library-connector';
+// import { ai } from '@/ai/genkit';
+// import { z } from 'zod';
+// import { promptLibraryConnector } from './prompt-library-connector';
 
-const DigitalEmployeeInputSchema = z.object({
-  promptId: z.string().describe('The ID of the prompt to use from the library.'),
-  promptContent: z.string().optional().describe('Optional: The raw content of the prompt, used for testing new prompts without saving them.'),
-  userContext: z.string().describe('The user-provided context or question for the AI to act upon.'),
-});
+// const DigitalEmployeeInputSchema = z.object({
+//   promptId: z.string().describe('The ID of the prompt to use from the library.'),
+//   promptContent: z.string().optional().describe('Optional: The raw content of the prompt, used for testing new prompts without saving them.'),
+//   userContext: z.string().describe('The user-provided context or question for the AI to act upon.'),
+// });
 
-export type DigitalEmployeeInput = z.infer<typeof DigitalEmployeeInputSchema>;
+// export type DigitalEmployeeInput = z.infer<typeof DigitalEmployeeInputSchema>;
 
-const DigitalEmployeeOutputSchema = z.object({
-  response: z.string().describe('The generated response from the AI.'),
-});
+// const DigitalEmployeeOutputSchema = z.object({
+//   response: z.string().describe('The generated response from the AI.'),
+// });
 
-export type DigitalEmployeeOutput = z.infer<typeof DigitalEmployeeOutputSchema>;
+// export type DigitalEmployeeOutput = z.infer<typeof DigitalEmployeeOutputSchema>;
 
-export async function digitalEmployee(
-  input: DigitalEmployeeInput
-): Promise<DigitalEmployeeOutput> {
-  return digitalEmployeeFlow(input);
+// export async function digitalEmployee(
+//   input: DigitalEmployeeInput
+// ): Promise<DigitalEmployeeOutput> {
+//   return digitalEmployeeFlow(input);
+// }
+
+// const digitalEmployeeFlow = ai.defineFlow(
+//   {
+//     name: 'digitalEmployeeFlow',
+//     inputSchema: DigitalEmployeeInputSchema,
+//     outputSchema: DigitalEmployeeOutputSchema,
+//   },
+//   async ({ promptId, promptContent, userContext }) => {
+//     let finalPromptContent: string;
+
+//     if (promptContent) {
+//       finalPromptContent = promptContent;
+//     } else {
+//       const { promptContent: retrievedContent } = await promptLibraryConnector({ promptId });
+//       finalPromptContent = retrievedContent;
+//     }
+
+//     const dynamicPrompt = ai.definePrompt({
+//         name: `dynamicPromptFor_${promptId.replace(/[^a-zA-Z0-9]/g, '_')}`, // Sanitize name
+//         prompt: `${finalPromptContent}
+
+// User Context:
+// {{{userContext}}}
+// `,
+//         input: { schema: z.object({ userContext: z.string() }) },
+//     });
+
+//     const llmResponse = await dynamicPrompt({ userContext });
+
+//     return { response: llmResponse.text };
+//   }
+// );
+
+
+export type DigitalEmployeeInput = any;
+export type DigitalEmployeeOutput = {
+    response: string;
+};
+
+export async function digitalEmployee(input: DigitalEmployeeInput): Promise<DigitalEmployeeOutput> {
+    console.log("digitalEmployee called with:", input);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+        response: `This is a dummy response for prompt ID "${input.promptId}" with context: "${input.userContext}"`
+    };
 }
-
-const digitalEmployeeFlow = ai.defineFlow(
-  {
-    name: 'digitalEmployeeFlow',
-    inputSchema: DigitalEmployeeInputSchema,
-    outputSchema: DigitalEmployeeOutputSchema,
-  },
-  async ({ promptId, promptContent, userContext }) => {
-    let finalPromptContent: string;
-
-    if (promptContent) {
-      finalPromptContent = promptContent;
-    } else {
-      const { promptContent: retrievedContent } = await promptLibraryConnector({ promptId });
-      finalPromptContent = retrievedContent;
-    }
-
-    const dynamicPrompt = ai.definePrompt({
-        name: `dynamicPromptFor_${promptId.replace(/[^a-zA-Z0-9]/g, '_')}`, // Sanitize name
-        prompt: `${finalPromptContent}
-
-User Context:
-{{{userContext}}}
-`,
-        input: { schema: z.object({ userContext: z.string() }) },
-    });
-
-    const llmResponse = await dynamicPrompt({ userContext });
-
-    return { response: llmResponse.text };
-  }
-);

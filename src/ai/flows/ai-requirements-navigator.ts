@@ -8,107 +8,128 @@
  * - AIRequirementsNavigatorOutput - The return type for the aiRequirementsNavigator function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+// import {ai} from '@/ai/genkit';
+// import {z} from 'genkit';
 
-type ConversationMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+// type ConversationMessage = {
+//   role: 'user' | 'assistant';
+//   content: string;
+// };
 
-const AIRequirementsNavigatorInputSchema = z.object({
-  userInput: z.string().describe('The user input for the current turn.'),
-  // We keep the history for the function input, but will format it before sending to the prompt
-  conversationHistory: z
-    .array(z.object({role: z.enum(['user', 'assistant']), content: z.string()}))
-    .optional()
-    .describe('The history of the conversation.'),
-});
+// const AIRequirementsNavigatorInputSchema = z.object({
+//   userInput: z.string().describe('The user input for the current turn.'),
+//   // We keep the history for the function input, but will format it before sending to the prompt
+//   conversationHistory: z
+//     .array(z.object({role: z.enum(['user', 'assistant']), content: z.string()}))
+//     .optional()
+//     .describe('The history of the conversation.'),
+// });
 
-export type AIRequirementsNavigatorInput = z.infer<
-  typeof AIRequirementsNavigatorInputSchema
->;
+// export type AIRequirementsNavigatorInput = z.infer<
+//   typeof AIRequirementsNavigatorInputSchema
+// >;
 
-const AIRequirementsNavigatorOutputSchema = z.object({
-  aiResponse: z.string().describe('The AI response to the user input.'),
-  extractedRequirements: z
-    .string()
-    .optional()
-    .describe('The extracted key requirements from the conversation.'),
-  isFinished: z
-    .boolean()
-    .describe(
-      'Whether the conversation is finished and the requirements are extracted.'
-    ),
-});
+// const AIRequirementsNavigatorOutputSchema = z.object({
+//   aiResponse: z.string().describe('The AI response to the user input.'),
+//   extractedRequirements: z
+//     .string()
+//     .optional()
+//     .describe('The extracted key requirements from the conversation.'),
+//   isFinished: z
+//     .boolean()
+//     .describe(
+//       'Whether the conversation is finished and the requirements are extracted.'
+//     ),
+// });
 
-export type AIRequirementsNavigatorOutput = z.infer<
-  typeof AIRequirementsNavigatorOutputSchema
->;
+// export type AIRequirementsNavigatorOutput = z.infer<
+//   typeof AIRequirementsNavigatorOutputSchema
+// >;
 
-export async function aiRequirementsNavigator(
-  input: AIRequirementsNavigatorInput
-): Promise<AIRequirementsNavigatorOutput> {
-  return aiRequirementsNavigatorFlow(input);
-}
+// export async function aiRequirementsNavigator(
+//   input: AIRequirementsNavigatorInput
+// ): Promise<AIRequirementsNavigatorOutput> {
+// //   return aiRequirementsNavigatorFlow(input);
+//     return {} as AIRequirementsNavigatorOutput
+// }
 
-// Define a schema for the prompt that includes the pre-formatted history string
-const PromptInputSchema = z.object({
-    userInput: z.string(),
-    formattedHistory: z.string(),
-});
+// // Define a schema for the prompt that includes the pre-formatted history string
+// const PromptInputSchema = z.object({
+//     userInput: z.string(),
+//     formattedHistory: z.string(),
+// });
 
 
-const prompt = ai.definePrompt({
-  name: 'aiRequirementsNavigatorPrompt',
-  model: 'googleai/gemini-1.5-flash-preview-0514',
-  input: {schema: PromptInputSchema},
-  output: {schema: AIRequirementsNavigatorOutputSchema},
-  prompt: `You are an AI assistant designed to guide users in articulating their needs for AI-driven workflows by collecting a detailed user profile. Analyze their input and extract key requirements effectively. 
+// const prompt = ai.definePrompt({
+//   name: 'aiRequirementsNavigatorPrompt',
+//   model: 'googleai/gemini-1.5-flash',
+//   input: {schema: PromptInputSchema},
+//   output: {schema: AIRequirementsNavigatorOutputSchema},
+//   prompt: `You are an AI assistant designed to guide users in articulating their needs for AI-driven workflows by collecting a detailed user profile. Analyze their input and extract key requirements effectively. 
 
-Follow these steps:
-1.  Start by introducing yourself and explaining that you will guide the user to define their user profile and needs for an AI-driven workflow.
-2.  Ask clarifying questions to gather the following information for the user profile. Be conversational and ask for them one by one or in small related groups:
-    - Enterprise Characteristics: What is your industry, main business, number of employees, and approximate revenue/profit range?
-    - Your Role: What is your position or job responsibility? (e.g., HR, Sales, Operations)
-    - Demand Scenario: What specific task or process do you want to automate or improve? (e.g., recruitment, lead generation, customer support)
-    - Core Need: Can you describe your core requirements for this scenario in a bit more detail?
-3.  Based on the user input, keep the conversation going until you have a clear picture of all the points above.
-4.  Once you have gathered all the necessary information, summarize it as the "extractedRequirements".
-5.  After summarizing, ask the user for confirmation. If the user confirms the requirements are complete and accurate, set isFinished to true. If not, continue the conversation to refine the details.
-6.  Mention that a fee evaluation can be performed once the requirements are finalized.
+// Follow these steps:
+// 1.  Start by introducing yourself and explaining that you will guide the user to define their user profile and needs for an AI-driven workflow.
+// 2.  Ask clarifying questions to gather the following information for the user profile. Be conversational and ask for them one by one or in small related groups:
+//     - Enterprise Characteristics: What is your industry, main business, number of employees, and approximate revenue/profit range?
+//     - Your Role: What is your position or job responsibility? (e.g., HR, Sales, Operations)
+//     - Demand Scenario: What specific task or process do you want to automate or improve? (e.g., recruitment, lead generation, customer support)
+//     - Core Need: Can you describe your core requirements for this scenario in a bit more detail?
+// 3.  Based on the user input, keep the conversation going until you have a clear picture of all the points above.
+// 4.  Once you have gathered all the necessary information, summarize it as the "extractedRequirements".
+// 5.  After summarizing, ask the user for confirmation. If the user confirms the requirements are complete and accurate, set isFinished to true. If not, continue the conversation to refine the details.
+// 6.  Mention that a fee evaluation can be performed once the requirements are finalized.
 
-Conversation History:
-{{{formattedHistory}}}
+// Conversation History:
+// {{{formattedHistory}}}
 
-User input:
-{{{userInput}}}`,
-});
+// User input:
+// {{{userInput}}}`,
+// });
 
-const aiRequirementsNavigatorFlow = ai.defineFlow(
-  {
-    name: 'aiRequirementsNavigatorFlow',
-    inputSchema: AIRequirementsNavigatorInputSchema,
-    outputSchema: AIRequirementsNavigatorOutputSchema,
-  },
-  async ({ userInput, conversationHistory }) => {
+// const aiRequirementsNavigatorFlow = ai.defineFlow(
+//   {
+//     name: 'aiRequirementsNavigatorFlow',
+//     inputSchema: AIRequirementsNavigatorInputSchema,
+//     outputSchema: AIRequirementsNavigatorOutputSchema,
+//   },
+//   async ({ userInput, conversationHistory }) => {
     
-    // Pre-format the conversation history into a single string here
-    const formattedHistory = (conversationHistory || [])
-      .map((message: ConversationMessage) => {
-        if (message.role === 'user') {
-          return `User: ${message.content}`;
-        }
-        return `Assistant: ${message.content}`;
-      })
-      .join('\n');
+//     // Pre-format the conversation history into a single string here
+//     const formattedHistory = (conversationHistory || [])
+//       .map((message: ConversationMessage) => {
+//         if (message.role === 'user') {
+//           return `User: ${message.content}`;
+//         }
+//         return `Assistant: ${message.content}`;
+//       })
+//       .join('\n');
 
-    // Call the prompt with the pre-formatted history
-    const {output} = await prompt({
-        userInput,
-        formattedHistory,
-    });
+//     // Call the prompt with the pre-formatted history
+//     const {output} = await prompt({
+//         userInput,
+//         formattedHistory,
+//     });
 
-    return output!;
-  }
-);
+//     return output!;
+//   }
+// );
+
+export type AIRequirementsNavigatorInput = any;
+export type AIRequirementsNavigatorOutput = any;
+
+export async function aiRequirementsNavigator(input: AIRequirementsNavigatorInput): Promise<AIRequirementsNavigatorOutput> {
+  console.log("aiRequirementsNavigator called with:", input);
+  // Dummy implementation
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  const isFinished = input.userInput.toLowerCase().includes("confirm");
+  const response = isFinished
+    ? "Great! I'm now generating the scenario based on your requirements."
+    : "Thanks for the input! What else can you tell me?";
+  const requirements = isFinished ? "User wants to automate customer support by using a chatbot." : undefined;
+  
+  return {
+    aiResponse: response,
+    isFinished: isFinished,
+    extractedRequirements: requirements,
+  };
+}

@@ -8,8 +8,8 @@
  * - PromptLibraryConnectorOutput - The return type for the promptLibraryConnector function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
+// import { ai } from '@/ai/genkit';
+// import { z } from 'zod';
 
 // A dummy prompt library for demonstration purposes.
 // In a real application, this would be a database or an external API call.
@@ -28,39 +28,38 @@ const promptLibrary: Record<string, { title: string; content: string }> = {
   },
 };
 
-const PromptLibraryConnectorInputSchema = z.object({
-  promptId: z.string().describe('The unique identifier for the prompt in the library.'),
-});
+// const PromptLibraryConnectorInputSchema = z.object({
+//   promptId: z.string().describe('The unique identifier for the prompt in the library.'),
+// });
 
-export type PromptLibraryConnectorInput = z.infer<typeof PromptLibraryConnectorInputSchema>;
+// export type PromptLibraryConnectorInput = z.infer<typeof PromptLibraryConnectorInputSchema>;
 
-const PromptLibraryConnectorOutputSchema = z.object({
-  promptTitle: z.string().describe('The title of the retrieved prompt.'),
-  promptContent: z.string().describe('The content of the retrieved prompt.'),
-});
+// const PromptLibraryConnectorOutputSchema = z.object({
+//   promptTitle: z.string().describe('The title of the retrieved prompt.'),
+//   promptContent: z.string().describe('The content of the retrieved prompt.'),
+// });
 
-export type PromptLibraryConnectorOutput = z.infer<typeof PromptLibraryConnectorOutputSchema>;
+// export type PromptLibraryConnectorOutput = z.infer<typeof PromptLibraryConnectorOutputSchema>;
+
+
+export type PromptLibraryConnectorInput = any;
+export type PromptLibraryConnectorOutput = {
+    promptTitle: string;
+    promptContent: string;
+};
+
 
 export async function promptLibraryConnector(
   input: PromptLibraryConnectorInput
 ): Promise<PromptLibraryConnectorOutput> {
-  return promptLibraryConnectorFlow(input);
-}
-
-const promptLibraryConnectorFlow = ai.defineFlow(
-  {
-    name: 'promptLibraryConnectorFlow',
-    inputSchema: PromptLibraryConnectorInputSchema,
-    outputSchema: PromptLibraryConnectorOutputSchema,
-  },
-  async ({ promptId }) => {
-    console.log(`Attempting to retrieve prompt with ID: ${promptId}`);
+  // return promptLibraryConnectorFlow(input);
+  console.log(`Attempting to retrieve prompt with ID: ${input.promptId}`);
     
-    const prompt = promptLibrary[promptId];
+    const prompt = promptLibrary[input.promptId];
 
     if (!prompt) {
-      console.error(`Prompt with ID "${promptId}" not found.`);
-      throw new Error(`Prompt with ID "${promptId}" not found.`);
+      console.error(`Prompt with ID "${input.promptId}" not found.`);
+      throw new Error(`Prompt with ID "${input.promptId}" not found.`);
     }
 
     console.log(`Successfully retrieved prompt: "${prompt.title}"`);
@@ -69,5 +68,29 @@ const promptLibraryConnectorFlow = ai.defineFlow(
       promptTitle: prompt.title,
       promptContent: prompt.content,
     };
-  }
-);
+}
+
+// const promptLibraryConnectorFlow = ai.defineFlow(
+//   {
+//     name: 'promptLibraryConnectorFlow',
+//     inputSchema: PromptLibraryConnectorInputSchema,
+//     outputSchema: PromptLibraryConnectorOutputSchema,
+//   },
+//   async ({ promptId }) => {
+//     console.log(`Attempting to retrieve prompt with ID: ${promptId}`);
+    
+//     const prompt = promptLibrary[promptId];
+
+//     if (!prompt) {
+//       console.error(`Prompt with ID "${promptId}" not found.`);
+//       throw new Error(`Prompt with ID "${promptId}" not found.`);
+//     }
+
+//     console.log(`Successfully retrieved prompt: "${prompt.title}"`);
+    
+//     return {
+//       promptTitle: prompt.title,
+//       promptContent: prompt.content,
+//     };
+//   }
+// );
