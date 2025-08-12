@@ -143,7 +143,11 @@ export default function Home() {
         if (result.suggestedPromptId) {
             setPromptId(result.suggestedPromptId);
              // Based on the suggestedPromptId, filter the scenarios to recommend to the user.
-            const recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
+            let recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
+            if (recommendations.length === 0) {
+              // If no specific recommendations found, show all sample scenarios.
+              recommendations = sampleScenarios;
+            }
             setRecommendedScenarios(recommendations);
             
             toast({
