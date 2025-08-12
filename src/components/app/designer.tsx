@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from 'react';
@@ -10,13 +11,13 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ScenarioCard } from '@/components/app/scenario-card';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2, Trash2 } from 'lucide-react';
+import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2, Trash2, TestTube2 } from 'lucide-react';
 import { digitalEmployee } from '@/ai/flows/digital-employee';
 import { Separator } from '../ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-type Scenario = {
+export type Scenario = {
     id: string;
     title: string;
     description: string;
@@ -26,7 +27,7 @@ type Scenario = {
 };
 
 
-const sampleScenarios: Scenario[] = [
+export const sampleScenarios: Scenario[] = [
     { 
         id: 'recruitment-expert', 
         title: '智能招聘助理', 
@@ -67,7 +68,7 @@ export function Designer() {
     setEditingScenario(prev => ({ ...prev, [field]: value }));
   };
   
-  const handleAddOrUpdateScenario = () => {
+  const handleAddScenarioToLibrary = () => {
     if (!editingScenario.title || !editingScenario.prompt) {
          toast({
             variant: 'destructive',
@@ -86,7 +87,7 @@ export function Designer() {
     });
   }
 
-  const handlePublishAndTest = async () => {
+  const handleTestPrompt = async () => {
     const usePromptId = !!testPromptId.trim();
     const useNewPrompt = !usePromptId && !!editingScenario.prompt.trim();
 
@@ -183,7 +184,7 @@ export function Designer() {
                 能力场景库
             </CardTitle>
             <CardDescription>
-                浏览、搜索和管理已发布的 AI 数字员工能力场景。
+                浏览、搜索和管理已发布的 AI 数字员工能力场景。点击下方卡片可加载至右侧设计器进行编辑。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden">
@@ -197,15 +198,6 @@ export function Designer() {
                           onDelete={() => handleDeleteScenario(scenario.id)}
                         />
                     ))}
-                     <div 
-                        className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg text-muted-foreground hover:bg-muted/50 cursor-pointer min-h-[220px]"
-                        onClick={handleAddOrUpdateScenario}
-                        role="button"
-                        aria-label="添加新场景"
-                     >
-                        <PlusCircle className="h-8 w-8" />
-                        <p className="mt-2 text-sm text-center">点击添加当前<br/>设计器中的场景</p>
-                    </div>
                 </div>
             </ScrollArea>
           </CardContent>
@@ -227,6 +219,7 @@ export function Designer() {
             <CardContent className="flex-1 flex flex-col justify-between gap-4 overflow-y-auto">
                 <ScrollArea className="flex-1 -mx-6 px-6">
                     <div className="space-y-4 pr-4">
+                        <h3 className="text-lg font-semibold text-foreground">场景设计</h3>
                         <div>
                             <Label htmlFor="scenario-title">能力标题</Label>
                             <Input id="scenario-title" placeholder="例如：智能招聘助理" value={editingScenario.title} onChange={e => handleInputChange('title', e.target.value)} />
@@ -256,6 +249,14 @@ export function Designer() {
                                 </Select>
                             </div>
                         </div>
+                         <Button className="w-full" onClick={handleAddScenarioToLibrary}>
+                            <PlusCircle className="mr-2 h-5 w-5" />
+                            添加/更新至场景库
+                        </Button>
+                        
+                        <Separator className="my-6" />
+
+                        <h3 className="text-lg font-semibold text-foreground">提示词测试</h3>
                         <div>
                             <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
                             <Textarea id="scenario-prompt" placeholder="在此创建新的中英文提示词，或留空以使用下面的ID..." rows={5} value={editingScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
@@ -303,9 +304,9 @@ export function Designer() {
 
 
                 <div className="mt-auto pt-4 border-t">
-                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handlePublishAndTest} disabled={isLoading}>
-                        <UploadCloud className="mr-2 h-5 w-5" />
-                        发布并测试
+                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleTestPrompt} disabled={isLoading}>
+                        <TestTube2 className="mr-2 h-5 w-5" />
+                        测试提示词
                     </Button>
                 </div>
             </CardContent>

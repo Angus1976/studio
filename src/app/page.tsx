@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -7,6 +8,9 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIRequirementsNavigatorInput } from "@/ai/flows/ai-requirements-navigator";
 import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
+import type { Scenario } from "@/components/app/designer";
+import { sampleScenarios } from "@/components/app/designer";
+
 
 import { AppHeader } from "@/components/app/header";
 import { RequirementsNavigator } from "@/components/app/requirements-navigator";
@@ -23,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SystemCapabilities } from "@/components/app/system-capabilities";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogClose } from "@/components/ui/alert-dialog";
+import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer";
 
 
 type ConversationMessage = {
@@ -72,6 +77,10 @@ export default function Home() {
   const [currentInput, setCurrentInput] = useState("");
   const [promptId, setPromptId] = useState("");
   const { toast } = useToast();
+  
+  const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
+  const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
+
 
   useEffect(() => {
     if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员', '用户方 - 企业租户'].includes(userRole || '')) {
@@ -84,6 +93,29 @@ export default function Home() {
         ]);
     }
   }, [isAuthenticated, userRole]);
+  
+  // New handler for when a scenario is selected for fine-tuning
+  const handleEditScenario = (scenario: Scenario) => {
+    setEditingScenario(scenario);
+    setScenarioOutput({
+      optimizedScenario: `微调场景： ${scenario.title}`,
+      aiAutomatableTasks: "根据您的自定义更新任务...",
+      improvementSuggestions: scenario.prompt,
+    });
+    toast({
+      title: "场景已加载",
+      description: `您现在可以微调 "${scenario.title}" 的内容。`,
+    });
+  };
+
+  const handleSelectScenario = (scenario: Scenario) => {
+    setPromptId(scenario.id);
+    toast({
+      title: "场景已选用",
+      description: `已选择 "${scenario.title}"。您现在可以在操作面板中连接并测试它。`,
+    });
+  };
+  
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -103,24 +135,22 @@ export default function Home() {
       });
 
       setConversationHistory([...newHistory, { role: "assistant", content: result.aiResponse }]);
+      
       if (result.isFinished && result.extractedRequirements) {
         setIsConversationFinished(true);
         setExtractedRequirements(result.extractedRequirements);
 
         if (result.suggestedPromptId) {
             setPromptId(result.suggestedPromptId);
+             // Based on the suggestedPromptId, filter the scenarios to recommend to the user.
+            const recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
+            setRecommendedScenarios(recommendations);
+            
             toast({
-                title: "智能路由成功！",
-                description: `已为您连接到最匹配的专家，请在右侧与他沟通。`,
+                title: "需求分析完成！",
+                description: `我们已经理解您的需求，并为您推荐了以下解决方案。`,
             });
         }
-
-        toast({
-          title: "需求已敲定！",
-          description: "正在为您生成优化的工作场景...",
-        });
-        // Automatically trigger the scenario architect
-        generateScenario(result.extractedRequirements);
       }
     } catch (error) {
       console.error("AI 需求导航器出错:", error);
@@ -244,14 +274,21 @@ export default function Home() {
 
         {/* Right Columns: Scenario & Actions */}
         <div className="lg:col-span-8 xl:col-span-9 h-full flex flex-col gap-6 overflow-y-auto">
-        {scenarioOutput ? (
+        {isConversationFinished ? (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="xl:col-span-2 flex flex-col gap-6">
-                    <ScenarioArchitectView
-                        scenario={scenarioOutput}
-                        onScenarioChange={setScenarioOutput}
+                     <ScenarioLibraryViewer 
+                        scenarios={recommendedScenarios}
+                        onSelect={handleSelectScenario}
+                        onEdit={handleEditScenario}
                     />
-                    <WorkflowViewer tasks={scenarioOutput.aiAutomatableTasks} />
+
+                    {editingScenario && scenarioOutput && (
+                        <ScenarioArchitectView
+                            scenario={scenarioOutput}
+                            onScenarioChange={setScenarioOutput}
+                        />
+                    )}
                 </div>
                 <div className="xl:col-span-1">
                      <Card className="flex-grow flex flex-col">
@@ -276,7 +313,7 @@ export default function Home() {
                             <div className="flex items-center gap-2">
                                 <Input 
                                 id="prompt-id" 
-                                placeholder="输入提示 ID" 
+                                placeholder="选用场景或输入ID" 
                                 value={promptId}
                                 onChange={(e) => setPromptId(e.target.value)}
                                 />
@@ -307,34 +344,36 @@ export default function Home() {
                         
                         <div className="mt-auto">
                             <Separator className="mb-6" />
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                                        确认并生成任务订单
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>确认您的任务订单</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            请检查以下根据您的需求生成的任务订单摘要。确认后，此订单将被创建。
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="text-lg flex items-center gap-2"><FileText /> 任务摘要</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="text-sm space-y-2">
-                                            <p><strong className="font-medium">优化场景:</strong> {scenarioOutput.optimizedScenario.substring(0, 100)}...</p>
-                                            <p><strong className="font-medium">自动化任务:</strong> {scenarioOutput.aiAutomatableTasks.split('\n')[0]}...</p>
-                                        </CardContent>
-                                    </Card>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>返回修改</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleTaskOrderGeneration}>确认生成</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+                             {scenarioOutput && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                                            确认并生成任务订单
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>确认您的任务订单</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                请检查以下根据您的需求生成的任务订单摘要。确认后，此订单将被创建。
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-lg flex items-center gap-2"><FileText /> 任务摘要</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="text-sm space-y-2">
+                                                <p><strong className="font-medium">优化场景:</strong> {scenarioOutput.optimizedScenario.substring(0, 100)}...</p>
+                                                <p><strong className="font-medium">自动化任务:</strong> {scenarioOutput.aiAutomatableTasks.split('\n')[0]}...</p>
+                                            </CardContent>
+                                        </Card>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>返回修改</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleTaskOrderGeneration}>确认生成</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                         </div>
                         </CardContent>
                     </Card>
@@ -346,12 +385,12 @@ export default function Home() {
                 <Wand2 className="mx-auto h-12 w-12 text-muted-foreground" />
                 <h3 className="mt-4 text-lg font-medium text-foreground">AI 场景架构师</h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                一旦您的需求最终确定，您优化的工作场景将显示在此处。
+                完成左侧的需求导航后，这里将为您展示推荐的解决方案。
                 </p>
-                {isLoading && isConversationFinished && (
+                {isLoading && (
                     <div className="flex items-center justify-center gap-2 mt-4 text-primary">
                     <LoaderCircle className="animate-spin h-5 w-5" />
-                    <span>正在生成场景...</span>
+                    <span>正在分析您的需求...</span>
                     </div>
                 )}
             </div>
