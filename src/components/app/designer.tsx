@@ -258,7 +258,7 @@ export function Designer() {
                         </div>
                         <div>
                             <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
-                            <Textarea id="scenario-prompt" placeholder="创建新的提示词，或留空以使用下面的ID..." rows={5} value={editingScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
+                            <Textarea id="scenario-prompt" placeholder="在此创建新的中英文提示词，或留空以使用下面的ID..." rows={5} value={editingScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
                         </div>
                         
                         <div className='flex items-center gap-2'>
@@ -314,5 +314,7 @@ export function Designer() {
     </div>
   );
 }
+
+    
 
     
