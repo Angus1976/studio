@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "../ui/textarea";
 import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Separator } from "../ui/separator";
 
 
 const usageData = [
@@ -366,6 +367,71 @@ function LiveChatDialog() {
   );
 }
 
+
+function ViewOrderDialog({ order }: { order: Order }) {
+    const getStatusBadgeVariant = (status: OrderStatus) => {
+        switch (status) {
+            case "待支付": return "destructive";
+            case "待平台确认": return "secondary";
+            case "配置中": return "default";
+            case "已完成": return "outline";
+            case "已取消": return "destructive";
+            default: return "default";
+        }
+    };
+    
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">查看</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>订单详情: {order.id}</DialogTitle>
+                    <DialogDescription>
+                        创建于 {order.createdAt}，最后更新于 {order.updatedAt}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">状态</span>
+                        <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                    </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">总金额</span>
+                        <span className="font-semibold">¥{order.totalAmount.toFixed(2)}</span>
+                    </div>
+                    <Separator />
+                    <h4 className="font-semibold">订单内容</h4>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>项目</TableHead>
+                                <TableHead>单价</TableHead>
+                                <TableHead className="text-center">数量</TableHead>
+                                <TableHead className="text-right">小计</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {order.items.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell>{item.title}</TableCell>
+                                    <TableCell>¥{item.price.toFixed(2)} / {item.unit}</TableCell>
+                                    <TableCell className="text-center">{item.quantity}</TableCell>
+                                    <TableCell className="text-right">¥{(item.price * item.quantity).toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="outline">关闭</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export function TenantDashboard() {
   const { toast } = useToast();
   const [users, setUsers] = useState(initialUsers);
@@ -576,7 +642,7 @@ export function TenantDashboard() {
                                             {order.status === '待支付' ? (
                                                 <Button size="sm" onClick={() => handlePayOrder(order.id)}>在线支付</Button>
                                             ) : (
-                                                <Button variant="outline" size="sm" onClick={() => handlePlaceholderClick(`查看订单 ${order.id}`)}>查看</Button>
+                                                <ViewOrderDialog order={order} />
                                             )}
                                         </TableCell>
                                     </TableRow>
