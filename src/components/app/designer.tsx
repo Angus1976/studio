@@ -14,6 +14,7 @@ import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2, Trash2 } fr
 import { digitalEmployee } from '@/ai/flows/digital-employee';
 import { Separator } from '../ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type Scenario = {
     id: string;
@@ -241,7 +242,18 @@ export function Designer() {
                             </div>
                             <div>
                                 <Label htmlFor="scenario-task">核心任务</Label>
-                                <Input id="scenario-task" placeholder="例如：招聘" value={editingScenario.task} onChange={e => handleInputChange('task', e.target.value)} />
+                                <Select value={editingScenario.task} onValueChange={(value) => handleInputChange('task', value)}>
+                                  <SelectTrigger id="scenario-task">
+                                    <SelectValue placeholder="选择任务类型" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="招聘">招聘</SelectItem>
+                                    <SelectItem value="内容创作">内容创作</SelectItem>
+                                    <SelectItem value="代码审查">代码审查</SelectItem>
+                                    <SelectItem value="客户支持">客户支持</SelectItem>
+                                    <SelectItem value="数据分析">数据分析</SelectItem>
+                                  </SelectContent>
+                                </Select>
                             </div>
                         </div>
                         <div>
@@ -302,3 +314,5 @@ export function Designer() {
     </div>
   );
 }
+
+    
