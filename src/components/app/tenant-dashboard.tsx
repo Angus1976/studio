@@ -13,13 +13,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "../ui/textarea";
 
 const usageData = [
   { month: "一月", tokens: 120000 },
@@ -50,16 +51,53 @@ const initialUsers = [
 ]
 
 const procurementItems = [
-    { title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础" },
-    { title: "视频会议服务", description: "高清、流畅、支持多方协作的在线会议平台。", icon: "Video", tag: "办公基础" },
-    { title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: "Cloud", tag: "IT设施" },
-    { title: "云存储", description: "大容量、高可靠性的对象存储和文件存储服务。", icon: "Cpu", tag: "IT设施" },
-    { title: "LLM Token 包", description: "批量采购大语言模型调用 Token，成本更优。", icon: "Bot", tag: "AI能力" },
-    { title: "IT 设备和服务", description: "提供办公电脑、服务器等硬件及运维服务。", icon: "Briefcase", tag: "硬件与服务" },
-    { title: "网络租赁", description: "高速、稳定的企业专线和网络解决方案。", icon: "Router", tag: "IT设施" },
-    { title: "RPA 流程设计", description: "定制化设计机器人流程自动化解决方案。", icon: "Palette", tag: "专业服务" },
-    { title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: "Bot", tag: "AI能力" },
+    { id: 'prod-001', title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础", price: 50, unit: "用户/年" },
+    { id: 'prod-002', title: "视频会议服务", description: "高清、流畅、支持多方协作的在线会议平台。", icon: "Video", tag: "办公基础", price: 100, unit: "许可/年" },
+    { id: 'prod-003', title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: "Cloud", tag: "IT设施", price: 500, unit: "vCPU/月" },
+    { id: 'prod-004', title: "云存储", description: "大容量、高可靠性的对象存储和文件存储服务。", icon: "Cpu", tag: "IT设施", price: 200, unit: "TB/月" },
+    { id: 'prod-005', title: "LLM Token 包", description: "批量采购大语言模型调用 Token，成本更优。", icon: "Bot", tag: "AI能力", price: 100, unit: "百万Token" },
+    { id: 'prod-006', title: "IT 设备和服务", description: "提供办公电脑、服务器等硬件及运维服务。", icon: "Briefcase", tag: "硬件与服务", price: 5000, unit: "台" },
+    { id: 'prod-007', title: "网络租赁", description: "高速、稳定的企业专线和网络解决方案。", icon: "Router", tag: "IT设施", price: 2000, unit: "Mbps/月" },
+    { id: 'prod-008', title: "RPA 流程设计", description: "定制化设计机器人流程自动化解决方案。", icon: "Palette", tag: "专业服务", price: 10000, unit: "流程" },
+    { id: 'prod-009', title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: "Bot", tag: "AI能力", price: 8000, unit: "个/月" },
 ]
+
+type ProcurementItem = typeof procurementItems[0];
+type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成";
+
+type Order = {
+    id: string;
+    items: (ProcurementItem & { quantity: number })[];
+    totalAmount: number;
+    status: OrderStatus;
+    createdAt: string;
+    updatedAt: string;
+}
+
+const initialOrders: Order[] = [
+    {
+        id: `PO-${Date.now() - 100000}`,
+        items: [{...procurementItems[0], quantity: 10}],
+        totalAmount: 500,
+        status: "已完成",
+        createdAt: "2024-07-20",
+        updatedAt: "2024-07-21"
+    },
+     {
+        id: `PO-${Date.now() - 50000}`,
+        items: [{...procurementItems[4], quantity: 5}],
+        totalAmount: 500,
+        status: "待支付",
+        createdAt: "2024-07-22",
+        updatedAt: "2024-07-22"
+    }
+]
+
+const preOrderSchema = z.object({
+  quantity: z.coerce.number().min(1, { message: "数量必须大于0。" }),
+  notes: z.string().optional(),
+});
+
 
 const inviteUserSchema = z.object({
   email: z.string().email({ message: "请输入有效的邮箱地址。" }),
@@ -72,6 +110,82 @@ const IconComponent = ({ name, ...props }: { name: string, [key: string]: any })
     if (!Icon) return <LucideReact.Package {...props} />; // Fallback icon
     return <Icon {...props} />;
 };
+
+function CreatePreOrderDialog({ item, onConfirm }: { item: ProcurementItem, onConfirm: (values: z.infer<typeof preOrderSchema>) => void }) {
+    const [open, setOpen] = useState(false);
+    const form = useForm<z.infer<typeof preOrderSchema>>({
+        resolver: zodResolver(preOrderSchema),
+        defaultValues: { quantity: 1, notes: "" },
+    });
+
+    const onSubmit = (values: z.infer<typeof preOrderSchema>) => {
+        onConfirm(values);
+        form.reset();
+        setOpen(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button className="w-full">加入预购单</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>创建预购单: {item.title}</DialogTitle>
+                    <DialogDescription>
+                        确认采购数量和备注，提交后将生成预购单，待平台客户经理确认。
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                        <div className="flex items-center gap-4 p-4 border rounded-lg">
+                           <div className="p-3 bg-accent/10 rounded-full">
+                               <IconComponent name={item.icon} className="h-8 w-8 text-accent" />
+                           </div>
+                           <div>
+                               <h4 className="font-semibold">{item.title}</h4>
+                               <p className="text-sm text-muted-foreground">
+                                   单价: ¥{item.price} / {item.unit}
+                                </p>
+                           </div>
+                        </div>
+
+                        <FormField
+                            control={form.control}
+                            name="quantity"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>采购数量</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" placeholder="输入采购数量" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="notes"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>备注 (可选)</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="如有特殊要求，请在此说明" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <DialogFooter>
+                            <DialogClose asChild><Button variant="ghost">取消</Button></DialogClose>
+                            <Button type="submit">提交预购单</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof inviteUserSchema>) => void }) {
   const form = useForm<z.infer<typeof inviteUserSchema>>({
@@ -147,6 +261,37 @@ function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof invi
 export function TenantDashboard() {
   const { toast } = useToast();
   const [users, setUsers] = useState(initialUsers);
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const handleCreatePreOrder = (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
+      const newOrder: Order = {
+          id: `PO-${Date.now()}`,
+          items: [{ ...item, quantity: values.quantity }],
+          totalAmount: item.price * values.quantity,
+          status: "待平台确认",
+          createdAt: new Date().toISOString().split('T')[0],
+          updatedAt: new Date().toISOString().split('T')[0],
+      };
+      setOrders(prev => [newOrder, ...prev]);
+      toast({
+          title: "预购单已提交",
+          description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
+      });
+      // Switch to orders tab
+      setActiveTab("orders");
+  };
+
+  const handlePayOrder = (orderId: string) => {
+    // In a real app, this would redirect to a payment gateway
+    setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status: "配置中", updatedAt: new Date().toISOString().split('T')[0] } : order
+    ));
+    toast({
+        title: "支付成功！",
+        description: "订单支付成功，平台将尽快为您完成资源配置。"
+    })
+  };
 
   const handleInviteUser = (values: z.infer<typeof inviteUserSchema>) => {
     const newUser = { ...values, name: "新成员", status: "邀请中" };
@@ -162,17 +307,32 @@ export function TenantDashboard() {
       title: '功能待开发',
       description: `${title} 功能正在开发中。`
     })
-  }
+  };
+  
+  const getStatusBadgeVariant = (status: OrderStatus) => {
+    switch (status) {
+        case "待支付":
+            return "destructive";
+        case "待平台确认":
+            return "secondary";
+        case "配置中":
+            return "default";
+        case "已完成":
+            return "outline"
+        default:
+            return "default";
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
         <h1 className="text-3xl font-bold font-headline">企业仪表盘</h1>
         
-        <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
                 <TabsTrigger value="overview"><Activity className="mr-2"/>概览</TabsTrigger>
                 <TabsTrigger value="procurement"><ShoppingCart className="mr-2"/>集采市场</TabsTrigger>
-                <TabsTrigger value="billing"><DollarSign className="mr-2"/>账单与发票</TabsTrigger>
+                <TabsTrigger value="orders"><FileEdit className="mr-2"/>我的订单</TabsTrigger>
                 <TabsTrigger value="users"><Users className="mr-2"/>成员管理</TabsTrigger>
                 <TabsTrigger value="settings"><KeyRound className="mr-2"/>资源与权限</TabsTrigger>
             </TabsList>
@@ -242,79 +402,81 @@ export function TenantDashboard() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {procurementItems.map((item) => (
-                             <Dialog key={item.title}>
-                                <Card className="flex flex-col hover:shadow-md transition-shadow">
-                                    <CardHeader className="flex-row items-start gap-4 space-y-0">
-                                        <div className="p-3 bg-accent/10 rounded-full">
-                                            <IconComponent name={item.icon} className="h-6 w-6 text-accent" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <CardTitle className="text-base">{item.title}</CardTitle>
-                                            <Badge variant="outline" className="mt-1 font-normal">{item.tag}</Badge>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="flex-1">
-                                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                                    </CardContent>
-                                    <CardFooter>
-                                        <DialogTrigger asChild>
-                                            <Button className="w-full">进入采购</Button>
-                                        </DialogTrigger>
-                                    </CardFooter>
-                                </Card>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>采购: {item.title}</DialogTitle>
-                                        <DialogDescription>{item.description}</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="text-center py-8 bg-muted rounded-lg">
-                                        <p className="text-muted-foreground">采购详情与配置界面待开发...</p>
+                             <Card key={item.id} className="flex flex-col hover:shadow-md transition-shadow">
+                                <CardHeader className="flex-row items-start gap-4 space-y-0">
+                                    <div className="p-3 bg-accent/10 rounded-full">
+                                        <IconComponent name={item.icon} className="h-6 w-6 text-accent" />
                                     </div>
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button variant="outline">关闭</Button>
-                                        </DialogClose>
-                                         <DialogClose asChild>
-                                            <Button>确认采购</Button>
-                                        </DialogClose>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                                    <div className="flex-1">
+                                        <CardTitle className="text-base">{item.title}</CardTitle>
+                                        <Badge variant="outline" className="mt-1 font-normal">{item.tag}</Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                    <p className="text-sm font-semibold mt-2">¥{item.price} <span className="text-xs text-muted-foreground">/ {item.unit}</span></p>
+                                </CardContent>
+                                <CardFooter>
+                                     <CreatePreOrderDialog 
+                                        item={item} 
+                                        onConfirm={(values) => handleCreatePreOrder(item, values)}
+                                     />
+                                </CardFooter>
+                            </Card>
                         ))}
                     </CardContent>
                 </Card>
             </TabsContent>
             
-            <TabsContent value="billing" className="mt-6">
+             <TabsContent value="orders" className="mt-6">
                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle>账单与发票</CardTitle>
-                            <CardDescription>查看和下载您的历史账单。</CardDescription>
-                        </div>
-                        <Button onClick={() => handlePlaceholderClick('下载全部')}><FileText className="mr-2"/>下载全部</Button>
+                    <CardHeader>
+                        <CardTitle>我的订单</CardTitle>
+                        <CardDescription>查看和管理您的采购订单。</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>发票号</TableHead>
-                                    <TableHead>日期</TableHead>
-                                    <TableHead>金额</TableHead>
+                                    <TableHead>订单号</TableHead>
+                                    <TableHead>内容</TableHead>
+                                    <TableHead>总金额</TableHead>
                                     <TableHead>状态</TableHead>
+                                    <TableHead>最后更新</TableHead>
                                     <TableHead className="text-right">操作</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {initialInvoices.map(invoice => (
-                                    <TableRow key={invoice.id}>
-                                        <TableCell className="font-medium">{invoice.id}</TableCell>
-                                        <TableCell>{invoice.date}</TableCell>
-                                        <TableCell>{invoice.amount}</TableCell>
-                                        <TableCell><Badge variant={invoice.status === '已支付' ? 'default' : 'secondary'}>{invoice.status}</Badge></TableCell>
-                                        <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handlePlaceholderClick(`查看发票 ${invoice.id}`)}>查看</Button></TableCell>
+                                {orders.length > 0 ? orders.map(order => (
+                                    <TableRow key={order.id}>
+                                        <TableCell className="font-medium">{order.id}</TableCell>
+                                        <TableCell>
+                                            {order.items.map(item => 
+                                                <div key={item.id}>{item.title} (x{item.quantity})</div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={getStatusBadgeVariant(order.status)}>
+                                                {order.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{order.updatedAt}</TableCell>
+                                        <TableCell className="text-right">
+                                            {order.status === '待支付' ? (
+                                                <Button size="sm" onClick={() => handlePayOrder(order.id)}>在线支付</Button>
+                                            ) : (
+                                                <Button variant="outline" size="sm" onClick={() => handlePlaceholderClick(`查看订单 ${order.id}`)}>查看</Button>
+                                            )}
+                                        </TableCell>
                                     </TableRow>
-                                ))}
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center h-24">
+                                            暂无订单。
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </CardContent>
@@ -379,7 +541,7 @@ export function TenantDashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><ShieldCheck/> 权限角色配置</CardTitle>
                             <CardDescription>自定义企业内部的角色及其权限。</CardDescription>
-                        </CardHeader>
+                        </Header>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">功能待开发：创建新角色、配置权限矩阵。</p>
                             <Button onClick={() => handlePlaceholderClick('配置角色')}>配置角色</Button>
@@ -391,5 +553,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-    
