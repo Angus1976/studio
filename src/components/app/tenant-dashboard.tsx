@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil, Trash2, Copy } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil, Trash2, Copy, Upload, Download } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -859,7 +859,7 @@ function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: 
 }
 
 
-function RoleManagementDialog({ roles, setRoles }: { roles: Role[]; setRoles: (roles: Role[]) => void }) {
+function RoleManagementDialog({ roles, setRoles }: { roles: Role[]; setRoles: React.Dispatch<React.SetStateAction<Role[]>> }) {
   const { toast } = useToast();
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -1225,7 +1225,17 @@ export function TenantDashboard() {
                             <CardTitle>成员管理</CardTitle>
                             <CardDescription>管理您企业下的成员账户和权限。</CardDescription>
                         </div>
-                        <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
+                        <div className="flex items-center gap-2">
+                           <Button variant="outline" onClick={() => handlePlaceholderClick('批量导入')}>
+                                <Upload className="mr-2 h-4 w-4" />
+                                批量导入
+                            </Button>
+                             <Button variant="outline" onClick={() => handlePlaceholderClick('导出列表')}>
+                                <Download className="mr-2 h-4 w-4" />
+                                导出列表
+                            </Button>
+                           <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
+                        </div>
                     </CardHeader>
                     <CardContent>
                        <Table>
@@ -1295,5 +1305,7 @@ export function TenantDashboard() {
     </div>
   );
 }
+
+    
 
     
