@@ -3,66 +3,48 @@
 
 'use server';
 
-// import {ai} from '@/ai/genkit';
-// import {z} from 'genkit';
+import {ai} from '@/ai/genkit';
+import {z} from 'zod';
 
-// const AIScenarioArchitectInputSchema = z.object({
-//   userRequirements: z.string().describe('Detailed description of user requirements for the AI-driven workflow.'),
-// });
+const AIScenarioArchitectInputSchema = z.object({
+  userRequirements: z.string().describe('Detailed description of user requirements for the AI-driven workflow.'),
+});
 
-// export type AIScenarioArchitectInput = z.infer<typeof AIScenarioArchitectInputSchema>;
+export type AIScenarioArchitectInput = z.infer<typeof AIScenarioArchitectInputSchema>;
 
-// const AIScenarioArchitectOutputSchema = z.object({
-//   optimizedScenario: z.string().describe('A detailed description of the optimized work scenario.'),
-//   aiAutomatableTasks: z.string().describe('A list of tasks within the scenario that are suitable for AI automation.'),
-//   improvementSuggestions: z.string().describe('Suggestions for improving the workflow and leveraging AI effectively.'),
-// });
+const AIScenarioArchitectOutputSchema = z.object({
+  optimizedScenario: z.string().describe('A detailed description of the optimized work scenario.'),
+  aiAutomatableTasks: z.string().describe('A list of tasks within the scenario that are suitable for AI automation.'),
+  improvementSuggestions: z.string().describe('Suggestions for improving the workflow and leveraging AI effectively.'),
+});
 
-// export type AIScenarioArchitectOutput = z.infer<typeof AIScenarioArchitectOutputSchema>;
-
-// export async function aiScenarioArchitect(input: AIScenarioArchitectInput): Promise<AIScenarioArchitectOutput> {
-//   return aiScenarioArchitectFlow(input);
-// }
-
-// const prompt = ai.definePrompt({
-//   name: 'aiScenarioArchitectPrompt',
-//   input: {schema: AIScenarioArchitectInputSchema},
-//   output: {schema: AIScenarioArchitectOutputSchema},
-//   prompt: `Based on the following user requirements, generate an optimized work scenario, identify tasks suitable for AI automation, and provide improvement suggestions.
-
-// User Requirements: {{{userRequirements}}}
-
-// Optimized Scenario: A detailed description of the optimized work scenario.
-// AI Automatable Tasks: A list of tasks within the scenario that are suitable for AI automation.
-// Improvement Suggestions: Suggestions for improving the workflow and leveraging AI effectively.`,
-// });
-
-// const aiScenarioArchitectFlow = ai.defineFlow(
-//   {
-//     name: 'aiScenarioArchitectFlow',
-//     inputSchema: AIScenarioArchitectInputSchema,
-//     outputSchema: AIScenarioArchitectOutputSchema,
-//   },
-//   async input => {
-//     const {output} = await prompt(input);
-//     return output!;
-//   }
-// );
-
-export type AIScenarioArchitectInput = any;
-export type AIScenarioArchitectOutput = {
-  optimizedScenario: string;
-  aiAutomatableTasks: string;
-  improvementSuggestions: string;
-};
+export type AIScenarioArchitectOutput = z.infer<typeof AIScenarioArchitectOutputSchema>;
 
 export async function aiScenarioArchitect(input: AIScenarioArchitectInput): Promise<AIScenarioArchitectOutput> {
-    console.log("aiScenarioArchitect called with:", input);
-    // Dummy implementation
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return {
-        optimizedScenario: "Implement a tiered chatbot system. Tier 1 handles common FAQs. Tier 2 escalates to a human agent if the chatbot cannot resolve the issue.",
-        aiAutomatableTasks: "- Answer frequently asked questions\n- Gather initial user information\n- Route complex issues to the correct department",
-        improvementSuggestions: "Integrate with the company's CRM to provide personalized responses. Use sentiment analysis to gauge customer satisfaction."
-    };
+  return aiScenarioArchitectFlow(input);
 }
+
+const prompt = ai.definePrompt({
+  name: 'aiScenarioArchitectPrompt',
+  input: {schema: AIScenarioArchitectInputSchema},
+  output: {schema: AIScenarioArchitectOutputSchema},
+  prompt: `Based on the following user requirements, generate an optimized work scenario, identify tasks suitable for AI automation, and provide improvement suggestions.
+
+User Requirements: {{{userRequirements}}}
+
+Optimized Scenario: A detailed description of the optimized work scenario.
+AI Automatable Tasks: A list of tasks within the scenario that are suitable for AI automation.
+Improvement Suggestions: Suggestions for improving the workflow and leveraging AI effectively.`,
+});
+
+const aiScenarioArchitectFlow = ai.defineFlow(
+  {
+    name: 'aiScenarioArchitectFlow',
+    inputSchema: AIScenarioArchitectInputSchema,
+    outputSchema: AIScenarioArchitectOutputSchema,
+  },
+  async input => {
+    const {output} = await prompt(input);
+    return output!;
+  }
+);
