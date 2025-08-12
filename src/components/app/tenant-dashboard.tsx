@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -48,7 +48,15 @@ const initialInvoices = [
     { id: "INV-2024-003", date: "2024-04-01", amount: "¥1,100.00", status: "已支付" },
 ]
 
-const initialUsers = [
+type User = {
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+};
+
+
+const initialUsers: User[] = [
     { name: "王经理", email: "wang.m@examplecorp.com", role: "管理员", status: "活跃" },
     { name: "李工", email: "li.e@examplecorp.com", role: "成员", status: "活跃" },
     { name: "赵分析师", email: "zhao.a@examplecorp.com", role: "成员", status: "已禁用" },
@@ -107,6 +115,13 @@ const inviteUserSchema = z.object({
   email: z.string().email({ message: "请输入有效的邮箱地址。" }),
   role: z.string().min(1, { message: "请为用户选择一个角色。" }),
 });
+
+const editUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string(),
+  role: z.string().min(1, { message: "请为用户选择一个角色。" }),
+});
+
 
 
 const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
@@ -260,6 +275,93 @@ function InviteUserDialog({ onInvite }: { onInvite: (values: z.infer<typeof invi
     </Dialog>
   );
 }
+
+function EditUserDialog({ user, onUpdate, children }: { user: User, onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
+  const form = useForm<z.infer<typeof editUserSchema>>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: user,
+  });
+  const [open, setOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (open) {
+      form.reset(user);
+    }
+  }, [open, user, form]);
+
+  const onSubmit = (values: z.infer<typeof editUserSchema>) => {
+    onUpdate(values);
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>编辑成员: {user.name}</DialogTitle>
+          <DialogDescription>修改成员的角色信息。</DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>姓名</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>邮箱地址</FormLabel>
+                  <FormControl>
+                    <Input {...field} disabled />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>角色</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="选择一个角色" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="成员">成员</SelectItem>
+                      <SelectItem value="管理员">管理员</SelectItem>
+                      <SelectItem value="访客">访客</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit">保存更改</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 type ChatMessage = {
   role: 'user' | 'manager';
@@ -473,6 +575,14 @@ export function TenantDashboard() {
     toast({
       title: "邀请已发送",
       description: `已成功向 ${values.email} 发送邀请。`,
+    });
+  };
+
+  const handleUpdateUser = (values: z.infer<typeof editUserSchema>) => {
+    setUsers(prev => prev.map(u => u.email === values.email ? { ...u, ...values } : u));
+    toast({
+      title: "成员已更新",
+      description: `成员 ${values.name} 的信息已更新。`,
     });
   };
   
@@ -692,7 +802,14 @@ export function TenantDashboard() {
                                             {user.status}
                                           </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handlePlaceholderClick(`编辑用户 ${user.name}`)}>编辑</Button></TableCell>
+                                        <TableCell className="text-right">
+                                            <EditUserDialog user={user} onUpdate={handleUpdateUser}>
+                                                <Button variant="outline" size="sm">
+                                                    <Pencil className="mr-2 h-3 w-3" />
+                                                    编辑
+                                                </Button>
+                                            </EditUserDialog>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -729,3 +846,5 @@ export function TenantDashboard() {
     </div>
   );
 }
+
+    
