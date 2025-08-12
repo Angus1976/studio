@@ -26,6 +26,10 @@ const promptLibrary: Record<string, { title: string; content: string }> = {
     title: '代码优化器提示',
     content: 'You are a code optimization expert. Review the following code snippet and provide suggestions to improve its performance and readability.',
   },
+  'contract-review-expert': {
+    title: 'AI合同预审专家提示',
+    content: 'You are an AI legal assistant specializing in contract review. Analyze the following contract text. Identify and summarize key clauses (e.g., payment terms, liability, termination), flag potential risks or ambiguities, and provide suggestions for revision to protect our interests.',
+  }
 };
 
 const PromptLibraryConnectorInputSchema = z.object({

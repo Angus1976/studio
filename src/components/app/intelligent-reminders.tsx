@@ -60,11 +60,11 @@ const initialReminders: Reminder[] = [
     },
     {
         id: 'reminder-3',
-        icon: 'TrendingUp',
-        title: '销售线索高价值提醒',
-        description: '系统分析发现客户“未来动力公司”有强烈购买意向，建议立即跟进。',
+        icon: 'ShieldAlert',
+        title: '供应商风险预警',
+        description: '系统监测到供应商“未来动力公司”近期出现负面舆情，建议重新评估合作风险。',
         timestamp: '昨天',
-        tags: [{ text: '智能建议', variant: 'secondary' }]
+        tags: [{ text: '风险预警', variant: 'destructive' }]
     },
     {
         id: 'reminder-4',
@@ -72,7 +72,7 @@ const initialReminders: Reminder[] = [
         title: 'OA系统维护',
         description: '今晚10点至11点，OA系统将进行升级维护。',
         timestamp: '3天前',
-        tags: [{ text: '系统通知', variant: 'destructive' }]
+        tags: [{ text: '系统通知', variant: 'outline' }]
     }
 ];
 

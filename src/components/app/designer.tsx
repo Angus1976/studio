@@ -52,6 +52,14 @@ export const sampleScenarios: Scenario[] = [
         task: '代码审查',
         prompt: 'You are a code optimization expert. Review the following code snippet and provide suggestions to improve its performance and readability.',
     },
+    {
+        id: 'contract-review-expert',
+        title: 'AI合同预审专家',
+        description: '自动审查合同文本，识别关键条款、潜在风险，并提供修改建议。',
+        industry: '法务风控',
+        task: '合同审查',
+        prompt: 'You are an AI legal assistant specializing in contract review. Analyze the following contract text. Identify and summarize key clauses (e.g., payment terms, liability, termination), flag potential risks or ambiguities, and provide suggestions for revision to protect our interests.',
+    }
 ];
 
 
@@ -243,6 +251,7 @@ export function Designer() {
                                     <SelectItem value="招聘">招聘</SelectItem>
                                     <SelectItem value="内容创作">内容创作</SelectItem>
                                     <SelectItem value="代码审查">代码审查</SelectItem>
+                                    <SelectItem value="合同审查">合同审查</SelectItem>
                                     <SelectItem value="客户支持">客户支持</SelectItem>
                                     <SelectItem value="数据分析">数据分析</SelectItem>
                                   </SelectContent>
