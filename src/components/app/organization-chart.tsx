@@ -122,8 +122,8 @@ export function OrganizationChart() {
                         <CardDescription>这是一个示例组织架构图。请在右侧输入您企业的真实信息以进行分析。</CardDescription>
                     </CardHeader>
                     <CardContent>
-                       <ScrollArea className="w-full h-[60vh] p-4 border rounded-lg bg-background/50">
-                            <OrgChartNode node={orgData} />
+                       <ScrollArea className="w-full h-[60vh] p-4 border rounded-lg bg-background/50 flex items-center justify-center">
+                            支持企业方导入和自主编排组织架构
                        </ScrollArea>
                     </CardContent>
                 </Card>
