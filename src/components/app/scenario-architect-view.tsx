@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import type { AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
+import type { Scenario } from "./designer";
 import { Sparkles, Save } from "lucide-react";
+import { Input } from "../ui/input";
 
 type ScenarioArchitectViewProps = {
-  scenario: AIScenarioArchitectOutput;
-  onScenarioChange: (newScenario: AIScenarioArchitectOutput) => void;
+  scenario: Scenario;
+  onScenarioChange: (newScenario: Scenario) => void;
 };
 
 export function ScenarioArchitectView({ scenario, onScenarioChange }: ScenarioArchitectViewProps) {
@@ -23,6 +24,10 @@ export function ScenarioArchitectView({ scenario, onScenarioChange }: ScenarioAr
       title: "自定义已保存！",
       description: "您对 AI 场景的更改已保存。",
     });
+  };
+
+  const handleFieldChange = (field: keyof Scenario, value: string) => {
+    onScenarioChange({ ...scenario, [field]: value });
   };
 
   return (
@@ -38,27 +43,39 @@ export function ScenarioArchitectView({ scenario, onScenarioChange }: ScenarioAr
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label htmlFor="optimized-scenario" className="text-base font-medium">
-            优化场景
+          <Label htmlFor="optimized-scenario-title" className="text-base font-medium">
+            优化场景标题
+          </Label>
+          <Input
+            id="optimized-scenario-title"
+            value={scenario.title}
+            onChange={(e) => handleFieldChange('title', e.target.value)}
+            className="mt-2"
+            placeholder="优化的工作场景标题..."
+          />
+        </div>
+        <div>
+          <Label htmlFor="optimized-scenario-desc" className="text-base font-medium">
+            优化场景描述
           </Label>
           <Textarea
-            id="optimized-scenario"
-            value={scenario.optimizedScenario}
-            onChange={(e) => onScenarioChange({ ...scenario, optimizedScenario: e.target.value })}
-            className="mt-2 min-h-[120px]"
-            placeholder="优化的工作场景..."
+            id="optimized-scenario-desc"
+            value={scenario.description}
+            onChange={(e) => handleFieldChange('description', e.target.value)}
+            className="mt-2 min-h-[100px]"
+            placeholder="优化的工作场景描述..."
           />
         </div>
         <div>
           <Label htmlFor="improvement-suggestions" className="text-base font-medium">
-            改进建议
+            核心提示词 (Prompt)
           </Label>
           <Textarea
             id="improvement-suggestions"
-            value={scenario.improvementSuggestions}
-            onChange={(e) => onScenarioChange({ ...scenario, improvementSuggestions: e.target.value })}
-            className="mt-2 min-h-[100px]"
-            placeholder="改进建议..."
+            value={scenario.prompt}
+            onChange={(e) => handleFieldChange('prompt', e.target.value)}
+            className="mt-2 min-h-[120px]"
+            placeholder="改进或自定义核心提示词..."
           />
         </div>
         <div className="flex justify-end">

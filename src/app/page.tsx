@@ -7,7 +7,8 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIRequirementsNavigatorInput } from "@/ai/flows/ai-requirements-navigator";
-import { aiScenarioArchitect, type AIScenarioArchitectOutput } from "@/ai/flows/ai-scenario-architect";
+import { digitalEmployee, type DigitalEmployeeInput, type DigitalEmployeeOutput } from "@/ai/flows/digital-employee";
+
 import type { Scenario } from "@/components/app/designer";
 import { sampleScenarios } from "@/components/app/designer";
 import { createReminderFlow, type CreateReminderOutput } from "@/ai/flows/create-reminder-flow";
@@ -77,7 +78,7 @@ export default function Home() {
   const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
-  const [scenarioOutput, setScenarioOutput] = useState<AIScenarioArchitectOutput | null>(null);
+  const [testOutput, setTestOutput] = useState<DigitalEmployeeOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentInput, setCurrentInput] = useState("");
   const [promptId, setPromptId] = useState("");
@@ -104,15 +105,6 @@ export default function Home() {
   
   const handleEditScenario = (scenario: Scenario) => {
     setEditingScenario(scenario);
-    setScenarioOutput({
-      optimizedScenario: `微调场景： ${scenario.title}`,
-      aiAutomatableTasks: "根据您的自定义更新任务...",
-      improvementSuggestions: scenario.prompt,
-    });
-    toast({
-      title: "场景已加载",
-      description: `您现在可以微调 "${scenario.title}" 的内容。`,
-    });
   };
 
   const handleSelectScenario = (scenario: Scenario) => {
@@ -331,10 +323,10 @@ export default function Home() {
                     onEdit={handleEditScenario}
                 />
 
-                {editingScenario && scenarioOutput && (
+                {editingScenario && (
                     <ScenarioArchitectView
-                        scenario={scenarioOutput}
-                        onScenarioChange={setScenarioOutput}
+                        scenario={editingScenario}
+                        onScenarioChange={setEditingScenario}
                     />
                 )}
                  <Card className="flex-grow flex flex-col">
@@ -390,7 +382,7 @@ export default function Home() {
                     
                     <div className="mt-auto">
                         <Separator className="mb-6" />
-                         {scenarioOutput && (
+                         {editingScenario && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
@@ -409,8 +401,8 @@ export default function Home() {
                                             <CardTitle className="text-lg flex items-center gap-2"><FileText /> 任务摘要</CardTitle>
                                         </CardHeader>
                                         <CardContent className="text-sm space-y-2">
-                                            <p><strong className="font-medium">优化场景:</strong> {scenarioOutput.optimizedScenario.substring(0, 100)}...</p>
-                                            <p><strong className="font-medium">自动化任务:</strong> {scenarioOutput.aiAutomatableTasks.split('\n')[0]}...</p>
+                                            <p><strong className="font-medium">场景标题:</strong> {editingScenario.title}</p>
+                                            <p><strong className="font-medium">场景描述:</strong> {editingScenario.description.substring(0, 100)}...</p>
                                         </CardContent>
                                     </Card>
                                     <AlertDialogFooter>
