@@ -2,13 +2,15 @@
 
 /**
  * @fileOverview A flow to create a reminder from natural language.
+ * This file is currently partially commented out because the 'genkit' dependency
+ * is not installed. Refer to CONFIGURATION_README.md for more details.
  *
  * - createReminderFlow - A function that extracts reminder details from user input.
  * - CreateReminderInput - The input type for the createReminderFlow function.
  * - CreateReminderOutput - The return type for the createReminderFlow function.
  */
 
-import { ai } from '@/ai/genkit';
+// import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const CreateReminderInputSchema = z.object({
@@ -27,9 +29,16 @@ export type CreateReminderOutput = z.infer<typeof CreateReminderOutputSchema>;
 export async function createReminderFlow(
   input: CreateReminderInput
 ): Promise<CreateReminderOutput> {
-  return createReminderFlowFlow(input);
+  // return createReminderFlowFlow(input);
+  // The flow is commented out, so we return a dummy response.
+  // This allows the UI to function without a real AI backend.
+  return {
+    title: `Reminder for "${input.userInput}"`,
+    dateTime: "Tomorrow at 10 AM (Placeholder)",
+  }
 }
 
+/*
 const prompt = ai.definePrompt({
   name: 'createReminderPrompt',
   input: { schema: CreateReminderInputSchema },
@@ -55,3 +64,4 @@ const createReminderFlowFlow = ai.defineFlow(
     return output;
   }
 );
+*/

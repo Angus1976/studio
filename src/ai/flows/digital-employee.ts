@@ -2,13 +2,15 @@
 
 /**
  * @fileOverview A generic digital employee flow that executes tasks based on a prompt from the library.
+ * This file is currently partially commented out because the 'genkit' dependency
+ * is not installed. Refer to CONFIGURATION_README.md for more details.
  *
  * - digitalEmployee - A function that takes a prompt ID and user context to generate a response.
  * - DigitalEmployeeInput - The input type for the digitalEmployee function.
  * - DigitalEmployeeOutput - The return type for the digitalEmployee function.
  */
 
-import { ai } from '@/ai/genkit';
+// import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { promptLibraryConnector } from './prompt-library-connector';
 
@@ -29,9 +31,13 @@ export type DigitalEmployeeOutput = z.infer<typeof DigitalEmployeeOutputSchema>;
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<DigitalEmployeeOutput> {
-  return digitalEmployeeFlow(input);
+  // return digitalEmployeeFlow(input);
+  // The flow is commented out, so we return a dummy response.
+  // This allows the UI to function without a real AI backend.
+  return { response: "This is a placeholder response from the AI. The Genkit backend is currently disabled." };
 }
 
+/*
 const digitalEmployeeFlow = ai.defineFlow(
   {
     name: 'digitalEmployeeFlow',
@@ -65,3 +71,4 @@ User Context:
     return { response: llmResponse.text };
   }
 );
+*/

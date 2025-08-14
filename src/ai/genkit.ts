@@ -1,3 +1,4 @@
+/*
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
@@ -14,3 +15,6 @@ export const ai = genkit({
   // logLevel: 'debug', // Note: logLevel is not a valid option in Genkit 1.x root config
   enableTracingAndMetrics: true,
 });
+*/
+const ai: any = {};
+export { ai };

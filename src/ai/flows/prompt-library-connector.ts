@@ -2,16 +2,17 @@
 
 /**
  * @fileOverview A flow to connect to a prompt library and retrieve prompts.
+ * This file is currently partially commented out because the 'genkit' dependency
+ * is not installed. Refer to CONFIGURATION_README.md for more details.
  *
  * - promptLibraryConnector - A function that retrieves a prompt from the library.
  * - PromptLibraryConnectorInput - The input type for the promptLibraryConnector function.
  * - PromptLibraryConnectorOutput - The return type for the promptLibraryConnector function.
  */
 
-// REAL IMPLEMENTATION using Firestore
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from "firebase/firestore";
-import { ai } from '@/ai/genkit';
+// import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 export type ScenarioData = {
@@ -41,9 +42,23 @@ export type PromptLibraryConnectorOutput = z.infer<typeof PromptLibraryConnector
 export async function promptLibraryConnector(
   input: PromptLibraryConnectorInput
 ): Promise<PromptLibraryConnectorOutput> {
-  return promptLibraryConnectorFlow(input);
+  // return promptLibraryConnectorFlow(input);
+  const { promptId } = input;
+  const scenarioDocRef = doc(db, "scenarios", promptId);
+  const scenarioDoc = await getDoc(scenarioDocRef);
+
+  if (!scenarioDoc.exists()) {
+      throw new Error(`Prompt with ID "${promptId}" not found in Firestore.`);
+  }
+  const scenarioData = scenarioDoc.data() as Omit<ScenarioData, 'id'>;
+  
+  return {
+      promptTitle: scenarioData.title,
+      promptContent: scenarioData.prompt,
+  };
 }
 
+/*
 const promptLibraryConnectorFlow = ai.defineFlow(
   {
     name: 'promptLibraryConnectorFlow',
@@ -65,3 +80,4 @@ const promptLibraryConnectorFlow = ai.defineFlow(
     };
   }
 );
+*/
