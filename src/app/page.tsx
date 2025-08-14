@@ -29,7 +29,7 @@ import { SystemCapabilities } from "@/components/app/system-capabilities";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogClose } from "@/components/ui/alert-dialog";
 import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer";
 import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
-import { IntelligentReminders, type Reminder } from "@/components/app/intelligent-reminders";
+import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-center";
 
 
 type ConversationMessage = {
@@ -84,7 +84,7 @@ export default function Home() {
   
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
   const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [pendingReminder, setPendingReminder] = useState<CreateReminderOutput | null>(null);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function Home() {
         setConversationHistory([
         {
             role: "assistant",
-            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求，或者您可以直接告诉我需要创建什么提醒。首先，您能描述一下您的需求吗？",
+            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求，或者您可以直接告诉我需要创建什么提醒或任务。",
         },
         ]);
     }
@@ -121,19 +121,20 @@ export default function Home() {
   };
   
     const handleConfirmReminder = (reminderDetails: CreateReminderOutput) => {
-        const newReminder: Reminder = {
-            id: `reminder-${Date.now()}`,
+        const newTask: Task = {
+            id: `task-${Date.now()}`,
             icon: 'CalendarClock',
             title: reminderDetails.title,
             description: `截止时间: ${reminderDetails.dateTime}`,
             timestamp: '刚刚',
+            status: '待确认',
             tags: [{ text: '日程提醒', variant: 'primary' }]
         };
-        setReminders(prev => [newReminder, ...prev]);
+        setTasks(prev => [newTask, ...prev]);
         setPendingReminder(null);
         toast({
-            title: '提醒已创建',
-            description: `“${reminderDetails.title}”已添加到您的智能提醒面板。`,
+            title: '任务已创建',
+            description: `“${reminderDetails.title}”已添加到您的任务中心。`,
             action: (
               <div className="flex items-center gap-2">
                 <CalendarPlus className="h-4 w-4" />
@@ -292,7 +293,7 @@ export default function Home() {
   const renderUserView = () => (
      <ThreeColumnLayout>
         <ThreeColumnLayout.Left>
-             <IntelligentReminders reminders={reminders} setReminders={setReminders}/>
+             <TaskDispatchCenter tasks={tasks} setTasks={setTasks}/>
         </ThreeColumnLayout.Left>
         
         <ThreeColumnLayout.Main>
