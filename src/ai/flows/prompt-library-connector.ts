@@ -8,12 +8,11 @@
  * - PromptLibraryConnectorOutput - The return type for the promptLibraryConnector function.
  */
 
-// NOTE: All Genkit-related functionality is currently commented out
-// due to dependency issues with next@14. To re-enable, see CONFIGURATION_README.md.
-
 // REAL IMPLEMENTATION using Firestore
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from "firebase/firestore";
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 
 export type ScenarioData = {
   id: string;
@@ -25,77 +24,44 @@ export type ScenarioData = {
 };
 
 
-export type PromptLibraryConnectorInput = {
-  promptId: string;
-};
+const PromptLibraryConnectorInputSchema = z.object({
+  promptId: z.string().describe('The unique identifier for the prompt in the library.'),
+});
 
-export type PromptLibraryConnectorOutput = {
-  promptTitle: string;
-  promptContent: string;
-};
+export type PromptLibraryConnectorInput = z.infer<typeof PromptLibraryConnectorInputSchema>;
+
+const PromptLibraryConnectorOutputSchema = z.object({
+  promptTitle: z.string().describe('The title of the retrieved prompt.'),
+  promptContent: z.string().describe('The content of the retrieved prompt.'),
+});
+
+export type PromptLibraryConnectorOutput = z.infer<typeof PromptLibraryConnectorOutputSchema>;
+
 
 export async function promptLibraryConnector(
   input: PromptLibraryConnectorInput
 ): Promise<PromptLibraryConnectorOutput> {
-  const scenarioDocRef = doc(db, "scenarios", input.promptId);
-  const scenarioDoc = await getDoc(scenarioDocRef);
-
-  if (!scenarioDoc.exists()) {
-      throw new Error(`Prompt with ID "${input.promptId}" not found in Firestore.`);
-  }
-  const scenarioData = scenarioDoc.data() as Omit<ScenarioData, 'id'>;
-  
-  return {
-      promptTitle: scenarioData.title,
-      promptContent: scenarioData.prompt,
-  };
+  return promptLibraryConnectorFlow(input);
 }
 
+const promptLibraryConnectorFlow = ai.defineFlow(
+  {
+    name: 'promptLibraryConnectorFlow',
+    inputSchema: PromptLibraryConnectorInputSchema,
+    outputSchema: PromptLibraryConnectorOutputSchema,
+  },
+  async ({ promptId }) => {
+    const scenarioDocRef = doc(db, "scenarios", promptId);
+    const scenarioDoc = await getDoc(scenarioDocRef);
 
-// import { ai } from '@/ai/genkit';
-// import { z } from 'zod';
-
-// const PromptLibraryConnectorInputSchema = z.object({
-//   promptId: z.string().describe('The unique identifier for the prompt in the library.'),
-// });
-
-// export type PromptLibraryConnectorInput = z.infer<typeof PromptLibraryConnectorInputSchema>;
-
-// const PromptLibraryConnectorOutputSchema = z.object({
-//   promptTitle: z.string().describe('The title of the retrieved prompt.'),
-//   promptContent: z.string().describe('The content of the retrieved prompt.'),
-// });
-
-// export type PromptLibraryConnectorOutput = z.infer<typeof PromptLibraryConnectorOutputSchema>;
-
-
-// export async function promptLibraryConnector(
-//   input: PromptLibraryConnectorInput
-// ): Promise<PromptLibraryConnectorOutput> {
-//   return promptLibraryConnectorFlow(input);
-// }
-
-// const promptLibraryConnectorFlow = ai.defineFlow(
-//   {
-//     name: 'promptLibraryConnectorFlow',
-//     inputSchema: PromptLibraryConnectorInputSchema,
-//     outputSchema: PromptLibraryConnectorOutputSchema,
-//   },
-//   async ({ promptId }) => {
-//     console.log(`Attempting to retrieve prompt with ID: ${promptId}`);
+    if (!scenarioDoc.exists()) {
+        throw new Error(`Prompt with ID "${promptId}" not found in Firestore.`);
+    }
+    const scenarioData = scenarioDoc.data() as Omit<ScenarioData, 'id'>;
     
-//     const prompt = promptLibrary[promptId];
-
-//     if (!prompt) {
-//       console.error(`Prompt with ID "${promptId}" not found.`);
-//       throw new Error(`Prompt with ID "${promptId}" not found.`);
-//     }
-
-//     console.log(`Successfully retrieved prompt: "${prompt.title}"`);
-    
-//     return {
-//       promptTitle: prompt.title,
-//       promptContent: prompt.content,
-//     };
-//   }
-// );
+    return {
+        promptTitle: scenarioData.title,
+        promptContent: scenarioData.prompt,
+    };
+  }
+);

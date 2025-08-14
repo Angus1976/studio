@@ -2,8 +2,8 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import type { FormEvent } from "react";
+import { useState, useEffect, createContext, useContext, useMemo } from "react";
+import type { FormEvent, ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -34,8 +34,7 @@ import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-ce
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { doc, getDoc, collection, onSnapshot } from "firebase/firestore";
-
+import { doc, getDoc, collection, onSnapshot, query, where } from "firebase/firestore";
 
 type ConversationMessage = {
   role: "user" | "assistant";
@@ -45,7 +44,18 @@ type ConversationMessage = {
   }
 };
 
-const useAuth = () => {
+type AuthContextType = {
+    isAuthenticated: boolean;
+    user: User | null;
+    userRole: string | null;
+    isLoading: boolean;
+    logout: () => Promise<void>;
+    demoLogin: (role: string) => void;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -53,32 +63,23 @@ const useAuth = () => {
     const { toast } = useToast();
 
     useEffect(() => {
-        const isDemo = sessionStorage.getItem('isDemo') === 'true';
-        const demoRole = sessionStorage.getItem('demoRole');
-
-        if (isDemo && demoRole) {
-            setUser({ uid: 'demo-user' } as User);
-            setUserRole(demoRole);
-            setIsLoading(false);
-            // Clear the demo flag after using it
-            sessionStorage.removeItem('isDemo');
-            sessionStorage.removeItem('demoRole');
-            return;
-        }
-
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                const userDocRef = doc(db, "users", currentUser.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
+                // If it's a demo user, we don't fetch from Firestore
+                if (currentUser.uid.startsWith('demo-')) {
                     setUser(currentUser);
-                    setUserRole(userDoc.data().roleName);
+                    // The role is set via demoLogin
                 } else {
-                    // This case handles if a user is in Auth but not Firestore.
-                    // It logs them out to prevent an inconsistent state.
-                    await signOut(auth);
-                    setUser(null);
-                    setUserRole(null);
+                    const userDocRef = doc(db, "users", currentUser.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    if (userDoc.exists()) {
+                        setUser(currentUser);
+                        setUserRole(userDoc.data().roleName);
+                    } else {
+                        await signOut(auth);
+                        setUser(null);
+                        setUserRole(null);
+                    }
                 }
             } else {
                 setUser(null);
@@ -86,14 +87,17 @@ const useAuth = () => {
             }
             setIsLoading(false);
         });
-
-        // Cleanup subscription on unmount
         return () => unsubscribe();
     }, []);
 
     const logout = async () => {
         try {
-            await signOut(auth);
+            const isDemo = user?.uid.startsWith('demo-');
+            if (!isDemo) {
+               await signOut(auth);
+            }
+            setUser(null);
+            setUserRole(null);
             toast({ title: "已登出", description: "您已成功登出。" });
             router.push('/login');
         } catch (error) {
@@ -101,12 +105,40 @@ const useAuth = () => {
             toast({ variant: "destructive", title: "登出失败" });
         }
     };
+    
+    const demoLogin = (role: string) => {
+        // Create a mock user object for demo purposes
+        setUser({ uid: `demo-user-${Date.now()}` } as User);
+        setUserRole(role);
+        setIsLoading(false);
+        router.push('/');
+    };
 
-    return { isAuthenticated: !!user, user, userRole, isLoading, logout };
+    const value = useMemo(() => ({
+        isAuthenticated: !!user,
+        user,
+        userRole,
+        isLoading,
+        logout,
+        demoLogin
+    }), [user, userRole, isLoading]);
+
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
-export default function Home() {
+function AuthWrapper({ children }: { children: ReactNode }) {
+    return <AuthProvider>{children}</AuthProvider>
+}
+
+function Page() {
   const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
@@ -121,10 +153,8 @@ export default function Home() {
   const [pendingReminder, setPendingReminder] = useState<CreateReminderOutput | null>(null);
   const [isTaskCenterMaximized, setIsTaskCenterMaximized] = useState(false);
 
-
   useEffect(() => {
     if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员', '用户方 - 企业租户'].includes(userRole || '')) {
-        // Start with a welcome message from the assistant
         setConversationHistory([
         {
             role: "assistant",
@@ -191,7 +221,6 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-        // Simple heuristic to detect if the user wants to create a reminder
         if (latestUserInput.includes('提醒') || latestUserInput.includes('安排')) {
              const result = await createReminderFlow({ userInput: latestUserInput });
              const assistantMessage: ConversationMessage = {
@@ -201,11 +230,9 @@ export default function Home() {
              setConversationHistory([...newHistory, assistantMessage]);
              setPendingReminder(result);
         } else {
-            // Fallback to requirements navigator
             const result = await aiRequirementsNavigator({
                 userInput: latestUserInput,
-                // @ts-ignore
-                conversationHistory: conversationHistory,
+                conversationHistory: newHistory.slice(0, -1).map(m => ({role: m.role, content: m.content})),
             });
 
             setConversationHistory([...newHistory, { role: "assistant", content: result.aiResponse }]);
@@ -216,14 +243,10 @@ export default function Home() {
                 if (result.suggestedPromptId) {
                     setPromptId(result.suggestedPromptId);
                     
-                    const unsubscribe = onSnapshot(collection(db, "scenarios"), (snapshot) => {
-                        const allScenarios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scenario));
-                        let recommendations = allScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
-                        if (recommendations.length === 0) {
-                          recommendations = allScenarios;
-                        }
-                        setRecommendedScenarios(recommendations);
-                        unsubscribe(); 
+                    const q = query(collection(db, "scenarios"), where("task", "==", result.suggestedPromptId.split('-')[0]));
+                    const unsubscribe = onSnapshot(q, (snapshot) => {
+                        const scenariosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scenario));
+                        setRecommendedScenarios(scenariosData.length > 0 ? scenariosData : []);
                     });
 
                     toast({
@@ -240,7 +263,6 @@ export default function Home() {
         title: "发生错误。",
         description: "从 AI 获取响应失败。请重试。",
       });
-      // Revert to previous history on error and put user's message back in input
       setConversationHistory(conversationHistory); 
       setCurrentInput(latestUserInput);
     } finally {
@@ -507,4 +529,13 @@ export default function Home() {
       </main>
     </div>
   );
+}
+
+// Wrap the export in the AuthProvider
+export default function Home() {
+    return (
+        <AuthWrapper>
+            <Page />
+        </AuthWrapper>
+    )
 }
