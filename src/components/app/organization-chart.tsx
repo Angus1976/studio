@@ -222,7 +222,7 @@ export function OrganizationChart() {
     const onCompanyInfoSubmit = (data: CompanyInfo) => {
         toast({
             title: "信息已保存",
-            description: "企业基本信息已更新。",
+            description: "企业基本信息已更新，现在可以在下方进行AI分析了。",
         });
         // In a real app, this would likely save to a backend.
         console.log("Company Info Saved:", data);
@@ -249,6 +249,15 @@ export function OrganizationChart() {
             ...(companyData.customFields || []).map(field => `${field.key}: ${field.value}`)
         ];
         const companyContext = companyContextParts.filter(Boolean).join('\n');
+
+        if (!companyContext.trim()) {
+            toast({
+                title: '信息不足',
+                description: '请先填写并保存上方的“企业基本信息”，以便AI能提供更精准的分析。',
+                variant: 'destructive',
+            });
+            return;
+        }
 
 
         setIsLoading(true);

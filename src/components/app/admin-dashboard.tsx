@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { db } from "@/lib/firebase";
-import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, Timestamp, query, orderBy, where, getDocs } from "firebase/firestore";
+import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, Timestamp, query, orderBy, getDoc } from "firebase/firestore";
 
 
 // --- Tenant Management ---
@@ -525,39 +525,39 @@ const softwareAssetSchema = z.object({
 type SoftwareAsset = z.infer<typeof softwareAssetSchema> & { id: string };
 
 
-const initialLlmModels: LlmModel[] = [
-  { id: 'llm-1', modelName: 'Gemini 1.5 Pro', provider: 'Google', apiKey: 'sk-...' },
-  { id: 'llm-2', modelName: 'GPT-4o', provider: 'OpenAI', apiKey: 'sk-...' },
-];
-
-const initialTokens: Token[] = [
-  { id: 'token-1', key: 'key-abc-123', assignedTo: 'Tech Innovators Inc.', usageLimit: 1000000, used: 250000 },
-  { id: 'token-2', key: 'key-def-456', assignedTo: 'Future Dynamics', usageLimit: 500000, used: 480000 },
-];
-
-const initialSoftwareAssets: SoftwareAsset[] = [
-  { id: 'asset-1', name: 'RPA Pro License', type: 'RPA许可', licenseKey: 'RPA-XYZ-123' },
-  { id: 'asset-2', name: 'Data Analytics Suite', type: '数据服务', licenseKey: 'DATA-ABC-789' },
-];
-
 function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
     const { toast } = useToast();
-    const [llmModels, setLlmModels] = useState(initialLlmModels);
-    const [tokens, setTokens] = useState(initialTokens);
-    const [softwareAssets, setSoftwareAssets] = useState(initialSoftwareAssets);
+    const [llmModels, setLlmModels] = useState<LlmModel[]>([]);
+    const [tokens, setTokens] = useState<Token[]>([]);
+    const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
 
-    const handleDelete = (type: 'llm' | 'token' | 'asset', id: string) => {
-        if (type === 'llm') setLlmModels(prev => prev.filter(item => item.id !== id));
-        if (type === 'token') setTokens(prev => prev.filter(item => item.id !== id));
-        if (type === 'asset') setSoftwareAssets(prev => prev.filter(item => item.id !== id));
-        toast({ title: '资产已删除', variant: 'destructive' });
+    useEffect(() => {
+        const unsubLlm = onSnapshot(collection(db, "llmModels"), snapshot => 
+            setLlmModels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmModel)))
+        );
+        const unsubTokens = onSnapshot(collection(db, "tokens"), snapshot => 
+            setTokens(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Token)))
+        );
+        const unsubAssets = onSnapshot(collection(db, "softwareAssets"), snapshot => 
+            setSoftwareAssets(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SoftwareAsset)))
+        );
+        return () => { unsubLlm(); unsubTokens(); unsubAssets(); };
+    }, []);
+
+    const handleDelete = async (collectionName: string, id: string) => {
+        try {
+            await deleteDoc(doc(db, collectionName, id));
+            toast({ title: '资产已删除', variant: 'destructive' });
+        } catch (error) {
+            toast({ title: '删除失败', variant: 'destructive' });
+        }
     };
     
     // Placeholder forms and handlers for adding new items
     const LlmForm = () => {
         const form = useForm({ resolver: zodResolver(llmModelSchema), defaultValues: {modelName: "", provider: "", apiKey: ""}});
-        const onSubmit = (data: z.infer<typeof llmModelSchema>) => {
-            setLlmModels(prev => [...prev, {...data, id: `llm-${Date.now()}`}]);
+        const onSubmit = async (data: z.infer<typeof llmModelSchema>) => {
+            await addDoc(collection(db, "llmModels"), data);
             toast({title: "LLM 模型已添加"});
             form.reset();
         };
@@ -575,8 +575,9 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     
      const TokenForm = () => {
         const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {assignedTo: "", usageLimit: 0}});
-        const onSubmit = (data: z.infer<typeof tokenSchema>) => {
-            setTokens(prev => [...prev, {...data, id: `token-${Date.now()}`, used: 0, key: `key-gen-${Date.now()}`}]);
+        const onSubmit = async (data: z.infer<typeof tokenSchema>) => {
+            const tokenData = { ...data, used: 0, key: `key-gen-${Date.now()}` };
+            await addDoc(collection(db, "tokens"), tokenData);
             toast({title: "Token 已分配"});
             form.reset();
         };
@@ -593,8 +594,8 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     
     const SoftwareAssetForm = () => {
         const form = useForm({ resolver: zodResolver(softwareAssetSchema), defaultValues: {name: "", type: "", licenseKey: ""}});
-        const onSubmit = (data: z.infer<typeof softwareAssetSchema>) => {
-            setSoftwareAssets(prev => [...prev, {...data, id: `asset-${Date.now()}`}]);
+        const onSubmit = async (data: z.infer<typeof softwareAssetSchema>) => {
+            await addDoc(collection(db, "softwareAssets"), data);
             toast({title: "软件资产已添加"});
             form.reset();
         };
@@ -640,7 +641,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                                     <TableRow key={model.id}>
                                                         <TableCell className="font-medium">{model.modelName}</TableCell>
                                                         <TableCell>{model.provider}</TableCell>
-                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('llm', model.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('llmModels', model.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -672,7 +673,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                                             <div className="text-xs text-muted-foreground">{token.key}</div>
                                                         </TableCell>
                                                         <TableCell>{token.used.toLocaleString()} / {token.usageLimit.toLocaleString()}</TableCell>
-                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('token', token.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('tokens', token.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -704,7 +705,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                                             <div className="text-xs text-muted-foreground">{asset.licenseKey}</div>
                                                         </TableCell>
                                                         <TableCell>{asset.type}</TableCell>
-                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('asset', asset.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('softwareAssets', asset.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -755,13 +756,17 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
         const unsubscribe = onSnapshot(q, async (snapshot) => {
             const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
             
-            // Fetch tenant names for each order
             const ordersWithTenantNames = await Promise.all(ordersData.map(async (order) => {
                 if (order.tenantId) {
-                    const tenantDoc = await getDocs(query(collection(db, "tenants"), where("id", "==", order.tenantId)));
-                    if (!tenantDoc.empty) {
-                        const tenantData = tenantDoc.docs[0].data();
-                        return { ...order, tenantName: tenantData.companyName };
+                    try {
+                        const tenantDocRef = doc(db, "tenants", order.tenantId);
+                        const tenantDoc = await getDoc(tenantDocRef);
+                        if (tenantDoc.exists()) {
+                            return { ...order, tenantName: tenantDoc.data().companyName };
+                        }
+                    } catch (e) {
+                         // This can happen if a tenantId in an order is invalid or deleted.
+                         console.warn(`Could not fetch tenant for order ${order.id}:`, e);
                     }
                 }
                 return { ...order, tenantName: '未知租户' };
@@ -829,7 +834,7 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
                                         <TableRow><TableCell colSpan={5} className="text-center h-24"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                                     ) : orders.map(order => (
                                         <TableRow key={order.id}>
-                                            <TableCell className="font-medium">{order.id}</TableCell>
+                                            <TableCell className="font-medium">{order.id.substring(0, 10)}...</TableCell>
                                             <TableCell>{order.tenantName}</TableCell>
                                             <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
                                             <TableCell>
