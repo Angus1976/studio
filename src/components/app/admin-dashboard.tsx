@@ -175,7 +175,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
   }
 
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
         <DialogTrigger asChild>
             <Button>{buttonText}</Button>
         </DialogTrigger>
@@ -277,11 +277,16 @@ const initialUsers: IndividualUser[] = [
     { id: "user-3", name: "赵六", email: "zhaoliu@example.com", registeredDate: "2024-07-19", role: "个人用户", status: "已禁用" },
 ];
 
-function UserForm({ user, onSubmit }: { user?: IndividualUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void }) {
+function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
     const form = useForm<z.infer<typeof userSchema>>({
         resolver: zodResolver(userSchema),
         defaultValues: user || { name: "", email: "", role: "个人用户", status: "待审核" },
     });
+
+    React.useEffect(() => {
+        form.reset(user || { name: "", email: "", role: "个人用户", status: "待审核" });
+    }, [user, form]);
+
 
     const handleSubmit = (values: z.infer<typeof userSchema>) => {
         onSubmit(values);
@@ -356,11 +361,10 @@ function UserForm({ user, onSubmit }: { user?: IndividualUser | null, onSubmit: 
                         </FormItem>
                     )}
                 />
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button type="submit">保存用户</Button>
-                    </DialogClose>
-                </DialogFooter>
+                <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
+                    <Button type="submit">保存</Button>
+                </div>
             </form>
         </Form>
     );
@@ -406,9 +410,14 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
     setUsers(users.filter(u => u.id !== userId));
     toast({ title: "用户已删除", variant: "destructive" });
   };
+
+  const handleCancelForm = () => {
+      setEditingUser(null);
+      setIsFormOpen(false);
+  };
   
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
         <DialogTrigger asChild>
             <Button>{buttonText}</Button>
         </DialogTrigger>
@@ -463,12 +472,12 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                 <div className="md:col-span-1">
                     <Card>
                          <CardHeader>
-                            <CardTitle className="text-lg">{editingUser ? '编辑用户' : '添加新用户'}</CardTitle>
-                            <CardDescription>{editingUser ? '修改用户信息。' : '添加一个新用户到平台。'}</CardDescription>
+                            <CardTitle className="text-lg">{editingUser ? '编辑用户' : (isFormOpen ? '添加新用户' : '管理')}</CardTitle>
+                            <CardDescription>{editingUser ? '修改用户信息。' : (isFormOpen ? '添加一个新用户到平台。' : '选择或添加用户')}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                           {isFormOpen || editingUser ? (
-                                <UserForm user={editingUser} onSubmit={handleAddOrUpdateUser} />
+                           {isFormOpen ? (
+                                <UserForm user={editingUser} onSubmit={handleAddOrUpdateUser} onCancel={handleCancelForm} />
                             ) : (
                                 <div className="text-center text-sm text-muted-foreground py-10">
                                     <p>点击“添加新用户”或选择一个现有用户进行编辑。</p>

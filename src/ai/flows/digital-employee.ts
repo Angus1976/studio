@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -9,60 +8,86 @@
  * - DigitalEmployeeOutput - The return type for the digitalEmployee function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-import { promptLibraryConnector } from './prompt-library-connector';
+// NOTE: All Genkit-related functionality is currently commented out
+// due to dependency issues with next@14. To re-enable, see CONFIGURATION_README.md.
 
-const DigitalEmployeeInputSchema = z.object({
-  promptId: z.string().describe('The ID of the prompt to use from the library.'),
-  promptContent: z.string().optional().describe('Optional: The raw content of the prompt, used for testing new prompts without saving them.'),
-  userContext: z.string().describe('The user-provided context or question for the AI to act upon.'),
-});
+// MOCK IMPLEMENTATION
+export type DigitalEmployeeInput = {
+  promptId: string;
+  promptContent?: string;
+  userContext: string;
+};
 
-export type DigitalEmployeeInput = z.infer<typeof DigitalEmployeeInputSchema>;
-
-const DigitalEmployeeOutputSchema = z.object({
-  response: z.string().describe('The generated response from the AI.'),
-});
-
-export type DigitalEmployeeOutput = z.infer<typeof DigitalEmployeeOutputSchema>;
+export type DigitalEmployeeOutput = {
+  response: string;
+};
 
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<DigitalEmployeeOutput> {
-  return digitalEmployeeFlow(input);
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        response: `This is a mock response for the prompt "${input.promptId}" with the context "${input.userContext.substring(0, 50)}...". The full AI functionality is currently disabled.`,
+      });
+    }, 1000);
+  });
 }
 
-const digitalEmployeeFlow = ai.defineFlow(
-  {
-    name: 'digitalEmployeeFlow',
-    inputSchema: DigitalEmployeeInputSchema,
-    outputSchema: DigitalEmployeeOutputSchema,
-  },
-  async ({ promptId, promptContent, userContext }) => {
-    let finalPromptContent: string;
+// import { ai } from '@/ai/genkit';
+// import { z } from 'zod';
+// import { promptLibraryConnector } from './prompt-library-connector';
 
-    if (promptContent) {
-      finalPromptContent = promptContent;
-    } else {
-      const { promptContent: retrievedContent } = await promptLibraryConnector({ promptId });
-      finalPromptContent = retrievedContent;
-    }
+// const DigitalEmployeeInputSchema = z.object({
+//   promptId: z.string().describe('The ID of the prompt to use from the library.'),
+//   promptContent: z.string().optional().describe('Optional: The raw content of the prompt, used for testing new prompts without saving them.'),
+//   userContext: z.string().describe('The user-provided context or question for the AI to act upon.'),
+// });
 
-    // By removing the dynamic 'name' property, we let Genkit handle the internal
-    // naming, which is safer and avoids potential collisions or invalid names,
-    // especially when testing new, unsaved prompts with temporary IDs.
-    const dynamicPrompt = ai.definePrompt({
-        prompt: `${finalPromptContent}
+// export type DigitalEmployeeInput = z.infer<typeof DigitalEmployeeInputSchema>;
 
-User Context:
-{{{userContext}}}
-`,
-        input: { schema: z.object({ userContext: z.string() }) },
-    });
+// const DigitalEmployeeOutputSchema = z.object({
+//   response: z.string().describe('The generated response from the AI.'),
+// });
 
-    const llmResponse = await dynamicPrompt({ userContext });
+// export type DigitalEmployeeOutput = z.infer<typeof DigitalEmployeeOutputSchema>;
 
-    return { response: llmResponse.text };
-  }
-);
+// export async function digitalEmployee(
+//   input: DigitalEmployeeInput
+// ): Promise<DigitalEmployeeOutput> {
+//   return digitalEmployeeFlow(input);
+// }
+
+// const digitalEmployeeFlow = ai.defineFlow(
+//   {
+//     name: 'digitalEmployeeFlow',
+//     inputSchema: DigitalEmployeeInputSchema,
+//     outputSchema: DigitalEmployeeOutputSchema,
+//   },
+//   async ({ promptId, promptContent, userContext }) => {
+//     let finalPromptContent: string;
+
+//     if (promptContent) {
+//       finalPromptContent = promptContent;
+//     } else {
+//       const { promptContent: retrievedContent } = await promptLibraryConnector({ promptId });
+//       finalPromptContent = retrievedContent;
+//     }
+
+//     // By removing the dynamic 'name' property, we let Genkit handle the internal
+//     // naming, which is safer and avoids potential collisions or invalid names,
+//     // especially when testing new, unsaved prompts with temporary IDs.
+//     const dynamicPrompt = ai.definePrompt({
+//         prompt: `${finalPromptContent}
+
+// User Context:
+// {{{userContext}}}
+// `,
+//         input: { schema: z.object({ userContext: z.string() }) },
+//     });
+
+//     const llmResponse = await dynamicPrompt({ userContext });
+
+//     return { response: llmResponse.text };
+//   }
+// );

@@ -908,7 +908,7 @@ function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { r
   }
 
   return (
-    <Dialog onOpenChange={(open) => { if (!open) setIsFormOpen(false); }}>
+    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
       <DialogTrigger asChild={triggerAsChild}>{children}</DialogTrigger>
       <DialogContent className="max-w-4xl">
         <DialogHeader>

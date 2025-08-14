@@ -78,7 +78,6 @@ export default function Home() {
   const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
-  const [testOutput, setTestOutput] = useState<DigitalEmployeeOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentInput, setCurrentInput] = useState("");
   const [promptId, setPromptId] = useState("");
@@ -173,6 +172,7 @@ export default function Home() {
             // Fallback to requirements navigator
             const result = await aiRequirementsNavigator({
                 userInput: latestUserInput,
+                // @ts-ignore
                 conversationHistory: conversationHistory,
             });
 
