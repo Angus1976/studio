@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,40 +29,38 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { db } from "@/lib/firebase";
+import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, Timestamp, query, orderBy } from "firebase/firestore";
 
 
 // --- Tenant Management ---
 
 const tenantSchema = z.object({
   companyName: z.string().min(2, { message: "公司名称至少需要2个字符。" }),
-  adminEmail: z.string().email({ message: "请输入有效的邮箱地址。" }),
   status: z.enum(["活跃", "待审核", "已禁用"]),
 });
 
-type Tenant = z.infer<typeof tenantSchema> & {
+type Tenant = {
   id: string;
-  registeredDate: string;
+  companyName: string;
+  status: "活跃" | "待审核" | "已禁用";
+  createdAt: Timestamp;
 };
 
-const initialTenants: Tenant[] = [
-    { id: "tenant-1", companyName: "Tech Innovators Inc.", adminEmail: "admin@techinnovators.com", registeredDate: "2024-07-20", status: "活跃" },
-    { id: "tenant-2", companyName: "A.I. Solutions Ltd.", adminEmail: "contact@aisolutions.com", registeredDate: "2024-07-18", status: "已禁用" },
-    { id: "tenant-3", companyName: "Future Dynamics", adminEmail: "ceo@futuredynamics.io", registeredDate: "2024-07-15", status: "待审核" },
-];
 
 function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, onSubmit: (values: z.infer<typeof tenantSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof tenantSchema>>({
         resolver: zodResolver(tenantSchema),
-        defaultValues: tenant || { companyName: "", adminEmail: "", status: "待审核" },
+        defaultValues: tenant ? { companyName: tenant.companyName, status: tenant.status } : { companyName: "", status: "待审核" },
     });
      
     React.useEffect(() => {
-        form.reset(tenant || { companyName: "", adminEmail: "", status: "待审核" });
+        form.reset(tenant ? { companyName: tenant.companyName, status: tenant.status } : { companyName: "", status: "待审核" });
     }, [tenant, form]);
 
 
@@ -81,17 +79,6 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
                         <FormItem>
                             <FormLabel>公司名称</FormLabel>
                             <FormControl><Input placeholder="例如：未来动力公司" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="adminEmail"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>管理员邮箱</FormLabel>
-                            <FormControl><Input placeholder="admin@company.com" {...field} /></FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
@@ -129,29 +116,47 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 
 
 function TenantManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleAddOrUpdateTenant = (values: z.infer<typeof tenantSchema>) => {
-    if (editingTenant) {
-      // Update
-      const updatedTenants = tenants.map(t => t.id === editingTenant.id ? { ...t, ...values } : t);
-      setTenants(updatedTenants);
-      toast({ title: "租户已更新", description: `${values.companyName} 的信息已更新。` });
-    } else {
-      // Add
-      const newTenant: Tenant = {
-        ...values,
-        id: `tenant-${Date.now()}`,
-        registeredDate: new Date().toISOString().split('T')[0],
-      };
-      setTenants([...tenants, newTenant]);
-      toast({ title: "租户已添加", description: `${values.companyName} 已成功添加到平台。` });
+  useEffect(() => {
+    const q = query(collection(db, "tenants"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const tenantsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tenant));
+        setTenants(tenantsData);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching tenants:", error);
+        toast({ variant: "destructive", title: "获取租户失败", description: "无法从数据库加载租户列表。" });
+        setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [toast]);
+
+  const handleAddOrUpdateTenant = async (values: z.infer<typeof tenantSchema>) => {
+    try {
+        if (editingTenant) {
+          // Update
+          const tenantRef = doc(db, "tenants", editingTenant.id);
+          await updateDoc(tenantRef, values);
+          toast({ title: "租户已更新", description: `${values.companyName} 的信息已更新。` });
+        } else {
+          // Add
+          await addDoc(collection(db, "tenants"), {
+              ...values,
+              createdAt: Timestamp.now()
+          });
+          toast({ title: "租户已添加", description: `${values.companyName} 已成功添加到平台。` });
+        }
+        setEditingTenant(null);
+        setIsFormOpen(false);
+    } catch(error) {
+         console.error("Error saving tenant:", error);
+         toast({ variant: "destructive", title: "操作失败", description: "保存租户信息时发生错误。" });
     }
-    setEditingTenant(null);
-    setIsFormOpen(false);
   };
   
   const handleEdit = (tenant: Tenant) => {
@@ -164,9 +169,14 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
     setIsFormOpen(true);
   };
 
-  const handleDelete = (tenantId: string) => {
-    setTenants(tenants.filter(t => t.id !== tenantId));
-    toast({ title: "租户已删除", variant: "destructive" });
+  const handleDelete = async (tenant: Tenant) => {
+    try {
+        await deleteDoc(doc(db, "tenants", tenant.id));
+        toast({ title: "租户已删除", description: `${tenant.companyName} 已被删除。`, variant: "destructive" });
+    } catch(error) {
+        console.error("Error deleting tenant:", error);
+        toast({ variant: "destructive", title: "删除失败", description: "删除租户时发生错误。" });
+    }
   };
   
   const handleCancelForm = () => {
@@ -193,34 +203,39 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="h-[400px]">
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center h-full"><LoaderCircle className="h-8 w-8 animate-spin" /></div>
+                                ) : (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>公司名称</TableHead>
                                             <TableHead>状态</TableHead>
+                                            <TableHead>注册日期</TableHead>
                                             <TableHead className="text-right">操作</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {tenants.map(tenant => (
                                             <TableRow key={tenant.id}>
-                                                <TableCell>
-                                                    <div className="font-medium">{tenant.companyName}</div>
-                                                    <div className="text-xs text-muted-foreground">{tenant.adminEmail}</div>
-                                                </TableCell>
+                                                <TableCell className="font-medium">{tenant.companyName}</TableCell>
                                                 <TableCell>
                                                      <Badge variant={tenant.status === '活跃' ? 'default' : tenant.status === '待审核' ? 'secondary' : 'destructive'}>
                                                         {tenant.status}
                                                     </Badge>
                                                 </TableCell>
+                                                <TableCell>
+                                                    {tenant.createdAt.toDate().toLocaleDateString()}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(tenant)}><Pencil className="h-4 w-4"/></Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDelete(tenant.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDelete(tenant)}><Trash2 className="h-4 w-4"/></Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
+                                )}
                             </ScrollArea>
                         </CardContent>
                     </Card>
@@ -258,33 +273,28 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
 }
 
 // --- User Management ---
-
 const userSchema = z.object({
-  name: z.string().min(2, { message: "用户姓名至少需要2个字符。" }),
-  email: z.string().email({ message: "请输入有效的邮箱地址。" }),
-  role: z.enum(["个人用户", "技术工程师"]),
+  roleName: z.string().min(1, "角色不能为空"),
   status: z.enum(["活跃", "待审核", "已禁用"]),
 });
 
-type IndividualUser = z.infer<typeof userSchema> & {
-  id: string;
-  registeredDate: string;
+type PlatformUser = {
+  uid: string;
+  email: string;
+  roleKey: string;
+  roleName: string;
+  status: "活跃" | "待审核" | "已禁用";
+  createdAt: Timestamp;
 };
 
-const initialUsers: IndividualUser[] = [
-    { id: "user-1", name: "李四", email: "lisi@example.com", registeredDate: "2024-07-21", role: "个人用户", status: "活跃" },
-    { id: "user-2", name: "王五", email: "wangwu@example.com", registeredDate: "2024-07-20", role: "技术工程师", status: "待审核" },
-    { id: "user-3", name: "赵六", email: "zhaoliu@example.com", registeredDate: "2024-07-19", role: "个人用户", status: "已禁用" },
-];
-
-function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
+function UserForm({ user, onSubmit, onCancel }: { user?: PlatformUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
     const form = useForm<z.infer<typeof userSchema>>({
         resolver: zodResolver(userSchema),
-        defaultValues: user || { name: "", email: "", role: "个人用户", status: "待审核" },
+        defaultValues: user ? { roleName: user.roleName, status: user.status } : { roleName: "用户方 - 个人用户", status: "待审核" },
     });
 
     React.useEffect(() => {
-        form.reset(user || { name: "", email: "", role: "个人用户", status: "待审核" });
+        form.reset(user ? { roleName: user.roleName, status: user.status } : { roleName: "用户方 - 个人用户", status: "待审核" });
     }, [user, form]);
 
 
@@ -298,29 +308,7 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 <FormField
                     control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>姓名</FormLabel>
-                            <FormControl><Input placeholder="例如：张三" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>邮箱</FormLabel>
-                            <FormControl><Input placeholder="user@example.com" {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="role"
+                    name="roleName"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>角色</FormLabel>
@@ -331,8 +319,10 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
                                 </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    <SelectItem value="个人用户">个人用户</SelectItem>
-                                    <SelectItem value="技术工程师">技术工程师</SelectItem>
+                                    <SelectItem value="平台方 - 管理员">平台方 - 管理员</SelectItem>
+                                    <SelectItem value="平台方 - 技术工程师">平台方 - 技术工程师</SelectItem>
+                                    <SelectItem value="用户方 - 企业租户">用户方 - 企业租户</SelectItem>
+                                    <SelectItem value="用户方 - 个人用户">用户方 - 个人用户</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormMessage />
@@ -371,44 +361,56 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
 }
 
 function UserManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [users, setUsers] = useState<IndividualUser[]>(initialUsers);
-  const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
+  const [users, setUsers] = useState<PlatformUser[]>([]);
+  const [editingUser, setEditingUser] = useState<PlatformUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleAddOrUpdateUser = (values: z.infer<typeof userSchema>) => {
-    if (editingUser) {
-      // Update
-      const updatedUsers = users.map(u => u.id === editingUser.id ? { ...u, ...values } : u);
-      setUsers(updatedUsers);
-      toast({ title: "用户已更新", description: `${values.name} 的信息已更新。` });
-    } else {
-      // Add
-      const newUser: IndividualUser = {
-        ...values,
-        id: `user-${Date.now()}`,
-        registeredDate: new Date().toISOString().split('T')[0],
-      };
-      setUsers([...users, newUser]);
-      toast({ title: "用户已添加", description: `${values.name} 已成功添加到平台。` });
-    }
-    setEditingUser(null);
-    setIsFormOpen(false);
+   useEffect(() => {
+    const q = query(collection(db, "users"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as PlatformUser));
+        setUsers(usersData);
+        setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching users:", error);
+        toast({ variant: "destructive", title: "获取用户失败", description: "无法从数据库加载用户列表。" });
+        setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [toast]);
+
+
+  const handleUpdateUser = async (values: z.infer<typeof userSchema>) => {
+      if (!editingUser) return;
+      try {
+        const userRef = doc(db, "users", editingUser.uid);
+        await updateDoc(userRef, values);
+        toast({ title: "用户已更新", description: `${editingUser.email} 的信息已更新。` });
+        setEditingUser(null);
+        setIsFormOpen(false);
+      } catch (error) {
+        console.error("Error updating user:", error);
+        toast({ variant: "destructive", title: "更新失败", description: "更新用户信息时出错。" });
+      }
   };
   
-  const handleEdit = (user: IndividualUser) => {
+  const handleEdit = (user: PlatformUser) => {
     setEditingUser(user);
     setIsFormOpen(true);
   };
 
-  const handleAddNew = () => {
-    setEditingUser(null);
-    setIsFormOpen(true);
-  };
-
-  const handleDelete = (userId: string) => {
-    setUsers(users.filter(u => u.id !== userId));
-    toast({ title: "用户已删除", variant: "destructive" });
+  const handleDelete = async (user: PlatformUser) => {
+    try {
+        await deleteDoc(doc(db, "users", user.uid));
+        // Note: This does not delete the user from Firebase Auth.
+        // That would require a backend function.
+        toast({ title: "用户已删除", description: `${user.email} 已从Firestore中删除。`, variant: "destructive" });
+    } catch(error) {
+        console.error("Error deleting user:", error);
+        toast({ variant: "destructive", title: "删除失败", description: "删除用户时发生错误。" });
+    }
   };
 
   const handleCancelForm = () => {
@@ -431,10 +433,12 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-lg">用户列表</CardTitle>
-                             <Button size="sm" onClick={handleAddNew}><PlusCircle className="mr-2 h-4 w-4"/> 添加新用户</Button>
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="h-[400px]">
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center h-full"><LoaderCircle className="h-8 w-8 animate-spin" /></div>
+                                ): (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -446,25 +450,26 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                                     </TableHeader>
                                     <TableBody>
                                         {users.map(user => (
-                                            <TableRow key={user.id}>
+                                            <TableRow key={user.uid}>
                                                 <TableCell>
-                                                    <div className="font-medium">{user.name}</div>
-                                                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                                                    <div className="font-medium">{user.email}</div>
+                                                    <div className="text-xs text-muted-foreground">UID: {user.uid.substring(0,10)}...</div>
                                                 </TableCell>
-                                                 <TableCell>{user.role}</TableCell>
+                                                 <TableCell>{user.roleName}</TableCell>
                                                 <TableCell>
                                                      <Badge variant={user.status === '活跃' ? 'default' : user.status === '待审核' ? 'secondary' : 'destructive'}>
-                                                        {user.status}
+                                                        {user.status || 'N/A'}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(user)}><Pencil className="h-4 w-4"/></Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDelete(user.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDelete(user)}><Trash2 className="h-4 w-4"/></Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
+                                )}
                             </ScrollArea>
                         </CardContent>
                     </Card>
@@ -472,15 +477,15 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                 <div className="md:col-span-1">
                     <Card>
                          <CardHeader>
-                            <CardTitle className="text-lg">{editingUser ? '编辑用户' : (isFormOpen ? '添加新用户' : '管理')}</CardTitle>
-                            <CardDescription>{editingUser ? '修改用户信息。' : (isFormOpen ? '添加一个新用户到平台。' : '选择或添加用户')}</CardDescription>
+                            <CardTitle className="text-lg">{editingUser ? '编辑用户' : '管理'}</CardTitle>
+                            <CardDescription>{editingUser ? '修改用户信息。' : '从列表中选择一个用户进行编辑。'}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                           {isFormOpen ? (
-                                <UserForm user={editingUser} onSubmit={handleAddOrUpdateUser} onCancel={handleCancelForm} />
+                           {isFormOpen && editingUser ? (
+                                <UserForm user={editingUser} onSubmit={handleUpdateUser} onCancel={handleCancelForm} />
                             ) : (
                                 <div className="text-center text-sm text-muted-foreground py-10">
-                                    <p>点击“添加新用户”或选择一个现有用户进行编辑。</p>
+                                    <p>从左侧列表中选择一个用户进行编辑。</p>
                                 </div>
                             )}
                         </CardContent>
@@ -853,13 +858,6 @@ const kpiData = [
     { title: "个人用户", value: "15,723", change: "+201", icon: User },
 ];
 
-const recentUsers = [
-    { name: "Tech Innovators Inc.", role: "企业租户", date: "2024-07-20", status: "活跃" },
-    { name: "张三", role: "技术工程师", date: "2024-07-19", status: "待审核" },
-    { name: "李四", role: "个人用户", date: "2024-07-19", status: "活跃" },
-    { name: "A.I. Solutions Ltd.", role: "企业租户", date: "2024-07-18", status: "已禁用" },
-];
-
 const managementPanels = [
     { 
         id: "tenants",
@@ -892,6 +890,18 @@ const managementPanels = [
 ];
 
 export function AdminDashboard() {
+  const [recentUsers, setRecentUsers] = useState<PlatformUser[]>([]);
+
+  useEffect(() => {
+    // Fetch the 5 most recent users
+    const q = query(collection(db, "users"), orderBy("createdAt", "desc"), );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as PlatformUser));
+        setRecentUsers(usersData);
+    });
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
         <h1 className="text-3xl font-bold font-headline">管理员仪表盘</h1>
@@ -965,16 +975,16 @@ export function AdminDashboard() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>名称</TableHead>
+                                    <TableHead>邮箱</TableHead>
                                     <TableHead>角色</TableHead>
                                     <TableHead>状态</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {recentUsers.map(user => (
-                                    <TableRow key={user.name}>
-                                        <TableCell className="font-medium">{user.name}</TableCell>
-                                        <TableCell>{user.role}</TableCell>
+                                {recentUsers.slice(0, 5).map(user => (
+                                    <TableRow key={user.uid}>
+                                        <TableCell className="font-medium">{user.email}</TableCell>
+                                        <TableCell>{user.roleName.split(' - ')[1]}</TableCell>
                                         <TableCell>
                                             <Badge variant={user.status === '活跃' ? 'default' : user.status === '待审核' ? 'secondary' : 'destructive'}>
                                                 {user.status}
