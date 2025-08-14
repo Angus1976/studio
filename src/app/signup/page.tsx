@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,26 +7,61 @@ import Link from "next/link";
 import { AppLogo } from "@/components/app/icons";
 import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
+import { auth, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import * as z from "zod";
+
+const rolesMap: { [key: string]: string } = {
+    'admin': '平台方 - 管理员',
+    'engineer': '平台方 - 技术工程师',
+    'tenant': '用户方 - 企业租户',
+    'individual': '用户方 - 个人用户',
+};
+
+const formSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
+  role: z.string(),
+});
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignup = async (values: any) => {
+  const handleSignup = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    console.log("注册信息:", values);
-    // 在此处添加您的注册逻辑
-    // 例如: const response = await api.signup(values);
-    setTimeout(() => {
-        toast({
-            title: "注册成功",
-            description: "已为您创建账户，请登录。",
-        });
-        setIsLoading(false);
-        // 注册成功后重定向到登录页面
-        router.push('/login');
-    }, 1000);
+    try {
+      // Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // Store user role in Firestore
+      const roleName = rolesMap[values.role] || '用户方 - 个人用户';
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        roleKey: values.role,
+        roleName: roleName,
+        createdAt: new Date(),
+      });
+
+      toast({
+        title: "注册成功",
+        description: "已为您创建账户，请登录。",
+      });
+      router.push('/login');
+    } catch (error: any) {
+      console.error("注册失败:", error);
+      toast({
+        variant: "destructive",
+        title: "注册失败",
+        description: error.message || "无法创建账户，请重试。",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

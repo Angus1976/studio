@@ -10,6 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import * as z from "zod";
 
 type DemoRole = {
   key: string;
@@ -26,31 +30,49 @@ const demoRoles: DemoRole[] = [
     { key: 'individual', name: '用户方 - 个人用户', icon: Briefcase, group: 'user' },
 ];
 
+const formSchema = z.object({
+  email: z.string().email(),
+  password: z.string(),
+  role: z.string(),
+});
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogin = async (values: any) => {
+  const handleLogin = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
-    console.log("登录信息:", values);
-    // In a real app, you'd have your login logic here
-    // e.g. const response = await api.login(values);
-    setTimeout(() => {
-        // Find the full role name from the key
-        const role = demoRoles.find(r => r.key === values.role);
-        
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      // Fetch user role from Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
         localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userRole', role ? role.name : values.role);
+        localStorage.setItem('userRole', userData.roleName);
         toast({
-            title: "登录成功",
-            description: "欢迎回来！",
+          title: "登录成功",
+          description: `欢迎回来, ${userData.roleName}!`,
         });
-        setIsLoading(false);
-        // Redirect to homepage on successful login
         router.push('/');
-    }, 1000);
+      } else {
+        throw new Error("用户数据未找到。");
+      }
+    } catch (error: any) {
+      console.error("登录失败:", error);
+      toast({
+        variant: "destructive",
+        title: "登录失败",
+        description: error.message || "无效的凭证，请重试。",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleDemoLogin = (role: DemoRole) => {

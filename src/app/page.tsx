@@ -32,6 +32,9 @@ import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer"
 import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
 import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-center";
 import { cn } from "@/lib/utils";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 
 type ConversationMessage = {
@@ -42,35 +45,50 @@ type ConversationMessage = {
   }
 };
 
-// 模拟检查用户是否已登录
-// 在真实应用中，这应该来自您的认证上下文或会话管理
 const useAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
+    const { toast } = useToast();
 
     useEffect(() => {
-        // 在真实应用中，您会在这里检查有效的会话或令牌
-        const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated');
-        const role = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-        
-        // 为了演示，我们将其设置为true
-        setTimeout(() => {
-             setIsAuthenticated(!!loggedIn);
-             setUserRole(role);
-             setIsLoading(false);
-        }, 500);
-    }, [])
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDocRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUser(user);
+                    setUserRole(userDoc.data().roleName);
+                } else {
+                    // Handle case where user exists in Auth but not in Firestore
+                    setUser(null);
+                    setUserRole(null);
+                    await signOut(auth);
+                }
+            } else {
+                setUser(null);
+                setUserRole(null);
+            }
+            setIsLoading(false);
+        });
 
-    const logout = () => {
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('userRole');
-        setIsAuthenticated(false);
-        setUserRole(null);
-        window.location.reload();
-    }
+        return () => unsubscribe();
+    }, []);
 
-    return { isAuthenticated, userRole, isLoading, logout };
+    const logout = async () => {
+        try {
+            await signOut(auth);
+            localStorage.clear();
+            toast({ title: "已登出", description: "您已成功登出。" });
+            router.push('/login');
+        } catch (error) {
+            console.error("登出失败:", error);
+            toast({ variant: "destructive", title: "登出失败" });
+        }
+    };
+
+    return { isAuthenticated: !!user, user, userRole, isLoading, logout };
 };
 
 
@@ -314,7 +332,7 @@ export default function Home() {
             />
         </ThreeColumnLayout.Main>
 
-        <ThreeColumnLayout.Right>
+        <ThreeColumnLayout.Right className="hidden md:flex flex-col gap-6">
         {isConversationFinished ? (
             <div className="space-y-6">
                  <ScenarioLibraryViewer 
