@@ -39,16 +39,16 @@ import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, Timestamp, q
 
 
 // --- Tenant Management ---
-
+const tenantStatusEnum = z.enum(["活跃", "待审核", "已禁用"]);
 const tenantSchema = z.object({
   companyName: z.string().min(2, { message: "公司名称至少需要2个字符。" }),
-  status: z.enum(["活跃", "待审核", "已禁用"]),
+  status: tenantStatusEnum,
 });
 
 type Tenant = {
   id: string;
   companyName: string;
-  status: "活跃" | "待审核" | "已禁用";
+  status: z.infer<typeof tenantStatusEnum>;
   createdAt: Timestamp;
 };
 
@@ -273,28 +273,31 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
 }
 
 // --- User Management ---
+const userStatusEnum = z.enum(["活跃", "待审核", "已禁用"]);
+const userRoleEnum = z.enum(["平台方 - 管理员", "平台方 - 技术工程师", "用户方 - 企业租户", "用户方 - 个人用户"]);
+
 const userSchema = z.object({
-  roleName: z.string().min(1, "角色不能为空"),
-  status: z.enum(["活跃", "待审核", "已禁用"]),
+  roleName: userRoleEnum,
+  status: userStatusEnum,
 });
 
 type PlatformUser = {
   uid: string;
   email: string;
   roleKey: string;
-  roleName: string;
-  status: "活跃" | "待审核" | "已禁用";
+  roleName: z.infer<typeof userRoleEnum>;
+  status: z.infer<typeof userStatusEnum>;
   createdAt: Timestamp;
 };
 
-function UserForm({ user, onSubmit, onCancel }: { user?: PlatformUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
+function UserForm({ user, onSubmit, onCancel }: { user: PlatformUser, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
     const form = useForm<z.infer<typeof userSchema>>({
         resolver: zodResolver(userSchema),
-        defaultValues: user ? { roleName: user.roleName, status: user.status } : { roleName: "用户方 - 个人用户", status: "待审核" },
+        defaultValues: { roleName: user.roleName, status: user.status },
     });
 
     React.useEffect(() => {
-        form.reset(user ? { roleName: user.roleName, status: user.status } : { roleName: "用户方 - 个人用户", status: "待审核" });
+        form.reset({ roleName: user.roleName, status: user.status });
     }, [user, form]);
 
 
@@ -1018,3 +1021,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    

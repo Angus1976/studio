@@ -70,16 +70,24 @@ export function Designer() {
     }
 
     setIsLoading(true);
+    const scenarioData: Omit<Scenario, 'id'> = {
+        title: editingScenario.title || '',
+        description: editingScenario.description || '',
+        industry: editingScenario.industry || '',
+        task: editingScenario.task || '',
+        prompt: editingScenario.prompt || ''
+    };
+
+
     try {
       if (editingScenario.id) {
         // Update
         const scenarioRef = doc(db, "scenarios", editingScenario.id);
-        const { id, ...dataToUpdate } = editingScenario;
-        await updateDoc(scenarioRef, dataToUpdate);
+        await updateDoc(scenarioRef, scenarioData);
         toast({ title: '场景已更新', description: `“${editingScenario.title}”已成功更新。` });
       } else {
         // Add
-        await addDoc(collection(db, "scenarios"), editingScenario);
+        await addDoc(collection(db, "scenarios"), scenarioData);
         toast({ title: '场景已添加', description: `“${editingScenario.title}”已添加到场景库。` });
       }
       setEditingScenario(emptyScenario);
@@ -327,3 +335,5 @@ export function Designer() {
     </div>
   );
 }
+
+    
