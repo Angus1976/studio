@@ -187,7 +187,113 @@ AI 任务流平台是一个连接 AI 数字员工能力的设计者、提供方�
     *   AI返回的不再是简单的文本回复，而是结构化的、可交互的任务计划卡片。用户可以在卡片上直接点击“确认执行”。
 
 ---
-## 5. 非功能性需求
+## 5. 后端架构与API设计
+
+本章节定义了支撑平台功能的后端服务、数据模型和API接口。
+
+### 5.1. 数据模型 (Data Models)
+
+我们将采用关系型数据库（如 PostgreSQL）或文档数据库（如 Firestore）来存储以下核心实体。
+
+#### 5.1.1. User (用户)
+存储所有类型的用户信息。
+
+| 字段名 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `id` | `UUID` | 主键，唯一标识 |
+| `email` | `String` | 用户的登录邮箱，唯一 |
+| `password_hash` | `String` | 加密后的用户密码 |
+| `role` | `Enum` | 用户角色: `ADMIN`, `ENGINEER`, `TENANT`, `INDIVIDUAL` |
+| `tenant_id` | `UUID` | (可选) 外键，关联到 Tenant 表，仅当 `role` 为 `TENANT` 时有效 |
+| `name` | `String` | 用户姓名或昵称 |
+| `status` | `Enum` | 账户状态: `ACTIVE`, `PENDING_APPROVAL`, `DISABLED` |
+| `created_at` | `Timestamp` | 创建时间 |
+| `updated_at` | `Timestamp` | 最后更新时间 |
+
+#### 5.1.2. Tenant (企业租户)
+存储企业租户信息。
+
+| 字段名 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `id` | `UUID` | 主键，唯一标识 |
+| `company_name` | `String` | 公司名称 |
+| `status` | `Enum` | 租户状态: `ACTIVE`, `PENDING_APPROVAL`, `DISABLED` |
+| `created_at` | `Timestamp` | 创建时间 |
+| `updated_at` | `Timestamp` | 最后更新时间 |
+
+#### 5.1.3. Scenario (能力场景)
+存储由工程师创建的AI能力场景。
+
+| 字段名 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `id` | `UUID` | 主键，唯一标识 |
+| `title` | `String` | 场景标题 |
+| `description` | `Text` | 场景的详细描述 |
+| `industry` | `String` | 适用行业 |
+| `task` | `String` | 核心任务 |
+| `prompt` | `Text` | 核心提示词 |
+| `creator_id` | `UUID` | 外键，关联到 User 表 (角色为 `ENGINEER`) |
+| `created_at` | `Timestamp` | 创建时间 |
+| `updated_at` | `Timestamp` | 最后更新时间 |
+
+#### 5.1.4. TaskOrder (任务订单)
+存储用户购买或使用场景生成的订单。
+
+| 字段名 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `id` | `UUID` | 主键，唯一标识 |
+| `user_id` | `UUID` | 外键，关联到 User 表 |
+| `scenario_id` | `UUID` | 外键，关联到 Scenario 表 |
+| `status` | `Enum` | 订单状态: `PENDING_PAYMENT`, `PROCESSING`, `COMPLETED`, `CANCELLED` |
+| `total_amount` | `Decimal` | 订单总金额 |
+| `created_at` | `Timestamp` | 创建时间 |
+| `updated_at` | `Timestamp` | 最后更新时间 |
+
+#### 5.1.5. Role (租户内角色)
+存储企业租户自定义的角色和权限。
+
+| 字段名 | 类型 | 描述 |
+| :--- | :--- | :--- |
+| `id` | `UUID` | 主键，唯一标识 |
+| `tenant_id` | `UUID` | 外键，关联到 Tenant 表 |
+| `name` | `String` | 角色名称 (如: 采购员, 财务) |
+| `permissions` | `Array<String>` | 权限标识符数组 (如: `manage_procurement`, `view_orders`) |
+
+### 5.2. API 端点清单
+
+所有API都将以 `/api/v1` 为前缀。
+
+| 功能模块 | HTTP方法 | 路径 | 描述 | 授权 |
+| :--- | :--- | :--- | :--- | :--- |
+| **认证** | `POST` | `/auth/register` | 用户注册 | 公开 |
+| | `POST` | `/auth/login` | 用户登录 | 公开 |
+| | `POST` | `/auth/logout` | 用户登出 | 已认证用户 |
+| **管理员-租户** | `GET` | `/admin/tenants` | 获取所有租户列表 | 管理员 |
+| | `POST` | `/admin/tenants` | 创建新租户 | 管理员 |
+| | `PUT` | `/admin/tenants/{id}` | 更新租户信息 | 管理员 |
+| **管理员-用户** | `GET` | `/admin/users` | 获取所有用户列表 | 管理员 |
+| | `PUT` | `/admin/users/{id}` | 更新用户信息 | 管理员 |
+| **能力场景** | `GET` | `/scenarios` | 获取公开的能力场景 | 已认证用户 |
+| | `POST` | `/scenarios` | 创建新场景 (工程师) | 工程师 |
+| | `PUT` | `/scenarios/{id}` | 更新场景 (工程师) | 工程师, 所有者 |
+| **AI 调用** | `POST` | `/ai/navigate` | 调用AI需求导航器 | 已认证用户 |
+| | `POST` | `/ai/execute` | 执行一个数字员工/场景 | 已认证用户 |
+| **订单** | `POST` | `/orders` | 创建任务订单 | 已认证用户 |
+| | `GET` | `/orders` | 获取我的订单列表 | 已认证用户 |
+
+### 5.3. 认证与授权
+
+*   **认证**: 采用基于 Token 的认证机制（如 JWT）。用户登录成功后，服务器会签发一个 Token，后续所有需要认证的请求都必须在请求头中携带此 Token。
+*   **授权**: 后端将实现基于角色的访问控制 (RBAC)。每个API端点都会有明确的权限要求（如上表“授权”列所示）。后端中间件会在处理请求前，验证用户的角色是否满足该端点的权限要求。
+
+### 5.4. 后端管理系统
+
+*   将为“平台管理员”角色提供一个专用的后端管理页面（建议路由为 `/admin`，但前端实现中已在主仪表盘`/`中体现）。
+*   此页面将提供一个直观的UI界面，用于直接对数据库中的核心实体（用户、租户、订单等）进行增、删、改、查 (CRUD) 操作，无需直接操作数据库。
+*   这是确保平台可管理、可运营的关键。
+
+---
+## 6. 非功能性需求
 
 *   **UI/UX**:
     *   **风格**: 界面应简洁、现代、响应式，并提供清晰的操作指引。
@@ -204,8 +310,3 @@ AI 任务流平台是一个连接 AI 数字员工能力的设计者、提供方�
     *   遵循 React 和 Next.js 的最佳实践，如使用函数式组件和 Hooks。
     *   代码应清晰、可读、易于维护。
     *   所有 AI 流程都应使用 TypeScript 和 Zod 进行严格的类型定义和验证。
-
-    
-
-
-
