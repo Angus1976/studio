@@ -12,14 +12,9 @@
 // due to dependency issues with next@14. To re-enable, see CONFIGURATION_README.md.
 
 // MOCK IMPLEMENTATION
-type ConversationMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
-
 export type AIRequirementsNavigatorInput = {
   userInput: string;
-  conversationHistory: ConversationMessage[];
+  conversationHistory: { role: 'user' | 'assistant'; content: string }[];
 };
 
 export type AIRequirementsNavigatorOutput = {
@@ -29,41 +24,25 @@ export type AIRequirementsNavigatorOutput = {
   isFinished: boolean;
 };
 
-const mockResponses = [
-    "请问您的行业是什么？以及您公司的主要业务是什么？",
-    "好的，了解了。那您的职位或工作职责是什么呢？",
-    "明白了。您希望通过AI自动化或改进哪个具体的任务或流程呢？例如：招聘、市场营销或客户支持？",
-    "非常具体的需求！为了更好地理解，您可以再详细描述一下您的核心需求吗？",
-    "感谢您的详细说明！我已经收集了足够的信息来为您推荐解决方案。我将为您推荐一些招聘方面的专家场景。准备好了吗？",
-];
-
-let turn = -1;
 
 export async function aiRequirementsNavigator(
   input: AIRequirementsNavigatorInput
 ): Promise<AIRequirementsNavigatorOutput> {
-    turn++;
-    if (input.userInput.toLowerCase().includes('yes') || input.userInput.toLowerCase().includes('好') || input.userInput.toLowerCase().includes('可以')) {
-        return {
-            aiResponse: "太棒了！根据您的需求，我为您推荐了以下能力场景。您可以在右侧查看并选择最适合您的方案。",
-            isFinished: true,
-            suggestedPromptId: 'recruitment-expert'
-        }
-    }
+  const isFinished = input.userInput.toLowerCase().includes("确认");
+  const suggestedPromptId = isFinished ? 'recruitment-expert' : undefined;
 
-    if (turn >= mockResponses.length) {
-        turn = mockResponses.length - 1;
-    }
-  
   return new Promise((resolve) => {
     setTimeout(() => {
-        resolve({
-            aiResponse: mockResponses[turn],
-            isFinished: false,
-        });
-    }, 500);
+      resolve({
+        aiResponse: isFinished ? "好的，需求已确认。正在为您寻找合适的解决方案..." : "请问您希望在哪个行业应用AI？例如：人力资源、市场营销",
+        isFinished,
+        suggestedPromptId
+      });
+    }, 1000);
   });
 }
+
+
 
 // import {ai} from '@/ai/genkit';
 // import {z} from 'zod';

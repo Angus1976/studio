@@ -28,7 +28,7 @@ import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
 import { OrganizationChart } from "./organization-chart";
 import { db, auth } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, Timestamp, getDocs } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 
 
@@ -1048,14 +1048,35 @@ export function TenantDashboard() {
   const [user, loading] = useAuthState(auth);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+   useEffect(() => {
+    if (user) {
+        const fetchTenantId = async () => {
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDocs(query(collection(db, "users"), where("uid", "==", user.uid)));
+            if (!userDoc.empty) {
+                const userData = userDoc.docs[0].data();
+                if (userData.tenantId) {
+                    setTenantId(userData.tenantId);
+                } else {
+                    // If user is a tenant, their UID is the tenantId
+                    setTenantId(user.uid);
+                }
+            }
+        };
+        fetchTenantId();
+    }
+  }, [user]);
+
 
   // Fetch tenant-specific orders
   useEffect(() => {
-    if (!user) {
+    if (!tenantId) {
         setIsLoadingOrders(false);
         return;
     };
-    const q = query(collection(db, "orders"), where("tenantId", "==", user.uid));
+    const q = query(collection(db, "orders"), where("tenantId", "==", tenantId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
         setOrders(ordersData);
@@ -1066,17 +1087,16 @@ export function TenantDashboard() {
         setIsLoadingOrders(false);
     });
     return () => unsubscribe();
-  }, [user, toast]);
+  }, [tenantId, toast]);
 
    // Fetch tenant-specific users (members)
   useEffect(() => {
-    if (!user) {
+    if (!tenantId) {
         setIsLoadingUsers(false);
         return
     };
-    // This is a simplification. In a real app, users would be linked to a tenant via a `tenantId` field.
-    // Here, we'll just mock this by fetching a few users for demonstration.
-    const q = query(collection(db, "users"), where("tenantId", "==", user.uid));
+    
+    const q = query(collection(db, "users"), where("tenantId", "==", tenantId));
      const unsubscribe = onSnapshot(q, (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
         setUsers(usersData);
@@ -1087,17 +1107,17 @@ export function TenantDashboard() {
         setIsLoadingUsers(false);
     });
     return () => unsubscribe();
-  }, [user, toast]);
+  }, [tenantId, toast]);
 
 
   const handleCreatePreOrder = async (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
-      if (!user) {
-          toast({ variant: "destructive", title: "请先登录" });
+      if (!tenantId) {
+          toast({ variant: "destructive", title: "无法确定租户信息" });
           return;
       }
       try {
         const newOrder = {
-            tenantId: user.uid,
+            tenantId: tenantId,
             items: [{ 
                 id: item.id, 
                 title: item.title, 
@@ -1461,15 +1481,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
-
-
-    
-
-
