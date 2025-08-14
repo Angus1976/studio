@@ -26,6 +26,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+
 
 type TaskTag = {
   text: string;
@@ -43,6 +46,13 @@ export type Task = {
   status: TaskStatus;
   tags: TaskTag[];
 };
+
+type TaskDispatchCenterProps = {
+    tasks: Task[];
+    setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+    isMaximized: boolean;
+    onToggleMaximize: () => void;
+}
 
 const initialTasks: Task[] = [
     {
@@ -107,7 +117,7 @@ const getStatusConfig = (status: TaskStatus) => {
 };
 
 
-export function TaskDispatchCenter({ tasks, setTasks }: { tasks: Task[], setTasks: React.Dispatch<React.SetStateAction<Task[]>>}) {
+export function TaskDispatchCenter({ tasks, setTasks, isMaximized, onToggleMaximize }: TaskDispatchCenterProps) {
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -141,10 +151,24 @@ export function TaskDispatchCenter({ tasks, setTasks }: { tasks: Task[], setTask
   return (
     <Card className="h-full flex flex-col shadow-lg">
       <CardHeader>
-        <CardTitle className="font-headline flex items-center justify-between">
-            <span>任务调度中心</span>
-            <Badge variant="primary" className="text-sm">{tasks.length}</Badge>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+            <CardTitle className="font-headline flex items-center">
+                <span>任务调度中心</span>
+                <Badge variant="primary" className="text-sm ml-2">{tasks.length}</Badge>
+            </CardTitle>
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                         <Button variant="ghost" size="icon" onClick={onToggleMaximize} className="h-7 w-7">
+                            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>{isMaximized ? '还原' : '最大化'}</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
         <CardDescription>由AI规划或您亲自创建的待办任务和自动化流程。</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 p-0 overflow-hidden">

@@ -30,6 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer";
 import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
 import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-center";
+import { cn } from "@/lib/utils";
 
 
 type ConversationMessage = {
@@ -86,6 +87,8 @@ export default function Home() {
   const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [pendingReminder, setPendingReminder] = useState<CreateReminderOutput | null>(null);
+  const [isTaskCenterMaximized, setIsTaskCenterMaximized] = useState(false);
+
 
   useEffect(() => {
     if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员', '用户方 - 企业租户'].includes(userRole || '')) {
@@ -292,11 +295,20 @@ export default function Home() {
 
   const renderUserView = () => (
      <ThreeColumnLayout>
-        <ThreeColumnLayout.Left>
-             <TaskDispatchCenter tasks={tasks} setTasks={setTasks}/>
+        <ThreeColumnLayout.Left 
+            className={cn(isTaskCenterMaximized && "lg:col-span-5")}
+        >
+             <TaskDispatchCenter 
+                tasks={tasks} 
+                setTasks={setTasks}
+                isMaximized={isTaskCenterMaximized}
+                onToggleMaximize={() => setIsTaskCenterMaximized(prev => !prev)}
+            />
         </ThreeColumnLayout.Left>
         
-        <ThreeColumnLayout.Main>
+        <ThreeColumnLayout.Main
+            className={cn(isTaskCenterMaximized && "hidden lg:flex")}
+        >
             <RequirementsNavigator
                 history={conversationHistory}
                 isLoading={isLoading}
