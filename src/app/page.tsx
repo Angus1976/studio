@@ -65,20 +65,19 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                // If it's a demo user, we don't fetch from Firestore
-                if (currentUser.uid.startsWith('demo-')) {
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
                     setUser(currentUser);
-                    // The role is set via demoLogin
+                    setUserRole(userDoc.data().roleName);
                 } else {
-                    const userDocRef = doc(db, "users", currentUser.uid);
-                    const userDoc = await getDoc(userDocRef);
-                    if (userDoc.exists()) {
-                        setUser(currentUser);
-                        setUserRole(userDoc.data().roleName);
+                    // This case handles demo users or if a real user's doc is missing
+                    if (user?.uid.startsWith('demo-')) {
+                       setUser(currentUser); // Keep demo user
                     } else {
-                        await signOut(auth);
-                        setUser(null);
-                        setUserRole(null);
+                       await signOut(auth);
+                       setUser(null);
+                       setUserRole(null);
                     }
                 }
             } else {
@@ -107,11 +106,10 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     
     const demoLogin = (role: string) => {
-        // Create a mock user object for demo purposes
-        setUser({ uid: `demo-user-${Date.now()}` } as User);
+        const demoUser = { uid: `demo-user-${Date.now()}` } as User;
+        setUser(demoUser);
         setUserRole(role);
         setIsLoading(false);
-        router.push('/');
     };
 
     const value = useMemo(() => ({
@@ -126,7 +124,7 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-const useAuth = () => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -317,30 +315,32 @@ function Page() {
 
   if (!isAuthenticated) {
     return (
-         <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
-            <div className="flex items-center justify-center gap-4 mb-6">
-                <Users className="h-16 w-16 text-accent" />
-                <Bot className="h-16 w-16 text-accent" />
+        <AuthWrapper>
+            <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
+                <div className="flex items-center justify-center gap-4 mb-6">
+                    <Users className="h-16 w-16 text-accent" />
+                    <Bot className="h-16 w-16 text-accent" />
+                </div>
+                <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流平台</h1>
+                <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
+                一个连接 AI 数字员工设计者与需求方的市场。在这里，您可以购买、定制或亲自设计和销售 AI 驱动的工作流程。
+                </p>
+                <div className="flex gap-4">
+                    <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                        <Link href="/login">
+                            <LogIn className="mr-2" />
+                            登录
+                        </Link>
+                    </Button>
+                    <Button asChild size="lg" variant="outline">
+                        <Link href="/signup">
+                        <UserPlus className="mr-2" />
+                        注册
+                        </Link>
+                    </Button>
+                </div>
             </div>
-            <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流平台</h1>
-            <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
-               一个连接 AI 数字员工设计者与需求方的市场。在这里，您可以购买、定制或亲自设计和销售 AI 驱动的工作流程。
-            </p>
-            <div className="flex gap-4">
-                <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    <Link href="/login">
-                        <LogIn className="mr-2" />
-                        登录
-                    </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline">
-                    <Link href="/signup">
-                       <UserPlus className="mr-2" />
-                       注册
-                    </Link>
-                </Button>
-            </div>
-        </div>
+        </AuthWrapper>
     )
   }
 

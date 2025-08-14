@@ -8,91 +8,64 @@
  * - AnalyzeOrgStructureOutput - The return type for the analyzeOrgStructure function.
  */
 
-// NOTE: All Genkit-related functionality is currently commented out
-// due to dependency issues with next@14. To re-enable, see CONFIGURATION_README.md.
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 
-// MOCK IMPLEMENTATION
-export type AnalyzeOrgStructureInput = {
-  orgInfo: string;
-  companyContext: string;
-};
+const AnalyzeOrgStructureInputSchema = z.object({
+  orgInfo: z.string().describe(
+    "A detailed text description of the company's organizational structure, including hierarchy, departments, and roles."
+  ),
+  companyContext: z.string().describe(
+    "A summary of the company's basic information, including industry, business operations, revenue, profit, number of employees, and other custom-defined fields. This provides context for the organizational analysis."
+  )
+});
 
-export type AnalyzeOrgStructureOutput = {
-  decisionPoints: string;
-  potentialBottlenecks: string;
-  improvementSuggestions: string;
-};
+export type AnalyzeOrgStructureInput = z.infer<typeof AnalyzeOrgStructureInputSchema>;
+
+const AnalyzeOrgStructureOutputSchema = z.object({
+  decisionPoints: z.string().describe('A summary of the key decision-making points and roles in the organization.'),
+  potentialBottlenecks: z.string().describe('An analysis of potential bottlenecks or inefficiencies in the described processes.'),
+  improvementSuggestions: z.string().describe('Actionable suggestions for improving the organizational structure or processes.'),
+});
+
+export type AnalyzeOrgStructureOutput = z.infer<typeof AnalyzeOrgStructureOutputSchema>;
 
 export async function analyzeOrgStructure(input: AnalyzeOrgStructureInput): Promise<AnalyzeOrgStructureOutput> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                decisionPoints: "模拟的关键决策点：CEO 和各部门主管是主要决策者。跨部门项目需经由项目管理办公室审批。",
-                potentialBottlenecks: "模拟的潜在瓶颈：研发部门的审批流程过长，可能导致项目延期。市场部和销售部之间的数据同步存在延迟。",
-                improvementSuggestions: "模拟的改进建议：1. 简化研发部门内部审批，授权团队领导更多决策权。2. 引入自动化工具，实现市场和销售数据的实时同步。3. 建立定期的跨部门沟通会议机制。"
-            });
-        }, 1000);
-    });
+  return analyzeOrgStructureFlow(input);
 }
 
-// import { ai } from '@/ai/genkit';
-// import { z } from 'zod';
+const prompt = ai.definePrompt({
+  name: 'analyzeOrgStructurePrompt',
+  input: { schema: AnalyzeOrgStructureInputSchema },
+  output: { schema: AnalyzeOrgStructureOutputSchema },
+  prompt: `You are an expert management consultant specializing in organizational structure and process optimization. Your task is to analyze the provided text about a company's internal mechanisms, using the company's basic information as crucial context.
 
-// const AnalyzeOrgStructureInputSchema = z.object({
-//   orgInfo: z.string().describe(
-//     "A detailed text description of the company's organizational structure, including hierarchy, departments, and roles."
-//   ),
-//   companyContext: z.string().describe(
-//     "A summary of the company's basic information, including industry, business operations, revenue, profit, number of employees, and other custom-defined fields. This provides context for the organizational analysis."
-//   )
-// });
+Based on the user's description of their organization and company, please perform the following analysis. Ensure your response is tailored to 人事 (HR) and 经营管理 (business management) aspects.
 
-// export type AnalyzeOrgStructureInput = z.infer<typeof AnalyzeOrgStructureInputSchema>;
+**Company Basic Information (Context):**
+{{{companyContext}}}
 
-// const AnalyzeOrgStructureOutputSchema = z.object({
-//   decisionPoints: z.string().describe('A summary of the key decision-making points and roles in the organization.'),
-//   potentialBottlenecks: z.string().describe('An analysis of potential bottlenecks or inefficiencies in the described processes.'),
-//   improvementSuggestions: z.string().describe('Actionable suggestions for improving the organizational structure or processes.'),
-// });
+**User's Organizational Structure:**
+{{{orgInfo}}}
 
-// export type AnalyzeOrgStructureOutput = z.infer<typeof AnalyzeOrgStructureOutputSchema>;
+Your analysis should include:
+1.  **Key Decision Points**: Identify and summarize the crucial decision-making nodes, departments, or roles within the described structure and processes.
+2.  **Potential Bottlenecks**: Pinpoint any areas that could lead to delays, communication breakdowns, or inefficiencies.
+3.  **Improvement Suggestions**: Provide clear, concise, and actionable recommendations to optimize the structure, streamline processes, and improve overall management efficiency.
+`,
+});
 
-// export async function analyzeOrgStructure(input: AnalyzeOrgStructureInput): Promise<AnalyzeOrgStructureOutput> {
-//   return analyzeOrgStructureFlow(input);
-// }
-
-// const prompt = ai.definePrompt({
-//   name: 'analyzeOrgStructurePrompt',
-//   input: { schema: AnalyzeOrgStructureInputSchema },
-//   output: { schema: AnalyzeOrgStructureOutputSchema },
-//   prompt: `You are an expert management consultant specializing in organizational structure and process optimization. Your task is to analyze the provided text about a company's internal mechanisms, using the company's basic information as crucial context.
-
-// Based on the user's description of their organization and company, please perform the following analysis. Ensure your response is tailored to 人事 (HR) and 经营管理 (business management) aspects.
-
-// **Company Basic Information (Context):**
-// {{{companyContext}}}
-
-// **User's Organizational Structure:**
-// {{{orgInfo}}}
-
-// Your analysis should include:
-// 1.  **Key Decision Points**: Identify and summarize the crucial decision-making nodes, departments, or roles within the described structure and processes.
-// 2.  **Potential Bottlenecks**: Pinpoint any areas that could lead to delays, communication breakdowns, or inefficiencies.
-// 3.  **Improvement Suggestions**: Provide clear, concise, and actionable recommendations to optimize the structure, streamline processes, and improve overall management efficiency.
-// `,
-// });
-
-// const analyzeOrgStructureFlow = ai.defineFlow(
-//   {
-//     name: 'analyzeOrgStructureFlow',
-//     inputSchema: AnalyzeOrgStructureInputSchema,
-//     outputSchema: AnalyzeOrgStructureOutputSchema,
-//   },
-//   async (input) => {
-//     const { output } = await prompt(input);
-//     if (!output) {
-//       throw new Error('Failed to get a valid analysis from the AI model.');
-//     }
-//     return output;
-//   }
-// );
+const analyzeOrgStructureFlow = ai.defineFlow(
+  {
+    name: 'analyzeOrgStructureFlow',
+    inputSchema: AnalyzeOrgStructureInputSchema,
+    outputSchema: AnalyzeOrgStructureOutputSchema,
+  },
+  async (input) => {
+    const { output } = await prompt(input);
+    if (!output) {
+      throw new Error('Failed to get a valid analysis from the AI model.');
+    }
+    return output;
+  }
+);
