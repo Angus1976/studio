@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useContext } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppLogo } from "@/components/app/icons";
@@ -14,7 +14,7 @@ import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import * as z from "zod";
-import { useAuth } from "@/app/page";
+import { useAuth } from "@/hooks/use-auth";
 
 type DemoRole = {
   key: string;

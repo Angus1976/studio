@@ -2,15 +2,12 @@
 
 "use client";
 
-import { useState, useEffect, createContext, useContext, useMemo } from "react";
-import type { FormEvent, ReactNode } from "react";
+import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIRequirementsNavigatorInput } from "@/ai/flows/ai-requirements-navigator";
-import { digitalEmployee, type DigitalEmployeeInput, type DigitalEmployeeOutput } from "@/ai/flows/digital-employee";
-
-import type { Scenario } from "@/components/app/designer";
+import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput } from "@/ai/flows/ai-requirements-navigator";
+import { type Scenario } from "@/components/app/designer";
 import { createReminderFlow, type CreateReminderOutput } from "@/ai/flows/create-reminder-flow";
 
 
@@ -21,20 +18,20 @@ import { Designer } from "@/components/app/designer";
 import { AdminDashboard } from "@/components/app/admin-dashboard";
 import { TenantDashboard } from "@/components/app/tenant-dashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText, CalendarPlus, Check, X } from "lucide-react";
+import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SystemCapabilities } from "@/components/app/system-capabilities";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogClose } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer";
 import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
 import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-center";
 import { cn } from "@/lib/utils";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { doc, getDoc, collection, onSnapshot, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { useAuth } from "@/hooks/use-auth";
 
 type ConversationMessage = {
   role: "user" | "assistant";
@@ -44,99 +41,7 @@ type ConversationMessage = {
   }
 };
 
-type AuthContextType = {
-    isAuthenticated: boolean;
-    user: User | null;
-    userRole: string | null;
-    isLoading: boolean;
-    logout: () => Promise<void>;
-    demoLogin: (role: string) => void;
-};
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [userRole, setUserRole] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
-    const { toast } = useToast();
-
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                const userDocRef = doc(db, "users", currentUser.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    setUser(currentUser);
-                    setUserRole(userDoc.data().roleName);
-                } else {
-                    // This case handles demo users or if a real user's doc is missing
-                    if (user?.uid.startsWith('demo-')) {
-                       setUser(currentUser); // Keep demo user
-                    } else {
-                       await signOut(auth);
-                       setUser(null);
-                       setUserRole(null);
-                    }
-                }
-            } else {
-                setUser(null);
-                setUserRole(null);
-            }
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    const logout = async () => {
-        try {
-            const isDemo = user?.uid.startsWith('demo-');
-            if (!isDemo) {
-               await signOut(auth);
-            }
-            setUser(null);
-            setUserRole(null);
-            toast({ title: "已登出", description: "您已成功登出。" });
-            router.push('/login');
-        } catch (error) {
-            console.error("登出失败:", error);
-            toast({ variant: "destructive", title: "登出失败" });
-        }
-    };
-    
-    const demoLogin = (role: string) => {
-        const demoUser = { uid: `demo-user-${Date.now()}` } as User;
-        setUser(demoUser);
-        setUserRole(role);
-        setIsLoading(false);
-    };
-
-    const value = useMemo(() => ({
-        isAuthenticated: !!user,
-        user,
-        userRole,
-        isLoading,
-        logout,
-        demoLogin
-    }), [user, userRole, isLoading]);
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-function AuthWrapper({ children }: { children: ReactNode }) {
-    return <AuthProvider>{children}</AuthProvider>
-}
-
-function Page() {
+export default function Page() {
   const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [isConversationFinished, setIsConversationFinished] = useState(false);
@@ -315,32 +220,30 @@ function Page() {
 
   if (!isAuthenticated) {
     return (
-        <AuthWrapper>
-            <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                    <Users className="h-16 w-16 text-accent" />
-                    <Bot className="h-16 w-16 text-accent" />
-                </div>
-                <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流平台</h1>
-                <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
-                一个连接 AI 数字员工设计者与需求方的市场。在这里，您可以购买、定制或亲自设计和销售 AI 驱动的工作流程。
-                </p>
-                <div className="flex gap-4">
-                    <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-                        <Link href="/login">
-                            <LogIn className="mr-2" />
-                            登录
-                        </Link>
-                    </Button>
-                    <Button asChild size="lg" variant="outline">
-                        <Link href="/signup">
-                        <UserPlus className="mr-2" />
-                        注册
-                        </Link>
-                    </Button>
-                </div>
-            </div>
-        </AuthWrapper>
+      <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
+          <div className="flex items-center justify-center gap-4 mb-6">
+              <Users className="h-16 w-16 text-accent" />
+              <Bot className="h-16 w-16 text-accent" />
+          </div>
+          <h1 className="text-4xl font-bold font-headline text-foreground mb-4">欢迎来到 AI 任务流平台</h1>
+          <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
+          一个连接 AI 数字员工设计者与需求方的市场。在这里，您可以购买、定制或亲自设计和销售 AI 驱动的工作流程。
+          </p>
+          <div className="flex gap-4">
+              <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  <Link href="/login">
+                      <LogIn className="mr-2" />
+                      登录
+                  </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                  <Link href="/signup">
+                  <UserPlus className="mr-2" />
+                  注册
+                  </Link>
+              </Button>
+          </div>
+      </div>
     )
   }
 
@@ -529,13 +432,4 @@ function Page() {
       </main>
     </div>
   );
-}
-
-// Wrap the export in the AuthProvider
-export default function Home() {
-    return (
-        <AuthWrapper>
-            <Page />
-        </AuthWrapper>
-    )
 }
