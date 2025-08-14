@@ -289,7 +289,7 @@ export function OrganizationChart() {
                     <CardHeader>
                         <CardTitle>AI 组织分析与流程优化</CardTitle>
                         <CardDescription>
-                            完成组织架构设计后，点击下方按钮，AI将分析其结构，识别关键决策点、潜在瓶颈，并提供优化建议。
+                            此项功能的意义在于，AI分析企业的组织架构、管理流程之后，可以根据员工的需求与企业决策管理之间匹配相同或类似的企业岗位、相似任务等。
                         </CardDescription>
                     </CardHeader>
                      <CardContent>
