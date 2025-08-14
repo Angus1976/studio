@@ -14,8 +14,11 @@ import { z } from 'zod';
 
 const AnalyzeOrgStructureInputSchema = z.object({
   orgInfo: z.string().describe(
-    'A detailed description of the company\'s organizational structure, decision-making processes, management rules, and other internal mechanisms, particularly related to HR and business management.'
+    "A detailed text description of the company's organizational structure, including hierarchy, departments, and roles."
   ),
+  companyContext: z.string().describe(
+    "A summary of the company's basic information, including industry, business operations, revenue, profit, number of employees, and other custom-defined fields. This provides context for the organizational analysis."
+  )
 });
 
 export type AnalyzeOrgStructureInput = z.infer<typeof AnalyzeOrgStructureInputSchema>;
@@ -36,11 +39,14 @@ const prompt = ai.definePrompt({
   name: 'analyzeOrgStructurePrompt',
   input: { schema: AnalyzeOrgStructureInputSchema },
   output: { schema: AnalyzeOrgStructureOutputSchema },
-  prompt: `You are an expert management consultant specializing in organizational structure and process optimization. Your task is to analyze the provided text about a company's internal mechanisms.
+  prompt: `You are an expert management consultant specializing in organizational structure and process optimization. Your task is to analyze the provided text about a company's internal mechanisms, using the company's basic information as crucial context.
 
-Based on the user's description of their organization, please perform the following analysis. Ensure your response is tailored to人事 (HR) and 经营管理 (business management) aspects.
+Based on the user's description of their organization and company, please perform the following analysis. Ensure your response is tailored to 人事 (HR) and 经营管理 (business management) aspects.
 
-User's organizational information:
+**Company Basic Information (Context):**
+{{{companyContext}}}
+
+**User's Organizational Structure:**
 {{{orgInfo}}}
 
 Your analysis should include:

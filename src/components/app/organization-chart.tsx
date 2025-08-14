@@ -2,16 +2,20 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Wand2, ArrowRight, Network, PlusCircle, Pencil, Trash2, Import } from 'lucide-react';
+import { LoaderCircle, Wand2, ArrowRight, Network, PlusCircle, Pencil, Trash2, Import, Building, FileDigit } from 'lucide-react';
 import { analyzeOrgStructure, AnalyzeOrgStructureOutput } from '@/ai/flows/analyze-org-structure';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form';
 
 
 type OrgNodeData = {
@@ -24,6 +28,21 @@ type OrgNodeData = {
 const initialOrgData: OrgNodeData[] = [
     { id: 'root', name: '公司', parentId: null },
 ];
+
+const companyInfoSchema = z.object({
+  industry: z.string().optional(),
+  business: z.string().optional(),
+  revenue: z.string().optional(),
+  profit: z.string().optional(),
+  employees: z.string().optional(),
+  customFields: z.array(z.object({
+    key: z.string().min(1, '字段名不能为空'),
+    value: z.string().min(1, '字段值不能为空'),
+  })).optional(),
+});
+
+type CompanyInfo = z.infer<typeof companyInfoSchema>;
+
 
 function OrgChartNode({ node, allNodes, onEdit, onDelete }: { node: OrgNodeData; allNodes: OrgNodeData[], onEdit: (node: OrgNodeData) => void; onDelete: (nodeId: string) => void; }) {
     const children = allNodes.filter(n => n.parentId === node.id);
@@ -83,6 +102,23 @@ export function OrganizationChart() {
     const [newNodeName, setNewNodeName] = useState('');
     const [newNodeParent, setNewNodeParent] = useState<string>('root');
     const [editingNode, setEditingNode] = useState<OrgNodeData | null>(null);
+
+    const companyInfoForm = useForm<CompanyInfo>({
+        resolver: zodResolver(companyInfoSchema),
+        defaultValues: {
+            industry: '',
+            business: '',
+            revenue: '',
+            profit: '',
+            employees: '',
+            customFields: [],
+        },
+    });
+
+    const { fields, append, remove } = useFieldArray({
+        control: companyInfoForm.control,
+        name: "customFields",
+    });
 
     const rootNode = useMemo(() => orgData.find(n => n.id === 'root'), [orgData]);
     
@@ -181,6 +217,15 @@ export function OrganizationChart() {
         };
         return buildHierarchy(null);
     }
+    
+    const onCompanyInfoSubmit = (data: CompanyInfo) => {
+        toast({
+            title: "信息已保存",
+            description: "企业基本信息已更新。",
+        });
+        // In a real app, this would likely save to a backend.
+        console.log("Company Info Saved:", data);
+    };
 
     const handleAnalyze = async () => {
         const orgInfo = generateOrgTextForAI();
@@ -192,11 +237,23 @@ export function OrganizationChart() {
             });
             return;
         }
+        
+        const companyData = companyInfoForm.getValues();
+        const companyContextParts = [
+            companyData.industry && `行业: ${companyData.industry}`,
+            companyData.business && `经营业务: ${companyData.business}`,
+            companyData.revenue && `营收: ${companyData.revenue}`,
+            companyData.profit && `利润: ${companyData.profit}`,
+            companyData.employees && `人员规模: ${companyData.employees}`,
+            ...(companyData.customFields || []).map(field => `${field.key}: ${field.value}`)
+        ];
+        const companyContext = companyContextParts.filter(Boolean).join('\n');
+
 
         setIsLoading(true);
         setAnalysisResult(null);
         try {
-            const result = await analyzeOrgStructure({ orgInfo });
+            const result = await analyzeOrgStructure({ orgInfo, companyContext });
             setAnalysisResult(result);
             toast({
                 title: '分析完成',
@@ -215,67 +272,107 @@ export function OrganizationChart() {
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-1">
-                <CardHeader>
-                    <CardTitle>组织架构设计器</CardTitle>
-                    <CardDescription>设计、导入或编辑您的企业组织架构。</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {/* Add/Edit Form */}
-                    <div className="space-y-4 p-4 border rounded-lg">
-                        <h4 className="font-semibold text-md">{editingNode ? '编辑节点' : '添加新节点'}</h4>
-                         <div>
-                            <Label htmlFor="node-name">名称</Label>
-                            <Input id="node-name" placeholder="例如：研发部" value={newNodeName} onChange={e => setNewNodeName(e.target.value)} />
-                        </div>
-                        <div>
-                            <Label htmlFor="node-parent">上级</Label>
-                            <Select value={newNodeParent} onValueChange={setNewNodeParent}>
-                                <SelectTrigger id="node-parent">
-                                    <SelectValue placeholder="选择上级节点" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {orgData.map(node => (
-                                        <SelectItem key={node.id} value={node.id} disabled={editingNode?.id === node.id}>
-                                            {node.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex gap-2">
-                             <Button onClick={handleAddOrUpdateNode} className="flex-1">
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                {editingNode ? '更新节点' : '添加节点'}
-                            </Button>
-                            {editingNode && <Button variant="ghost" onClick={cancelEdit}>取消</Button>}
-                        </div>
-                    </div>
-                     {/* Import from Text */}
-                     <div className="space-y-2">
-                        <Label htmlFor="org-import" className="text-base font-medium">从文本导入</Label>
-                        <Textarea 
-                            id="org-import"
-                            rows={5}
-                            placeholder="每行一个层级关系，例如：研发部 > 前端团队"
-                            value={importText}
-                            onChange={(e) => setImportText(e.target.value)}
-                        />
-                         <p className="text-xs text-muted-foreground">
-                           使用 `>` 分隔层级。例如: 市场部 > 营销组
-                        </p>
-                        <Button onClick={handleImportFromText} variant="outline" className="w-full">
-                            <Import className="mr-2 h-4 w-4" /> 导入
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Column 1: Designer and Info */}
+            <div className="space-y-6">
                  <Card>
                     <CardHeader>
-                        <CardTitle>当前组织架构</CardTitle>
+                        <CardTitle className="flex items-center gap-2"><Building className="text-accent" />企业基本信息</CardTitle>
+                        <CardDescription>补充企业基本信息，以便AI能提供更精准的分析。</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <Form {...companyInfoForm}>
+                            <form onSubmit={companyInfoForm.handleSubmit(onCompanyInfoSubmit)} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField control={companyInfoForm.control} name="industry" render={({ field }) => (<FormItem><FormLabel>行业</FormLabel><FormControl><Input placeholder="例如：信息技术" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={companyInfoForm.control} name="business" render={({ field }) => (<FormItem><FormLabel>经营业务</FormLabel><FormControl><Input placeholder="例如：SaaS软件开发" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={companyInfoForm.control} name="revenue" render={({ field }) => (<FormItem><FormLabel>营收</FormLabel><FormControl><Input placeholder="例如：1亿人民币" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={companyInfoForm.control} name="profit" render={({ field }) => (<FormItem><FormLabel>利润</FormLabel><FormControl><Input placeholder="例如：2000万人民币" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={companyInfoForm.control} name="employees" render={({ field }) => (<FormItem><FormLabel>人员规模</FormLabel><FormControl><Input placeholder="例如：100-200人" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                </div>
+                                <Separator />
+                                <div>
+                                    <h4 className="text-sm font-medium mb-2">自定义字段</h4>
+                                    {fields.map((field, index) => (
+                                        <div key={field.id} className="flex items-center gap-2 mb-2">
+                                            <FormField control={companyInfoForm.control} name={`customFields.${index}.key`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input placeholder="字段名" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <FormField control={companyInfoForm.control} name={`customFields.${index}.value`} render={({ field }) => (<FormItem className="flex-1"><FormControl><Input placeholder="字段值" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>
+                                        </div>
+                                    ))}
+                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ key: '', value: '' })}>
+                                        <PlusCircle className="mr-2 h-4 w-4"/> 添加字段
+                                    </Button>
+                                </div>
+                                <CardFooter className="p-0 pt-4">
+                                     <Button type="submit">保存基本信息</Button>
+                                </CardFooter>
+                            </form>
+                       </Form>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Network className="text-accent"/>组织架构设计器</CardTitle>
+                        <CardDescription>设计、导入或编辑您的企业组织架构。</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {/* Add/Edit Form */}
+                        <div className="space-y-4 p-4 border rounded-lg">
+                            <h4 className="font-semibold text-md">{editingNode ? '编辑节点' : '添加新节点'}</h4>
+                            <div>
+                                <Label htmlFor="node-name">名称</Label>
+                                <Input id="node-name" placeholder="例如：研发部" value={newNodeName} onChange={e => setNewNodeName(e.target.value)} />
+                            </div>
+                            <div>
+                                <Label htmlFor="node-parent">上级</Label>
+                                <Select value={newNodeParent} onValueChange={setNewNodeParent}>
+                                    <SelectTrigger id="node-parent">
+                                        <SelectValue placeholder="选择上级节点" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {orgData.map(node => (
+                                            <SelectItem key={node.id} value={node.id} disabled={editingNode?.id === node.id}>
+                                                {node.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button onClick={handleAddOrUpdateNode} className="flex-1">
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    {editingNode ? '更新节点' : '添加节点'}
+                                </Button>
+                                {editingNode && <Button variant="ghost" onClick={cancelEdit}>取消</Button>}
+                            </div>
+                        </div>
+                        {/* Import from Text */}
+                        <div className="space-y-2">
+                            <Label htmlFor="org-import" className="text-base font-medium">从文本导入</Label>
+                            <Textarea 
+                                id="org-import"
+                                rows={5}
+                                placeholder="每行一个层级关系，例如：研发部 > 前端团队"
+                                value={importText}
+                                onChange={(e) => setImportText(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                            使用 `>` 分隔层级。例如: 市场部 > 营销组
+                            </p>
+                            <Button onClick={handleImportFromText} variant="outline" className="w-full">
+                                <Import className="mr-2 h-4 w-4" /> 导入
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Column 2: Chart and Analysis */}
+            <div className="space-y-6">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><FileDigit className="text-accent" />当前组织架构</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {rootNode ? 
@@ -331,5 +428,3 @@ export function OrganizationChart() {
         </div>
     );
 }
-
-    
