@@ -54,26 +54,32 @@ const useAuth = () => {
     const { toast } = useToast();
 
     useEffect(() => {
-        // Handle Demo Login
-        if (sessionStorage.getItem('isDemo') === 'true') {
-            setUserRole(sessionStorage.getItem('demoRole'));
-            setUser({uid: 'demo-user'} as User);
+        const isDemo = sessionStorage.getItem('isDemo') === 'true';
+        const demoRole = sessionStorage.getItem('demoRole');
+
+        if (isDemo && demoRole) {
+            setUser({ uid: 'demo-user' } as User);
+            setUserRole(demoRole);
             setIsLoading(false);
+            // Clear the demo flag after using it
+            sessionStorage.removeItem('isDemo');
+            sessionStorage.removeItem('demoRole');
             return;
         }
-        
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const userDocRef = doc(db, "users", user.uid);
+
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                const userDocRef = doc(db, "users", currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
-                    setUser(user);
+                    setUser(currentUser);
                     setUserRole(userDoc.data().roleName);
                 } else {
-                    // Handle case where user exists in Auth but not in Firestore
+                    // This case handles if a user is in Auth but not Firestore.
+                    // It logs them out to prevent an inconsistent state.
+                    await signOut(auth);
                     setUser(null);
                     setUserRole(null);
-                    await signOut(auth);
                 }
             } else {
                 setUser(null);
@@ -82,15 +88,13 @@ const useAuth = () => {
             setIsLoading(false);
         });
 
+        // Cleanup subscription on unmount
         return () => unsubscribe();
     }, []);
 
     const logout = async () => {
         try {
             await signOut(auth);
-            // Clear both session and local storage on logout
-            sessionStorage.clear();
-            localStorage.clear();
             toast({ title: "已登出", description: "您已成功登出。" });
             router.push('/login');
         } catch (error) {
