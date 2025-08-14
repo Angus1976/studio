@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIRequirementsNavigatorInput } from "@/ai/flows/ai-requirements-navigator";
 import { digitalEmployee, type DigitalEmployeeInput, type DigitalEmployeeOutput } from "@/ai/flows/digital-employee";
@@ -67,8 +68,14 @@ const useAuth = () => {
                     await signOut(auth);
                 }
             } else {
-                setUser(null);
-                setUserRole(null);
+                 const localRole = localStorage.getItem('userRole');
+                 if(localRole){ // Respect demo login
+                     setUserRole(localRole);
+                     setUser({uid: 'demo-user'} as User);
+                 } else {
+                    setUser(null);
+                    setUserRole(null);
+                 }
             }
             setIsLoading(false);
         });
@@ -332,7 +339,7 @@ export default function Home() {
             />
         </ThreeColumnLayout.Main>
 
-        <ThreeColumnLayout.Right className="hidden md:flex flex-col gap-6">
+        <ThreeColumnLayout.Right className="flex flex-col gap-6">
         {isConversationFinished ? (
             <div className="space-y-6">
                  <ScenarioLibraryViewer 

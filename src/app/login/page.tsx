@@ -47,14 +47,12 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Fetch user role from Firestore
+      // Fetch user role from Firestore to ensure user exists there
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userRole', userData.roleName);
         toast({
           title: "登录成功",
           description: `欢迎回来, ${userData.roleName}!`,
