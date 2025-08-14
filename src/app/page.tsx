@@ -54,6 +54,14 @@ const useAuth = () => {
     const { toast } = useToast();
 
     useEffect(() => {
+        // Handle Demo Login
+        if (sessionStorage.getItem('isDemo') === 'true') {
+            setUserRole(sessionStorage.getItem('demoRole'));
+            setUser({uid: 'demo-user'} as User);
+            setIsLoading(false);
+            return;
+        }
+        
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDocRef = doc(db, "users", user.uid);
@@ -68,14 +76,8 @@ const useAuth = () => {
                     await signOut(auth);
                 }
             } else {
-                 const localRole = localStorage.getItem('userRole');
-                 if(localRole){ // Respect demo login
-                     setUserRole(localRole);
-                     setUser({uid: 'demo-user'} as User);
-                 } else {
-                    setUser(null);
-                    setUserRole(null);
-                 }
+                setUser(null);
+                setUserRole(null);
             }
             setIsLoading(false);
         });
@@ -86,6 +88,8 @@ const useAuth = () => {
     const logout = async () => {
         try {
             await signOut(auth);
+            // Clear both session and local storage on logout
+            sessionStorage.clear();
             localStorage.clear();
             toast({ title: "已登出", description: "您已成功登出。" });
             router.push('/login');

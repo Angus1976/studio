@@ -74,8 +74,10 @@ export default function LoginPage() {
   };
   
   const handleDemoLogin = (role: DemoRole) => {
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('userRole', role.name);
+    // This now simulates a successful login by setting a demo user state
+    // in a way the main page's useAuth hook can understand without localStorage.
+    sessionStorage.setItem('isDemo', 'true');
+    sessionStorage.setItem('demoRole', role.name);
     toast({
       title: '演示登录成功',
       description: `您现在以“${role.name}”的身份登录。`,
