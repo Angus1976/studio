@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,11 +11,13 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ScenarioCard } from '@/components/app/scenario-card';
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2, Trash2, TestTube2 } from 'lucide-react';
+import { PlusCircle, UploadCloud, Library, Bot, LoaderCircle, Wand2, Trash2, TestTube2, Pencil } from 'lucide-react';
 import { digitalEmployee } from '@/ai/flows/digital-employee';
 import { Separator } from '../ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 
 export type Scenario = {
     id: string;
@@ -26,86 +28,72 @@ export type Scenario = {
     prompt: string;
 };
 
-
-export const sampleScenarios: Scenario[] = [
-    { 
-        id: 'recruitment-expert', 
-        title: '智能招聘助理', 
-        description: '自动筛选简历、进行初步评估并安排面试。', 
-        industry: '人力资源', 
-        task: '招聘',
-        prompt: 'You are an expert recruitment specialist. Analyze the provided job description and candidate resume to determine suitability.',
-    },
-    { 
-        id: 'marketing-guru', 
-        title: '营销内容生成器', 
-        description: '根据产品信息和市场趋势，自动生成吸引人的社交媒体帖子。', 
-        industry: '市场营销', 
-        task: '内容创作',
-        prompt: 'You are a marketing guru. Generate three creative and engaging social media posts based on the following product description.',
-    },
-    { 
-        id: 'code-optimizer', 
-        title: '代码优化机器人', 
-        description: '审查代码片段并提供提高其性能和可读性的建议。', 
-        industry: '软件开发', 
-        task: '代码审查',
-        prompt: 'You are a code optimization expert. Review the following code snippet and provide suggestions to improve its performance and readability.',
-    },
-    {
-        id: 'contract-review-expert',
-        title: 'AI合同预审专家',
-        description: '自动审查合同文本，识别关键条款、潜在风险，并提供修改建议。',
-        industry: '法务风控',
-        task: '合同审查',
-        prompt: 'You are an AI legal assistant specializing in contract review. Analyze the following contract text. Identify and summarize key clauses (e.g., payment terms, liability, termination), flag potential risks or ambiguities, and provide suggestions for revision to protect our interests.',
-    },
-    {
-        id: 'knowledge-base-assistant',
-        title: '企业智能知识库助理',
-        description: '支持导入企业私有知识库，对接内部软件系统，提供精准的智能问答和数据查询服务。',
-        industry: '企业服务',
-        task: '知识库问答',
-        prompt: 'You are an enterprise knowledge base assistant. Based on the provided enterprise knowledge base context and the user\'s question, provide an accurate and comprehensive answer. If the information is not in the knowledge base, state that clearly. Context: [User-provided knowledge base data]. Question: {{{userContext}}}',
-    }
-];
-
+const emptyScenario: Omit<Scenario, 'id'> = { title: '', description: '', industry: '', task: '', prompt: '' };
 
 export function Designer() {
-  const [scenarios, setScenarios] = useState(sampleScenarios);
-  const [editingScenario, setEditingScenario] = useState<Omit<Scenario, 'id'>>({ title: '', description: '', industry: '', task: '', prompt: '' });
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [editingScenario, setEditingScenario] = useState<Partial<Scenario>>(emptyScenario);
   const [testContext, setTestContext] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLibraryLoading, setIsLibraryLoading] = useState(true);
   const [testResult, setTestResult] = useState('');
   const [testPromptId, setTestPromptId] = useState('');
   const { toast } = useToast();
   
-  const handleInputChange = (field: keyof typeof editingScenario, value: string) => {
+  useEffect(() => {
+    const q = query(collection(db, "scenarios"), orderBy("title"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const scenariosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scenario));
+      setScenarios(scenariosData);
+      setIsLibraryLoading(false);
+    }, (error) => {
+      console.error("Error fetching scenarios:", error);
+      toast({ variant: "destructive", title: "获取场景库失败" });
+      setIsLibraryLoading(false);
+    });
+    return () => unsubscribe();
+  }, [toast]);
+
+
+  const handleInputChange = (field: keyof Omit<Scenario, 'id'>, value: string) => {
     setEditingScenario(prev => ({ ...prev, [field]: value }));
   };
   
-  const handleAddScenarioToLibrary = () => {
+  const handleAddOrUpdateScenario = async () => {
     if (!editingScenario.title || !editingScenario.prompt) {
          toast({
             variant: 'destructive',
             title: '缺少信息',
-            description: '请填写能力标题和核心提示词以添加新场景。',
+            description: '请填写能力标题和核心提示词。',
         });
         return;
     }
-    const newId = `custom-${editingScenario.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-    const scenarioToAdd = { ...editingScenario, id: newId };
-    setScenarios(prev => [...prev, scenarioToAdd]);
-    setEditingScenario({ title: '', description: '', industry: '', task: '', prompt: '' });
-    toast({
-        title: '场景已添加',
-        description: `能力 "${scenarioToAdd.title}" 已添加到场景库中。`,
-    });
+
+    setIsLoading(true);
+    try {
+      if (editingScenario.id) {
+        // Update
+        const scenarioRef = doc(db, "scenarios", editingScenario.id);
+        const { id, ...dataToUpdate } = editingScenario;
+        await updateDoc(scenarioRef, dataToUpdate);
+        toast({ title: '场景已更新', description: `“${editingScenario.title}”已成功更新。` });
+      } else {
+        // Add
+        await addDoc(collection(db, "scenarios"), editingScenario);
+        toast({ title: '场景已添加', description: `“${editingScenario.title}”已添加到场景库。` });
+      }
+      setEditingScenario(emptyScenario);
+    } catch (error) {
+      console.error("Error saving scenario:", error);
+      toast({ variant: 'destructive', title: '保存失败', description: '保存场景时发生错误。' });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const handleTestPrompt = async () => {
     const usePromptId = !!testPromptId.trim();
-    const useNewPrompt = !usePromptId && !!editingScenario.prompt.trim();
+    const useNewPrompt = !usePromptId && !!editingScenario.prompt?.trim();
 
     if (!usePromptId && !useNewPrompt) {
         toast({
@@ -166,26 +154,29 @@ export function Designer() {
   };
 
   const handleEditScenario = (scenario: Scenario) => {
-    setEditingScenario({
-      title: scenario.title,
-      description: scenario.description,
-      industry: scenario.industry,
-      task: scenario.task,
-      prompt: scenario.prompt
-    });
+    setEditingScenario(scenario);
     toast({
       title: '正在编辑',
       description: `已将“${scenario.title}”加载到设计器中。`
     })
   };
 
-  const handleDeleteScenario = (scenarioId: string) => {
-    setScenarios(prev => prev.filter(s => s.id !== scenarioId));
-    toast({
-      variant: 'destructive',
-      title: '场景已删除',
-      description: '选定的场景已从库中移除。'
-    })
+  const handleDeleteScenario = async (scenario: Scenario) => {
+    try {
+        await deleteDoc(doc(db, "scenarios", scenario.id));
+        toast({
+          variant: 'destructive',
+          title: '场景已删除',
+          description: `“${scenario.title}”已从库中移除。`
+        })
+    } catch (error) {
+        console.error("Error deleting scenario:", error);
+        toast({
+          variant: 'destructive',
+          title: '删除失败',
+          description: '删除场景时发生错误。'
+        })
+    }
   };
 
 
@@ -200,21 +191,25 @@ export function Designer() {
                 能力场景库
             </CardTitle>
             <CardDescription>
-                浏览、搜索和管理已发布的 AI 数字员工能力场景。点击下方卡片可加载至右侧设计器进行编辑。
+                浏览、搜索和管理已发布的 AI 数字员工能力场景。点击卡片上的编辑按钮可加载至右侧设计器。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
+               {isLibraryLoading ? (
+                 <div className="flex items-center justify-center h-full"><LoaderCircle className="h-8 w-8 animate-spin" /></div>
+               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pr-4">
                     {scenarios.map(scenario => (
                         <ScenarioCard 
                           key={scenario.id} 
                           scenario={scenario} 
                           onEdit={() => handleEditScenario(scenario)}
-                          onDelete={() => handleDeleteScenario(scenario.id)}
+                          onDelete={() => handleDeleteScenario(scenario)}
                         />
                     ))}
                 </div>
+               )}
             </ScrollArea>
           </CardContent>
         </Card>
@@ -235,23 +230,23 @@ export function Designer() {
             <CardContent className="flex-1 flex flex-col justify-between gap-4 overflow-y-auto">
                 <ScrollArea className="flex-1 -mx-6 px-6">
                     <div className="space-y-4 pr-4">
-                        <h3 className="text-lg font-semibold text-foreground">场景设计</h3>
+                        <h3 className="text-lg font-semibold text-foreground">{editingScenario.id ? "编辑场景" : "创建新场景"}</h3>
                         <div>
                             <Label htmlFor="scenario-title">能力标题</Label>
-                            <Input id="scenario-title" placeholder="例如：智能招聘助理" value={editingScenario.title} onChange={e => handleInputChange('title', e.target.value)} />
+                            <Input id="scenario-title" placeholder="例如：智能招聘助理" value={editingScenario.title || ''} onChange={e => handleInputChange('title', e.target.value)} />
                         </div>
                         <div>
                             <Label htmlFor="scenario-desc">能力描述</Label>
-                            <Textarea id="scenario-desc" placeholder="简要描述此能力解决了什么问题..." value={editingScenario.description} onChange={e => handleInputChange('description', e.target.value)}/>
+                            <Textarea id="scenario-desc" placeholder="简要描述此能力解决了什么问题..." value={editingScenario.description || ''} onChange={e => handleInputChange('description', e.target.value)}/>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label htmlFor="scenario-industry">适用行业</Label>
-                                <Input id="scenario-industry" placeholder="例如：人力资源" value={editingScenario.industry} onChange={e => handleInputChange('industry', e.target.value)} />
+                                <Input id="scenario-industry" placeholder="例如：人力资源" value={editingScenario.industry || ''} onChange={e => handleInputChange('industry', e.target.value)} />
                             </div>
                             <div>
                                 <Label htmlFor="scenario-task">核心任务</Label>
-                                <Select value={editingScenario.task} onValueChange={(value) => handleInputChange('task', value)}>
+                                <Select value={editingScenario.task || ''} onValueChange={(value) => handleInputChange('task', value)}>
                                   <SelectTrigger id="scenario-task">
                                     <SelectValue placeholder="选择任务类型" />
                                   </SelectTrigger>
@@ -266,9 +261,9 @@ export function Designer() {
                                 </Select>
                             </div>
                         </div>
-                         <Button className="w-full" onClick={handleAddScenarioToLibrary}>
-                            <PlusCircle className="mr-2 h-5 w-5" />
-                            添加/更新至场景库
+                         <Button className="w-full" onClick={handleAddOrUpdateScenario} disabled={isLoading}>
+                            {isLoading ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
+                            {editingScenario.id ? '更新至场景库' : '添加至场景库'}
                         </Button>
                         
                         <Separator className="my-6" />
@@ -276,7 +271,7 @@ export function Designer() {
                         <h3 className="text-lg font-semibold text-foreground">提示词测试</h3>
                         <div>
                             <Label htmlFor="scenario-prompt">核心提示词 (Prompt)</Label>
-                            <Textarea id="scenario-prompt" placeholder="在此创建新的中英文提示词，或留空以使用下面的ID..." rows={5} value={editingScenario.prompt} onChange={e => handleInputChange('prompt', e.target.value)} />
+                            <Textarea id="scenario-prompt" placeholder="在此创建新的中英文提示词，或留空以使用下面的ID..." rows={5} value={editingScenario.prompt || ''} onChange={e => handleInputChange('prompt', e.target.value)} />
                         </div>
                         
                         <div className='flex items-center gap-2'>
@@ -297,7 +292,7 @@ export function Designer() {
                             <Textarea id="scenario-test" placeholder="输入需要AI处理的具体内容来测试提示词效果..." value={testContext} onChange={e => setTestContext(e.target.value)} />
                         </div>
                         
-                        {isLoading && (
+                        {isLoading && !testResult && (
                             <div className="flex items-center justify-center gap-2 text-primary">
                                 <LoaderCircle className="animate-spin h-5 w-5" />
                                 <span>正在调用AI进行测试...</span>
@@ -322,7 +317,7 @@ export function Designer() {
 
                 <div className="mt-auto pt-4 border-t">
                     <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleTestPrompt} disabled={isLoading}>
-                        <TestTube2 className="mr-2 h-5 w-5" />
+                        {isLoading ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <TestTube2 className="mr-2 h-5 w-5" />}
                         测试提示词
                     </Button>
                 </div>
@@ -332,8 +327,3 @@ export function Designer() {
     </div>
   );
 }
-
-    
-
-    
-

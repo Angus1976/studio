@@ -11,32 +11,17 @@
 // NOTE: All Genkit-related functionality is currently commented out
 // due to dependency issues with next@14. To re-enable, see CONFIGURATION_README.md.
 
-// MOCK IMPLEMENTATION
+// REAL IMPLEMENTATION using Firestore
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from "firebase/firestore";
 
-// A dummy prompt library for demonstration purposes.
-// In a real application, this would be a database or an external API call.
-const promptLibrary: Record<string, { title: string; content: string }> = {
-  'recruitment-expert': {
-    title: '招聘专家提示',
-    content: 'You are an expert recruitment specialist. Analyze the provided job description and candidate resume to determine suitability.',
-  },
-  'marketing-guru': {
-    title: '营销大师提示',
-    content: 'You are a marketing guru. Generate three creative and engaging social media posts based on the following product description.',
-  },
-  'code-optimizer': {
-    title: '代码优化器提示',
-    content: 'You are a code optimization expert. Review the following code snippet and provide suggestions to improve its performance and readability.',
-  },
-  'contract-review-expert': {
-    title: 'AI合同预审专家提示',
-    content: 'You are an AI legal assistant specializing in contract review. Analyze the following contract text. Identify and summarize key clauses (e.g., payment terms, liability, termination), flag potential risks or ambiguities, and provide suggestions for revision to protect our interests.',
-  },
-  'knowledge-base-assistant': {
-    title: '企业智能知识库助理',
-    description: '支持导入企业私有知识库，对接内部软件系统，提供精准的智能问答和数据查询服务。',
-    prompt: 'You are an enterprise knowledge base assistant. Based on the provided enterprise knowledge base context and the user\'s question, provide an accurate and comprehensive answer. If the information is not in the knowledge base, state that clearly. Context: [User-provided knowledge base data]. Question: {{{userContext}}}',
-  }
+export type ScenarioData = {
+  id: string;
+  title: string;
+  description: string;
+  industry: string;
+  task: string;
+  prompt: string;
 };
 
 
@@ -52,15 +37,20 @@ export type PromptLibraryConnectorOutput = {
 export async function promptLibraryConnector(
   input: PromptLibraryConnectorInput
 ): Promise<PromptLibraryConnectorOutput> {
-  const prompt = promptLibrary[input.promptId];
-  if (!prompt) {
-      throw new Error(`Prompt with ID "${input.promptId}" not found.`);
+  const scenarioDocRef = doc(db, "scenarios", input.promptId);
+  const scenarioDoc = await getDoc(scenarioDocRef);
+
+  if (!scenarioDoc.exists()) {
+      throw new Error(`Prompt with ID "${input.promptId}" not found in Firestore.`);
   }
+  const scenarioData = scenarioDoc.data() as Omit<ScenarioData, 'id'>;
+  
   return {
-      promptTitle: prompt.title,
-      promptContent: prompt.content,
+      promptTitle: scenarioData.title,
+      promptContent: scenarioData.prompt,
   };
 }
+
 
 // import { ai } from '@/ai/genkit';
 // import { z } from 'zod';
