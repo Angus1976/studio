@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { db } from "@/lib/firebase";
-import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, Timestamp, query, orderBy } from "firebase/firestore";
+import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, Timestamp, query, orderBy, where, getDocs } from "firebase/firestore";
 
 
 // --- Tenant Management ---
@@ -736,47 +736,57 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
 type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
 type Order = {
     id: string;
-    tenantName: string;
+    tenantId: string;
+    tenantName?: string; // Optional, can be fetched
     items: { title: string; quantity: number }[];
     totalAmount: number;
     status: OrderStatus;
-    createdAt: string;
+    createdAt: Timestamp;
 };
 
-const initialOrders: Order[] = [
-    {
-        id: "PO-12345",
-        tenantName: "Tech Innovators Inc.",
-        items: [{ title: "企业邮箱服务", quantity: 10 }],
-        totalAmount: 500,
-        status: "待平台确认",
-        createdAt: "2024-07-25",
-    },
-    {
-        id: "PO-12346",
-        tenantName: "Future Dynamics",
-        items: [{ title: "LLM Token 包", quantity: 5 }],
-        totalAmount: 500,
-        status: "待支付",
-        createdAt: "2024-07-24",
-    },
-     {
-        id: "PO-12347",
-        tenantName: "Tech Innovators Inc.",
-        items: [{ title: "RPA 流程设计", quantity: 1 }],
-        totalAmount: 10000,
-        status: "已完成",
-        createdAt: "2024-07-20",
-    }
-];
 
 function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-    const [orders, setOrders] = useState<Order[]>(initialOrders);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
 
-    const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
-        setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
-        toast({ title: "订单状态已更新", description: `订单 ${orderId} 的状态已更新为 ${newStatus}。` });
+    useEffect(() => {
+        const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
+            const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+            
+            // Fetch tenant names for each order
+            const ordersWithTenantNames = await Promise.all(ordersData.map(async (order) => {
+                if (order.tenantId) {
+                    const tenantDoc = await getDocs(query(collection(db, "tenants"), where("id", "==", order.tenantId)));
+                    if (!tenantDoc.empty) {
+                        const tenantData = tenantDoc.docs[0].data();
+                        return { ...order, tenantName: tenantData.companyName };
+                    }
+                }
+                return { ...order, tenantName: '未知租户' };
+            }));
+
+            setOrders(ordersWithTenantNames);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching orders:", error);
+            toast({ variant: "destructive", title: "获取订单失败" });
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [toast]);
+
+
+    const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+        try {
+            const orderRef = doc(db, "orders", orderId);
+            await updateDoc(orderRef, { status: newStatus });
+            toast({ title: "订单状态已更新", description: `订单 ${orderId} 的状态已更新为 ${newStatus}。` });
+        } catch (error) {
+             toast({ variant: "destructive", title: "更新失败", description: "更新订单状态时发生错误。" });
+        }
     };
 
     const getStatusBadgeVariant = (status: OrderStatus) => {
@@ -815,7 +825,9 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {orders.map(order => (
+                                    {isLoading ? (
+                                        <TableRow><TableCell colSpan={5} className="text-center h-24"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                    ) : orders.map(order => (
                                         <TableRow key={order.id}>
                                             <TableCell className="font-medium">{order.id}</TableCell>
                                             <TableCell>{order.tenantName}</TableCell>

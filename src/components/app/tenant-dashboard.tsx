@@ -3,7 +3,7 @@
 "use client";
 
 import * as LucideReact from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil, Trash2, Copy, Upload, Download, Building2 } from "lucide-react";
+import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil, Trash2, Copy, Upload, Download, Building2, LoaderCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -27,6 +27,9 @@ import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
 import { OrganizationChart } from "./organization-chart";
+import { db, auth } from "@/lib/firebase";
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 
 const usageData = [
@@ -45,25 +48,14 @@ const chartConfig = {
   },
 };
 
-const initialInvoices = [
-    { id: "INV-2024-005", date: "2024-06-01", amount: "¥1,500.00", status: "已支付" },
-    { id: "INV-2024-004", date: "2024-05-01", amount: "¥1,250.00", status: "已支付" },
-    { id: "INV-2024-003", date: "2024-04-01", amount: "¥1,100.00", status: "已支付" },
-]
-
 type User = {
+    uid: string;
     name: string;
     email: string;
     role: string;
     status: string;
 };
 
-
-const initialUsers: User[] = [
-    { name: "王经理", email: "wang.m@examplecorp.com", role: "管理员", status: "活跃" },
-    { name: "李工", email: "li.e@examplecorp.com", role: "成员", status: "活跃" },
-    { name: "赵分析师", email: "zhao.a@examplecorp.com", role: "成员", status: "已禁用" },
-]
 
 const procurementItems = [
     { id: 'prod-001', title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础", price: 50, unit: "用户/年" },
@@ -82,31 +74,13 @@ type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" |
 
 type Order = {
     id: string;
-    items: (ProcurementItem & { quantity: number })[];
+    tenantId: string;
+    items: { id: string; title: string; quantity: number; price: number; unit: string; icon: string; }[];
     totalAmount: number;
     status: OrderStatus;
-    createdAt: string;
-    updatedAt: string;
+    createdAt: Timestamp;
+    updatedAt: Timestamp;
 }
-
-const initialOrders: Order[] = [
-    {
-        id: `PO-${Date.now() - 100000}`,
-        items: [{...procurementItems[0], quantity: 10}],
-        totalAmount: 500,
-        status: "已完成",
-        createdAt: "2024-07-20",
-        updatedAt: "2024-07-21"
-    },
-     {
-        id: `PO-${Date.now() - 50000}`,
-        items: [{...procurementItems[4], quantity: 5}],
-        totalAmount: 500,
-        status: "待支付",
-        createdAt: "2024-07-22",
-        updatedAt: "2024-07-22"
-    }
-]
 
 const preOrderSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "数量必须大于0。" }),
@@ -527,7 +501,7 @@ function ViewOrderDialog({ order }: { order: Order }) {
                 <DialogHeader>
                     <DialogTitle>订单详情: {order.id}</DialogTitle>
                     <DialogDescription>
-                        创建于 {order.createdAt}，最后更新于 {order.updatedAt}
+                        创建于 {order.createdAt.toDate().toLocaleString()}，最后更新于 {order.updatedAt.toDate().toLocaleString()}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
@@ -1024,7 +998,7 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
             return;
         }
 
-        newUsers.push({ name, email, role, status: '邀请中' });
+        newUsers.push({ uid: `imported-${Date.now()}-${i}`, name, email, role, status: '邀请中' });
     }
 
     onImport(newUsers);
@@ -1067,42 +1041,108 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
 
 export function TenantDashboard() {
   const { toast } = useToast();
-  const [users, setUsers] = useState(initialUsers);
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [users, setUsers] = useState<User[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [activeTab, setActiveTab] = useState("overview");
+  const [user, loading] = useAuthState(auth);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
 
-  const handleCreatePreOrder = (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
-      const newOrder: Order = {
-          id: `PO-${Date.now()}`,
-          items: [{ ...item, quantity: values.quantity }],
-          totalAmount: item.price * values.quantity,
-          status: "待平台确认",
-          createdAt: new Date().toISOString().split('T')[0],
-          updatedAt: new Date().toISOString().split('T')[0],
-      };
-      setOrders(prev => [newOrder, ...prev]);
-      toast({
-          title: "预购单已提交",
-          description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
-      });
-      // Switch to orders tab
-      setActiveTab("orders");
+  // Fetch tenant-specific orders
+  useEffect(() => {
+    if (!user) {
+        setIsLoadingOrders(false);
+        return;
+    };
+    const q = query(collection(db, "orders"), where("tenantId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        setOrders(ordersData);
+        setIsLoadingOrders(false);
+    }, (error) => {
+        console.error("Error fetching orders:", error);
+        toast({ variant: "destructive", title: "获取订单失败" });
+        setIsLoadingOrders(false);
+    });
+    return () => unsubscribe();
+  }, [user, toast]);
+
+   // Fetch tenant-specific users (members)
+  useEffect(() => {
+    if (!user) {
+        setIsLoadingUsers(false);
+        return
+    };
+    // This is a simplification. In a real app, users would be linked to a tenant via a `tenantId` field.
+    // Here, we'll just mock this by fetching a few users for demonstration.
+    const q = query(collection(db, "users"), where("tenantId", "==", user.uid));
+     const unsubscribe = onSnapshot(q, (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
+        setUsers(usersData);
+        setIsLoadingUsers(false);
+    }, (error) => {
+        console.error("Error fetching users:", error);
+        toast({ variant: "destructive", title: "获取成员失败" });
+        setIsLoadingUsers(false);
+    });
+    return () => unsubscribe();
+  }, [user, toast]);
+
+
+  const handleCreatePreOrder = async (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
+      if (!user) {
+          toast({ variant: "destructive", title: "请先登录" });
+          return;
+      }
+      try {
+        const newOrder = {
+            tenantId: user.uid,
+            items: [{ 
+                id: item.id, 
+                title: item.title, 
+                quantity: values.quantity,
+                price: item.price,
+                unit: item.unit,
+                icon: item.icon,
+            }],
+            totalAmount: item.price * values.quantity,
+            status: "待平台确认",
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+        };
+        await addDoc(collection(db, "orders"), newOrder);
+        toast({
+            title: "预购单已提交",
+            description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
+        });
+        setActiveTab("orders");
+      } catch (error) {
+          console.error("Error creating order:", error);
+          toast({ variant: "destructive", title: "下单失败", description: "创建订单时发生错误。" });
+      }
   };
 
-  const handlePayOrder = (orderId: string) => {
-    // In a real app, this would redirect to a payment gateway
-    setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status: "配置中", updatedAt: new Date().toISOString().split('T')[0] } : order
-    ));
-    toast({
-        title: "支付成功！",
-        description: "订单支付成功，平台将尽快为您完成资源配置。"
-    });
+  const handlePayOrder = async (orderId: string) => {
+    try {
+        const orderRef = doc(db, "orders", orderId);
+        await updateDoc(orderRef, {
+            status: "配置中",
+            updatedAt: Timestamp.now()
+        });
+        toast({
+            title: "支付成功！",
+            description: "订单支付成功，平台将尽快为您完成资源配置。"
+        });
+    } catch (error) {
+        toast({ variant: "destructive", title: "支付失败", description: "更新订单状态时发生错误。" });
+    }
   };
 
   const handleInviteUser = (values: z.infer<typeof inviteUserSchema>) => {
-    const newUser = { ...values, name: "新成员", status: "邀请中" };
+    // This is a mock. In a real app, this would trigger a backend function
+    // to create a user and send an invitation email.
+    const newUser = { uid: `new-${Date.now()}`, ...values, name: "新成员", status: "邀请中" };
     setUsers(prev => [...prev, newUser]);
     toast({
       title: "邀请已发送",
@@ -1111,6 +1151,7 @@ export function TenantDashboard() {
   };
 
   const handleUpdateUser = (values: z.infer<typeof editUserSchema>) => {
+    // This is a mock.
     setUsers(prev => prev.map(u => u.email === values.email ? { ...u, ...values } : u));
     toast({
       title: "成员已更新",
@@ -1291,9 +1332,11 @@ export function TenantDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {orders.length > 0 ? orders.map(order => (
+                                {isLoadingOrders ? (
+                                    <TableRow><TableCell colSpan={6} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : orders.length > 0 ? orders.map(order => (
                                     <TableRow key={order.id}>
-                                        <TableCell className="font-medium">{order.id}</TableCell>
+                                        <TableCell className="font-medium">{order.id.substring(0, 10)}...</TableCell>
                                         <TableCell>
                                             {order.items.map(item => 
                                                 <div key={item.id}>{item.title} (x{item.quantity})</div>
@@ -1305,7 +1348,7 @@ export function TenantDashboard() {
                                                 {order.status}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>{order.updatedAt}</TableCell>
+                                        <TableCell>{order.updatedAt.toDate().toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
                                             {order.status === '待支付' ? (
                                                 <Button size="sm" onClick={() => handlePayOrder(order.id)}>在线支付</Button>
@@ -1358,8 +1401,10 @@ export function TenantDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {users.map(user => (
-                                    <TableRow key={user.email}>
+                                {isLoadingUsers ? (
+                                    <TableRow><TableCell colSpan={5} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                ) : users.map(user => (
+                                    <TableRow key={user.uid}>
                                         <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
@@ -1426,4 +1471,5 @@ export function TenantDashboard() {
 
 
     
+
 

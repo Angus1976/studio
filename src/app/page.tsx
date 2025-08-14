@@ -11,7 +11,6 @@ import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIReq
 import { digitalEmployee, type DigitalEmployeeInput, type DigitalEmployeeOutput } from "@/ai/flows/digital-employee";
 
 import type { Scenario } from "@/components/app/designer";
-import { sampleScenarios } from "@/components/app/designer";
 import { createReminderFlow, type CreateReminderOutput } from "@/ai/flows/create-reminder-flow";
 
 
@@ -35,7 +34,7 @@ import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-ce
 import { cn } from "@/lib/utils";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, onSnapshot } from "firebase/firestore";
 
 
 type ConversationMessage = {
@@ -216,12 +215,17 @@ export default function Home() {
 
                 if (result.suggestedPromptId) {
                     setPromptId(result.suggestedPromptId);
-                    let recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
-                    if (recommendations.length === 0) {
-                      recommendations = sampleScenarios;
-                    }
-                    setRecommendedScenarios(recommendations);
                     
+                    const unsubscribe = onSnapshot(collection(db, "scenarios"), (snapshot) => {
+                        const allScenarios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Scenario));
+                        let recommendations = allScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
+                        if (recommendations.length === 0) {
+                          recommendations = allScenarios;
+                        }
+                        setRecommendedScenarios(recommendations);
+                        unsubscribe(); 
+                    });
+
                     toast({
                         title: "需求分析完成！",
                         description: "我们已经理解您的需求，并为您推荐了以下解决方案。",
