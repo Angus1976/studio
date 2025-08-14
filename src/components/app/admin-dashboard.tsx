@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -175,7 +175,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
   }
 
   return (
-    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
+    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm(); }}>
         <DialogTrigger asChild>
             <Button>{buttonText}</Button>
         </DialogTrigger>
@@ -417,7 +417,7 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
   };
   
   return (
-    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
+    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm(); }}>
         <DialogTrigger asChild>
             <Button>{buttonText}</Button>
         </DialogTrigger>
@@ -507,11 +507,10 @@ const llmModelSchema = z.object({
 type LlmModel = z.infer<typeof llmModelSchema> & { id: string };
 
 const tokenSchema = z.object({
-  key: z.string().min(1, "Key不能为空"),
   assignedTo: z.string().min(1, "必须分配给一个租户或用户"),
-  usageLimit: z.number().min(0, "用量限制不能为负"),
+  usageLimit: z.coerce.number().min(0, "用量限制不能为负"),
 });
-type Token = z.infer<typeof tokenSchema> & { id: string, used: number };
+type Token = z.infer<typeof tokenSchema> & { id: string; key: string; used: number };
 
 const softwareAssetSchema = z.object({
   name: z.string().min(1, "资产名称不能为空"),
@@ -552,7 +551,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     // Placeholder forms and handlers for adding new items
     const LlmForm = () => {
         const form = useForm({ resolver: zodResolver(llmModelSchema), defaultValues: {modelName: "", provider: "", apiKey: ""}});
-        const onSubmit = (data: any) => {
+        const onSubmit = (data: z.infer<typeof llmModelSchema>) => {
             setLlmModels(prev => [...prev, {...data, id: `llm-${Date.now()}`}]);
             toast({title: "LLM 模型已添加"});
             form.reset();
@@ -570,18 +569,17 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     };
     
      const TokenForm = () => {
-        const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {key: "", assignedTo: "", usageLimit: 0}});
-        const onSubmit = (data: any) => {
-            setTokens(prev => [...prev, {...data, id: `token-${Date.now()}`, used: 0}]);
+        const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {assignedTo: "", usageLimit: 0}});
+        const onSubmit = (data: z.infer<typeof tokenSchema>) => {
+            setTokens(prev => [...prev, {...data, id: `token-${Date.now()}`, used: 0, key: `key-gen-${Date.now()}`}]);
             toast({title: "Token 已分配"});
             form.reset();
         };
         return (
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-                    <FormField control={form.control} name="key" render={({field}) => (<FormItem><FormControl><Input placeholder="Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="assignedTo" render={({field}) => (<FormItem><FormControl><Input placeholder="分配给" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="usageLimit" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="用量限制" {...field} onChange={e => field.onChange(Number(e.target.value))}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="assignedTo" render={({field}) => (<FormItem><FormControl><Input placeholder="分配给 (租户或用户)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="usageLimit" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="用量限制" {...field} /></FormControl><FormMessage/></FormItem>)}/>
                     <Button type="submit" size="sm" className="w-full">分配 Token</Button>
                 </form>
             </Form>
@@ -590,7 +588,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     
     const SoftwareAssetForm = () => {
         const form = useForm({ resolver: zodResolver(softwareAssetSchema), defaultValues: {name: "", type: "", licenseKey: ""}});
-        const onSubmit = (data: any) => {
+        const onSubmit = (data: z.infer<typeof softwareAssetSchema>) => {
             setSoftwareAssets(prev => [...prev, {...data, id: `asset-${Date.now()}`}]);
             toast({title: "软件资产已添加"});
             form.reset();
@@ -873,7 +871,7 @@ const managementPanels = [
     {
         id: "users",
         title: "个人用户管理",
-        description: "查看和管理所有个人用户。",
+        description: "查看和管理所有个人用户和技术工程师账户。",
         icon: User,
         buttonText: "管理个人用户",
     },
@@ -945,12 +943,6 @@ export function AdminDashboard() {
                                     title={panel.title}
                                     description={panel.description}
                                 />
-                            ) : panel.id === 'engineers' ? (
-                                <UserManagementDialog 
-                                    buttonText={panel.buttonText}
-                                    title={panel.title}
-                                    description={panel.description}
-                                />
                             ) : (
                                 <AssetManagementDialog
                                     triggerButtonText={panel.buttonText}
@@ -999,5 +991,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
