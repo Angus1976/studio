@@ -24,7 +24,7 @@ const Main = ({ children, className }: { children: React.ReactNode; className?: 
 };
 
 const Right = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-  return <div className={cn("lg:col-span-4 h-full hidden lg:flex flex-col gap-6", className)}>{children}</div>;
+  return <div className={cn("lg:col-span-4 h-full flex flex-col gap-6", className)}>{children}</div>;
 };
 
 ThreeColumnLayout.Left = Left;
