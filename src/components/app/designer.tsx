@@ -59,6 +59,14 @@ export const sampleScenarios: Scenario[] = [
         industry: '法务风控',
         task: '合同审查',
         prompt: 'You are an AI legal assistant specializing in contract review. Analyze the following contract text. Identify and summarize key clauses (e.g., payment terms, liability, termination), flag potential risks or ambiguities, and provide suggestions for revision to protect our interests.',
+    },
+    {
+        id: 'knowledge-base-assistant',
+        title: '企业智能知识库助理',
+        description: '支持导入企业私有知识库，对接内部软件系统，提供精准的智能问答和数据查询服务。',
+        industry: '企业服务',
+        task: '知识库问答',
+        prompt: 'You are an enterprise knowledge base assistant. Based on the provided enterprise knowledge base context and the user\'s question, provide an accurate and comprehensive answer. If the information is not in the knowledge base, state that clearly. Context: [User-provided knowledge base data]. Question: {{{userContext}}}',
     }
 ];
 
@@ -328,3 +336,4 @@ export function Designer() {
     
 
     
+
