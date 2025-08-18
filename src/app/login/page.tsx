@@ -66,6 +66,7 @@ export default function LoginPage() {
   const handleDemoLogin = async (role: DemoRole) => {
     setIsLoading(true);
     try {
+      // First, just try to log in.
       const result = await loginUser({ email: role.email, password: 'password' });
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userRole', result.role);
@@ -75,6 +76,7 @@ export default function LoginPage() {
       });
       router.push('/');
     } catch (error: any) {
+      // If login fails because user doesn't exist, create it.
       if (error.message && error.message.includes('用户不存在')) {
         try {
           await registerUser({
@@ -84,10 +86,10 @@ export default function LoginPage() {
             name: role.name,
           });
 
-          await signInWithEmailAndPassword(clientAuth, role.email, 'password');
-
+          // After successful registration, sign in again.
+          const result = await loginUser({ email: role.email, password: 'password' });
           localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('userRole', role.fullName);
+          localStorage.setItem('userRole', result.role);
           
           toast({
             title: '演示账户已创建并登录',
@@ -103,6 +105,7 @@ export default function LoginPage() {
           });
         }
       } else {
+        // Handle other login errors (e.g., wrong password for an existing demo account)
         console.error("Demo login failed:", error);
         toast({
           variant: "destructive",

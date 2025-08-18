@@ -48,10 +48,15 @@ const useAuth = () => {
 
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
+                // If firebase says we are logged in, trust it.
+                // If local storage is out of sync, it will be updated on next login.
                 setIsAuthenticated(true);
                 const storedRole = localStorage.getItem('userRole');
-                setUserRole(storedRole);
+                if (storedRole) {
+                    setUserRole(storedRole);
+                }
             } else {
+                // If firebase says we are logged out, clear local storage.
                 localStorage.removeItem('isAuthenticated');
                 localStorage.removeItem('userRole');
                 setIsAuthenticated(false);
