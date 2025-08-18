@@ -45,14 +45,13 @@ const promptExecutionFlow = ai.defineFlow(
         prompt.push({ role: 'system', content: [{text: systemInstruction}] });
     }
 
-    const userParts: Part[] = [];
+    const userContent: Part[] = [];
     if(context) {
-        userParts.push({ text: `Context/Examples:\n${context}\n\n---\n\n` });
+        userContent.push({ text: `Context/Examples:\n${context}\n\n---\n\n` });
     }
-    userParts.push({ text: `User Instruction:\n${finalUserPrompt}`});
-
-    // The content of a 'user' role part must be an array of Parts (text, media, etc.)
-    prompt.push({ role: 'user', content: userParts.map(p => p.content).flat() });
+    userContent.push({ text: `User Instruction:\n${finalUserPrompt}`});
+    
+    prompt.push({ role: 'user', content: userContent });
     
     // Configure safety settings - this is illustrative; actual negative prompt handling is now in system prompt
     const safetySettings = [];
