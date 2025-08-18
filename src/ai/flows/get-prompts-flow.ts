@@ -7,7 +7,7 @@
  */
 
 import admin from '@/lib/firebase-admin';
-import { type GetPromptsOutput } from '@/lib/data-types';
+import { type GetPromptsOutput, PromptSchema } from '@/lib/data-types';
 
 
 export async function getPrompts(): Promise<GetPromptsOutput> {
@@ -26,18 +26,19 @@ export async function getPrompts(): Promise<GetPromptsOutput> {
 
     const prompts: GetPromptsOutput = promptsSnapshot.docs.map(doc => {
         const data = doc.data();
-        return {
+        // Zod parsing to ensure data integrity
+        const parsedData = PromptSchema.safeParse({
             id: doc.id,
-            name: data.name || '未命名',
-            expertId: data.expertId || 'general-expert', // Default to a general expert if not set
-            userPrompt: data.userPrompt || '',
-            systemPrompt: data.systemPrompt,
-            context: data.context,
-            negativePrompt: data.negativePrompt,
-            tenantId: data.tenantId,
-            archived: data.archived || false,
-        };
-    });
+            ...data,
+        });
+
+        if (!parsedData.success) {
+            console.warn(`Skipping invalid prompt object from Firestore: ${doc.id}`, parsedData.error);
+            return null;
+        }
+
+        return parsedData.data;
+    }).filter((p): p is NonNullable<typeof p> => p !== null);
     
     return prompts;
   } catch (error) {
