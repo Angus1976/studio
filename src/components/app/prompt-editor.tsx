@@ -40,7 +40,7 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
                    结构化提示词编辑器
                 </CardTitle>
                 <CardDescription>
-                    在此设计和编排您的提示词。在用户指令中使用 `{"{{variable}}"`} 语法来定义可替换的变量。
+                    在此设计和编排您的提示词。在用户指令中使用 <code className="bg-muted px-1 py-0.5 rounded text-muted-foreground">{`{{variable}}`}</code> 语法来定义可替换的变量。
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 grid grid-cols-1 gap-4 overflow-y-auto p-4">
