@@ -33,38 +33,35 @@ const promptExecutionFlow = ai.defineFlow(
     const template = Handlebars.compile(userPrompt);
     const finalUserPrompt = template(variables || {});
     
+    let systemInstruction = systemPrompt || '';
+    if (negativePrompt) {
+       systemInstruction += `\n\nIMPORTANT: Do not include any of the following in your response: "${negativePrompt}"`.trim();
+    }
+    
     // Construct the prompt with structured roles for better model performance
     const prompt: Part[] = [];
 
-    if (systemPrompt) {
-        prompt.push({ role: 'system', content: [{text: systemPrompt}] });
+    if (systemInstruction) {
+        prompt.push({ role: 'system', content: [{text: systemInstruction}] });
     }
 
-    const userParts = [];
+    const userParts: Part[] = [];
     if(context) {
         userParts.push({ text: `Context/Examples:\n${context}\n\n---\n\n` });
     }
     userParts.push({ text: `User Instruction:\n${finalUserPrompt}`});
 
-    prompt.push({ role: 'user', content: userParts });
+    // The content of a 'user' role part must be an array of Parts (text, media, etc.)
+    prompt.push({ role: 'user', content: userParts.map(p => p.content).flat() });
     
-    // Configure safety settings to handle the negative prompt
+    // Configure safety settings - this is illustrative; actual negative prompt handling is now in system prompt
     const safetySettings = [];
     if (negativePrompt) {
         safetySettings.push({
             category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
             threshold: 'BLOCK_ONLY_HIGH',
         });
-        // Also, add the negative prompt to the system prompt if possible
-        const updatedSystemPrompt = `${systemPrompt || ''}\n\nIMPORTANT: Do not include any of the following in your response: "${negativePrompt}"`.trim();
-        const systemPromptIndex = prompt.findIndex(p => p.role === 'system');
-        if (systemPromptIndex !== -1 && prompt[systemPromptIndex]?.content) {
-            prompt[systemPromptIndex] = { role: 'system', content: [{text: updatedSystemPrompt}]};
-        } else {
-             prompt.unshift({ role: 'system', content: [{text: updatedSystemPrompt}] });
-        }
     }
-
 
     const llmResponse = await ai.generate({
       prompt: prompt,
