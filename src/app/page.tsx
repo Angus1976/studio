@@ -5,12 +5,14 @@ import Link from "next/link";
 import { AppHeader } from "@/components/app/header";
 import { AdminDashboard } from "@/components/app/admin-dashboard";
 import { TenantDashboard } from "@/components/app/tenant-dashboard";
-import { LoaderCircle, LogIn, UserPlus, PackageSearch } from "lucide-react";
+import { LoaderCircle, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { PromptEngineerWorkbench } from "@/components/app/prompt-engineer-workbench";
 import { AppLogo } from "@/components/app/icons";
+import { UserPersonaView } from "@/components/app/user-persona-view";
+
 
 const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -30,17 +32,15 @@ const useAuth = () => {
             }
         });
 
-        // Also check local storage on initial load
         const localAuth = localStorage.getItem('isAuthenticated') === 'true';
-        const localRole = localStorage.getItem('userRole');
-        if (localAuth && localRole) {
+        if (!auth.currentUser && localAuth) {
+            const localRole = localStorage.getItem('userRole');
             setIsAuthenticated(true);
             setUserRole(localRole);
-        } else {
-            // Set to false if nothing is in local storage to avoid loading state flash
+        } else if (!auth.currentUser && !localAuth) {
             setIsAuthenticated(false);
+            setUserRole(null);
         }
-
 
         return () => unsubscribe();
     }, []);
@@ -49,7 +49,6 @@ const useAuth = () => {
         await signOut(auth);
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
-        // No need to manually set state, onAuthStateChanged will handle it.
         window.location.href = '/login';
     };
 
@@ -101,8 +100,11 @@ export default function Home() {
         case 'Tenant Admin':
             return <TenantDashboard />;
         case 'Prompt Engineer/Developer':
+            return <PromptEngineerWorkbench />;
         case 'Individual User':
+             return <UserPersonaView />;
         default:
+            // Fallback for any other user role or if role is not defined
             return <PromptEngineerWorkbench />;
     }
   };
