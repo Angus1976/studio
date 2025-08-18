@@ -78,7 +78,8 @@ export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput>
       message: 'Login successful',
     };
 
-  } catch (error: any) {
+  } catch (error: any)
+{
     console.error('Error in loginUser flow:', error.code, error.message);
     if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
       throw new Error('用户不存在或密码错误。');

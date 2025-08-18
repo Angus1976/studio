@@ -10,9 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
 import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth as clientAuth } from '@/lib/firebase';
-
 
 type DemoRole = {
   key: string;
