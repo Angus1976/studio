@@ -21,6 +21,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
     const [conversation, setConversation] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isFinished, setIsFinished] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom
@@ -61,6 +62,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
             setConversation(prev => [...prev, { role: 'model', parts: [{ text: result.response }] }]);
             
             if(result.isFinished && result.suggestedPromptId) {
+                 setIsFinished(true);
                  toast({ title: "需求分析完成", description: "正在为您推荐能力场景..." });
                  onFinish(result.suggestedPromptId);
             }
@@ -115,7 +117,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                                 )}
                            </div>
                         ))}
-                         {isLoading && conversation.length > 0 && (
+                         {isLoading && conversation.length > 0 && !isFinished &&(
                             <div className="flex items-start gap-3 justify-start">
                                 <Avatar className="h-8 w-8 bg-accent/20 text-accent">
                                     <AvatarFallback><Bot size={18}/></AvatarFallback>
@@ -129,7 +131,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                 </ScrollArea>
                 <form onSubmit={handleSubmit} className="relative">
                     <Textarea
-                        placeholder="输入您的需求..."
+                        placeholder={isFinished ? "需求分析完成。请查看右侧推荐。" : "输入您的需求..."}
                         value={input}
                         onChange={e => setInput(e.target.value)}
                         onKeyDown={e => {
@@ -138,10 +140,10 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                                 handleSubmit(e);
                             }
                         }}
-                        disabled={isLoading}
+                        disabled={isLoading || isFinished}
                         className="pr-14"
                     />
-                     <Button type="submit" size="icon" className="absolute right-2 bottom-2 h-8 w-10" disabled={isLoading || !input.trim()}>
+                     <Button type="submit" size="icon" className="absolute right-2 bottom-2 h-8 w-10" disabled={isLoading || !input.trim() || isFinished}>
                         {isLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
                 </form>

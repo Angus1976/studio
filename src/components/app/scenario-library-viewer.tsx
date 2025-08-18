@@ -24,22 +24,12 @@ export function ScenarioLibraryViewer({ scenarios, isLoading }: ScenarioLibraryV
             请先完成左侧的需求导航，AI 将为您推荐最匹配的能力场景。
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-5/6" />
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                <Skeleton className="h-10 w-1/2" />
-                <Skeleton className="h-10 w-1/2" />
-              </CardFooter>
-            </Card>
-          ))}
+        <CardContent className="flex flex-col items-center justify-center flex-1 gap-4 text-center">
+             <Skeleton className="h-12 w-12 rounded-full" />
+             <div className="space-y-2">
+                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4 w-[200px]" />
+            </div>
         </CardContent>
       </Card>
     );
@@ -60,7 +50,7 @@ export function ScenarioLibraryViewer({ scenarios, isLoading }: ScenarioLibraryV
         {scenarios.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {scenarios.map((scenario) => (
-              <Card key={scenario.id} className="flex flex-col">
+              <Card key={scenario.id} className="flex flex-col hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-lg">{scenario.title}</CardTitle>
                 </CardHeader>
@@ -82,7 +72,7 @@ export function ScenarioLibraryViewer({ scenarios, isLoading }: ScenarioLibraryV
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-center p-8">
-            <AlertTriangle className="h-12 w-12 mb-4" />
+            <AlertTriangle className="h-12 w-12 mb-4 text-destructive" />
             <h3 className="text-lg font-semibold text-foreground mb-2">未能找到完全匹配的场景</h3>
             <p className="text-sm">
                 抱歉，我们的标准库中似乎没有完美匹配您独特需求的场景。
@@ -94,9 +84,9 @@ export function ScenarioLibraryViewer({ scenarios, isLoading }: ScenarioLibraryV
         )}
       </CardContent>
        {scenarios.length > 0 && (
-         <CardFooter className="border-t pt-4 flex-col items-start gap-2 text-sm text-muted-foreground">
-             <p>没有找到满意的？</p>
-             <Button variant="secondary">联系工程师定制专属场景</Button>
+         <CardFooter className="border-t pt-6 flex-col items-center gap-4 text-sm text-muted-foreground text-center">
+             <p>没有找到满意的？<br/>您可以联系我们的认证工程师为您量身定制专属的 AI 能力场景。</p>
+             <Button variant="secondary">联系平台认证工程师</Button>
          </CardFooter>
        )}
     </Card>

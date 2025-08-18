@@ -9,11 +9,14 @@ import { promptScenarios, Scenario } from '@/lib/prompt-scenarios';
 export function UserPersonaView() {
   const [recommendedExpertId, setRecommendedExpertId] = useState<string | null>(null);
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+
 
   const handleNavigationFinish = (expertId: string) => {
     setRecommendedExpertId(expertId);
     const filteredScenarios = promptScenarios.filter(s => s.expertId === expertId);
     setRecommendedScenarios(filteredScenarios);
+    setShowRecommendations(true);
   };
 
   return (
@@ -25,7 +28,7 @@ export function UserPersonaView() {
       <ThreeColumnLayout.Main className="lg:col-span-8 xl:col-span-9">
         <ScenarioLibraryViewer 
             scenarios={recommendedScenarios} 
-            isLoading={!recommendedExpertId}
+            isLoading={!showRecommendations}
         />
       </ThreeColumnLayout.Main>
     </ThreeColumnLayout>

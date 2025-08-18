@@ -105,7 +105,7 @@ export default function Home() {
              return <UserPersonaView />;
         default:
             // Fallback for any other user role or if role is not defined
-            return <PromptEngineerWorkbench />;
+            return <UserPersonaView />;
     }
   };
 
