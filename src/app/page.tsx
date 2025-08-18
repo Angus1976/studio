@@ -11,7 +11,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { PromptEngineerWorkbench } from "@/components/app/prompt-engineer-workbench";
 import { AppLogo } from "@/components/app/icons";
-import { UserPersonaView } from "@/components/app/user-persona-view";
+import { AIWorkbench } from "@/components/app/ai-workbench";
 
 
 const useAuth = () => {
@@ -102,14 +102,14 @@ export default function Home() {
         case 'Platform Admin':
             return <AdminDashboard />;
         case 'Tenant Admin':
-            return <TenantDashboard />;
+             return <AIWorkbench />;
         case 'Prompt Engineer/Developer':
             return <PromptEngineerWorkbench />;
         case 'Individual User':
-             return <UserPersonaView />;
+             return <AIWorkbench />;
         default:
             // Fallback for any other user role or if role is not defined
-            return <UserPersonaView />;
+            return <AIWorkbench />;
     }
   };
 
