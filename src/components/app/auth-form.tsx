@@ -21,7 +21,7 @@ import { LoaderCircle } from "lucide-react";
 const loginSchema = z.object({
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
-  role: z.string({ required_error: "请选择一个角色。" }),
+  role: z.string().optional(), // Role is not needed for login, but keep for form consistency
 });
 
 // Schema for the signup form
@@ -41,12 +41,11 @@ type AuthFormProps = {
 
 const roles = {
     'platform': [
-        { value: 'admin', label: '平台方 - 管理员' },
-        { value: 'engineer', label: '平台方 - 技术工程师' },
+        { value: 'admin', label: '平台管理员' },
     ],
     'user': [
-        { value: 'tenant', label: '用户方 - 企业租户' },
-        { value: 'individual', label: '用户方 - 个人用户' },
+        { value: 'tenant', label: '租户管理员' },
+        { value: 'engineer', label: '提示词工程师' },
     ]
 };
 
@@ -54,7 +53,7 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
   const form = useForm({
     resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
     defaultValues: mode === 'login' 
-        ? { email: "", password: "", role: undefined } 
+        ? { email: "", password: "" } 
         : { name: "", email: "", password: "", role: undefined },
   });
 
@@ -62,7 +61,8 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {mode === 'signup' && (
-           <FormField
+           <>
+            <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
@@ -75,6 +75,7 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
                 </FormItem>
               )}
             />
+           </>
         )}
         <FormField
           control={form.control}
@@ -102,35 +103,37 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>角色</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择您的角色" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                    {Object.entries(roles).map(([groupName, groupRoles]) => (
-                        <SelectGroup key={groupName}>
-                            <SelectLabel>{groupName === 'platform' ? '平台方' : '用户方'}</SelectLabel>
-                            {groupRoles.map(role => (
-                                <SelectItem key={role.value} value={role.value}>
-                                    {role.label.split(' - ')[1]}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {mode === 'signup' && (
+            <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>角色</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                    <SelectTrigger>
+                        <SelectValue placeholder="选择您的角色" />
+                    </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {Object.entries(roles).map(([groupName, groupRoles]) => (
+                            <SelectGroup key={groupName}>
+                                <SelectLabel>{groupName === 'platform' ? '平台方' : '用户方'}</SelectLabel>
+                                {groupRoles.map(role => (
+                                    <SelectItem key={role.value} value={role.value}>
+                                        {role.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectGroup>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        )}
         <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
           {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
           {mode === "login" ? "登录" : "注册"}

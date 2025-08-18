@@ -8,10 +8,11 @@ import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, Code, Building, Briefcase } from "lucide-react";
+import { Shield, Code, Building, User } from "lucide-react";
 import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
-import { signInWithEmailAndPassword, AuthErrorCodes } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { AuthErrorCodes } from "firebase/auth";
 
 type DemoRole = {
   key: string;
@@ -23,10 +24,9 @@ type DemoRole = {
 };
 
 const demoRoles: DemoRole[] = [
-    { key: 'admin', name: '管理员', email: 'admin@example.com', icon: Shield, group: 'platform', fullName: '平台方 - 管理员' },
-    { key: 'engineer', name: '技术工程师', email: 'engineer@example.com', icon: Code, group: 'platform', fullName: '平台方 - 技术工程师' },
-    { key: 'tenant', name: '企业租户', email: 'tenant@example.com', icon: Building, group: 'user', fullName: '用户方 - 企业租户' },
-    { key: 'individual', name: '个人用户', email: 'user@example.com', icon: Briefcase, group: 'user', fullName: '用户方 - 个人用户' },
+    { key: 'admin', name: '平台管理员', email: 'admin@promptuniverse.com', icon: Shield, group: 'platform', fullName: 'Platform Admin' },
+    { key: 'tenant', name: '租户管理员', email: 'tenant@example.com', icon: Building, group: 'user', fullName: 'Tenant Admin' },
+    { key: 'engineer', name: '提示词工程师', email: 'engineer@example.com', icon: Code, group: 'user', fullName: 'Prompt Engineer/Developer' },
 ];
 
 
@@ -38,10 +38,7 @@ export default function LoginPage() {
   const handleLogin = async (values: any) => {
     setIsLoading(true);
     try {
-        // Step 1: Sign in on the client to verify password
-        const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-        
-        // Step 2: If client auth is successful, get role data from our secure backend
+        await signInWithEmailAndPassword(auth, values.email, values.password);
         const result = await loginUser({ email: values.email, password: values.password });
 
         localStorage.setItem('isAuthenticated', 'true');
@@ -56,10 +53,18 @@ export default function LoginPage() {
 
     } catch (error: any) {
         console.error("Login failed:", error);
+        let description = "用户名或密码不正确，请重试。";
+        if (error instanceof Error) {
+           if (error.message.includes("auth/invalid-credential") || error.message.includes("auth/user-not-found") || error.message.includes("auth/wrong-password")) {
+                description = "用户不存在或密码错误。";
+           } else {
+                description = error.message;
+           }
+        }
         toast({
             variant: "destructive",
             title: "登录失败",
-            description: error.message === '用户不存在或密码错误。' ? error.message : "用户名或密码不正确，请重试。",
+            description,
         });
     } finally {
         setIsLoading(false);
@@ -69,25 +74,22 @@ export default function LoginPage() {
   const handleDemoLogin = async (role: DemoRole) => {
     setIsLoading(true);
     try {
-      // First, try to log in using the client SDK to verify password
+      // First, try to log in.
       await signInWithEmailAndPassword(auth, role.email, 'password');
-      
-      // If login is successful, get user data from our backend
       const result = await loginUser({ email: role.email, password: 'password' });
 
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userRole', result.role);
       toast({
         title: '演示登录成功',
-        description: `您现在以“${role.fullName}”的身份登录。`,
+        description: `您现在以“${role.name}”的身份登录。`,
       });
       router.push('/');
 
     } catch (error: any) {
-      // If login fails, check if it's because the user doesn't exist
-      if (error.code === AuthErrorCodes.USER_DELETED || error.code === AuthErrorCodes.INVALID_credential) {
+      // If login fails because user not found, create the user then log in.
+      if (error.code === AuthErrorCodes.USER_DELETED || error.code === AuthErrorCodes.INVALID_CREDENTIAL || error.code === 'auth/user-not-found') {
         try {
-          // User doesn't exist, so create them via our backend flow
           await registerUser({
             email: role.email,
             password: 'password',
@@ -95,10 +97,8 @@ export default function LoginPage() {
             name: role.name,
           });
 
-          // After successful registration, sign in again using client SDK
           await signInWithEmailAndPassword(auth, role.email, 'password');
           
-          // And get user data from backend
           const result = await loginUser({ email: role.email, password: 'password' });
 
           localStorage.setItem('isAuthenticated', 'true');
@@ -106,7 +106,7 @@ export default function LoginPage() {
           
           toast({
             title: '演示账户已创建并登录',
-            description: `欢迎体验“${role.fullName}”角色。`,
+            description: `欢迎体验“${role.name}”角色。`,
           });
           router.push('/');
         } catch (registerError: any) {
@@ -136,12 +136,12 @@ export default function LoginPage() {
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 bg-background">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <AppLogo className="mx-auto h-12 w-auto text-accent" />
-        <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-foreground">
+        <h2 className="mt-6 text-center text-3xl font-bold font-headline leading-9 tracking-tight text-foreground">
           登录您的账户
         </h2>
       </div>
 
-       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-4xl">
+       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-3xl">
             <Card className="mb-8 shadow-lg border-accent/20">
                 <CardHeader>
                     <CardTitle className="text-lg text-center font-headline">一键登录演示账户</CardTitle>
@@ -150,9 +150,9 @@ export default function LoginPage() {
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <h3 className="text-center font-semibold mb-4 text-foreground">平台方</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {demoRoles.filter(r => r.group === 'platform').map((role) => (
-                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
+                        <div className="flex justify-center">
+                           {demoRoles.filter(r => r.group === 'platform').map((role) => (
+                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base w-48" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
                                     <span>{role.name}</span>
                                 </Button>

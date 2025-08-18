@@ -11,10 +11,9 @@ import { z } from "zod";
 
 
 const roleMap: { [key: string]: string } = {
-    'admin': '平台方 - 管理员',
-    'engineer': '平台方 - 技术工程师',
-    'tenant': '用户方 - 企业租户',
-    'individual': '用户方 - 个人用户',
+    'admin': 'Platform Admin',
+    'tenant': 'Tenant Admin',
+    'engineer': 'Prompt Engineer/Developer',
 };
 
 const signupSchema = z.object({
@@ -74,7 +73,7 @@ export default function SignupPage() {
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 bg-background">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <AppLogo className="mx-auto h-12 w-auto text-accent" />
-        <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-foreground">
+        <h2 className="mt-6 text-center text-3xl font-bold font-headline leading-9 tracking-tight text-foreground">
           创建新账户
         </h2>
       </div>

@@ -1,98 +1,92 @@
 'use server';
-
 /**
- * @fileOverview An AI flow to analyze a company's organizational structure and processes.
+ * @fileOverview An AI flow for analyzing corporate organizational structures.
  *
- * - analyzeOrgStructure - A function that takes organizational information and returns an analysis.
+ * - analyzeOrgStructure - A function that takes organizational info and company context to provide analysis.
  * - AnalyzeOrgStructureInput - The input type for the analyzeOrgStructure function.
  * - AnalyzeOrgStructureOutput - The return type for the analyzeOrgStructure function.
  */
 
-// NOTE: All Genkit-related functionality is currently commented out
-// due to dependency issues with next@14. To re-enable, see CONFIGURATION_README.md.
+import {ai} from '@/ai/genkit';
+import {z} from 'zod';
 
-// MOCK IMPLEMENTATION
-export type AnalyzeOrgStructureInput = {
-  orgInfo: string;
-  companyContext: string;
-};
+export const AnalyzeOrgStructureInputSchema = z.object({
+  orgInfo: z
+    .string()
+    .describe(
+      'A textual representation of the company\'s organizational structure, often as a hierarchical list.'
+    ),
+  companyContext: z
+    .string()
+    .optional()
+    .describe(
+      'Additional context about the company, such as industry, business, revenue, profit, and number of employees.'
+    ),
+});
+export type AnalyzeOrgStructureInput = z.infer<
+  typeof AnalyzeOrgStructureInputSchema
+>;
 
-export type AnalyzeOrgStructureOutput = {
-  decisionPoints: string;
-  potentialBottlenecks: string;
-  improvementSuggestions: string;
-};
+export const AnalyzeOrgStructureOutputSchema = z.object({
+  decisionPoints: z
+    .string()
+    .describe('Key decision-making nodes or roles within the structure.'),
+  potentialBottlenecks: z
+    .string()
+    .describe('Potential bottlenecks in communication or workflow.'),
+  improvementSuggestions: z
+    .string()
+    .describe('Actionable suggestions for improving the organizational structure.'),
+});
+export type AnalyzeOrgStructureOutput = z.infer<
+  typeof AnalyzeOrgStructureOutputSchema
+>;
 
-export async function analyzeOrgStructure(input: AnalyzeOrgStructureInput): Promise<AnalyzeOrgStructureOutput> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                decisionPoints: "模拟的关键决策点：CEO 和各部门主管是主要决策者。跨部门项目需经由项目管理办公室审批。",
-                potentialBottlenecks: "模拟的潜在瓶颈：研发部门的审批流程过长，可能导致项目延期。市场部和销售部之间的数据同步存在延迟。",
-                improvementSuggestions: "模拟的改进建议：1. 简化研发部门内部审批，授权团队领导更多决策权。2. 引入自动化工具，实现市场和销售数据的实时同步。3. 建立定期的跨部门沟通会议机制。"
-            });
-        }, 1000);
-    });
+export async function analyzeOrgStructure(
+  input: AnalyzeOrgStructureInput
+): Promise<AnalyzeOrgStructureOutput> {
+  return analyzeOrgStructureFlow(input);
 }
 
-// import { ai } from '@/ai/genkit';
-// import { z } from 'zod';
+const analyzeOrgStructureFlow = ai.defineFlow(
+  {
+    name: 'analyzeOrgStructureFlow',
+    inputSchema: AnalyzeOrgStructureInputSchema,
+    outputSchema: AnalyzeOrgStructureOutputSchema,
+  },
+  async (input) => {
+    const prompt = `You are an expert organizational management consultant. Your task is to analyze the provided organizational structure and company context.
 
-// const AnalyzeOrgStructureInputSchema = z.object({
-//   orgInfo: z.string().describe(
-//     "A detailed text description of the company's organizational structure, including hierarchy, departments, and roles."
-//   ),
-//   companyContext: z.string().describe(
-//     "A summary of the company's basic information, including industry, business operations, revenue, profit, number of employees, and other custom-defined fields. This provides context for the organizational analysis."
-//   )
-// });
+Based on your analysis, you must identify:
+1.  **Key Decision Points**: The individuals or departments that hold significant decision-making power.
+2.  **Potential Bottlenecks**: Areas where communication, workflow, or decision-making might slow down or get stuck.
+3.  **Improvement Suggestions**: Concrete, actionable advice to optimize the structure for better efficiency and communication.
 
-// export type AnalyzeOrgStructureInput = z.infer<typeof AnalyzeOrgStructureInputSchema>;
+Return your analysis in a structured JSON format.
 
-// const AnalyzeOrgStructureOutputSchema = z.object({
-//   decisionPoints: z.string().describe('A summary of the key decision-making points and roles in the organization.'),
-//   potentialBottlenecks: z.string().describe('An analysis of potential bottlenecks or inefficiencies in the described processes.'),
-//   improvementSuggestions: z.string().describe('Actionable suggestions for improving the organizational structure or processes.'),
-// });
+**Organizational Structure:**
+\`\`\`
+${input.orgInfo}
+\`\`\`
 
-// export type AnalyzeOrgStructureOutput = z.infer<typeof AnalyzeOrgStructureOutputSchema>;
+**Company Context:**
+\`\`\`
+${input.companyContext || 'No additional context provided.'}
+\`\`\`
+`;
 
-// export async function analyzeOrgStructure(input: AnalyzeOrgStructureInput): Promise<AnalyzeOrgStructureOutput> {
-//   return analyzeOrgStructureFlow(input);
-// }
+    const llmResponse = await ai.generate({
+      prompt: prompt,
+      model: 'googleai/gemini-1.5-flash',
+      output: {
+        schema: AnalyzeOrgStructureOutputSchema,
+      },
+    });
 
-// const prompt = ai.definePrompt({
-//   name: 'analyzeOrgStructurePrompt',
-//   input: { schema: AnalyzeOrgStructureInputSchema },
-//   output: { schema: AnalyzeOrgStructureOutputSchema },
-//   prompt: `You are an expert management consultant specializing in organizational structure and process optimization. Your task is to analyze the provided text about a company's internal mechanisms, using the company's basic information as crucial context.
-
-// Based on the user's description of their organization and company, please perform the following analysis. Ensure your response is tailored to 人事 (HR) and 经营管理 (business management) aspects.
-
-// **Company Basic Information (Context):**
-// {{{companyContext}}}
-
-// **User's Organizational Structure:**
-// {{{orgInfo}}}
-
-// Your analysis should include:
-// 1.  **Key Decision Points**: Identify and summarize the crucial decision-making nodes, departments, or roles within the described structure and processes.
-// 2.  **Potential Bottlenecks**: Pinpoint any areas that could lead to delays, communication breakdowns, or inefficiencies.
-// 3.  **Improvement Suggestions**: Provide clear, concise, and actionable recommendations to optimize the structure, streamline processes, and improve overall management efficiency.
-// `,
-// });
-
-// const analyzeOrgStructureFlow = ai.defineFlow(
-//   {
-//     name: 'analyzeOrgStructureFlow',
-//     inputSchema: AnalyzeOrgStructureInputSchema,
-//     outputSchema: AnalyzeOrgStructureOutputSchema,
-//   },
-//   async (input) => {
-//     const { output } = await prompt(input);
-//     if (!output) {
-//       throw new Error('Failed to get a valid analysis from the AI model.');
-//     }
-//     return output;
-//   }
-// );
+    const result = llmResponse.output();
+    if (!result) {
+        throw new Error("AI failed to return a structured analysis.");
+    }
+    return result;
+  }
+);

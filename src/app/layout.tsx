@@ -1,10 +1,14 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
+import { Inter, Space_Grotesk } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' })
 
 export const metadata: Metadata = {
-  title: 'AI 任务流',
-  description: '使用 AI 驱动的任务流简化您的工作。',
+  title: '提示词宇宙',
+  description: '下一代提示词管理与优化平台',
 };
 
 export default function RootLayout({
@@ -13,12 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className="h-full">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="zh-CN" className={`${inter.variable} ${spaceGrotesk.variable} h-full`}>
       <body className="font-body antialiased h-full">
         {children}
         <Toaster />
