@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -11,6 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
 import { analyzePromptMetadata, AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
+import { ThreeColumnLayout } from './layouts/three-column-layout';
 
 
 type Variable = {
@@ -65,6 +67,7 @@ export function PromptEngineerWorkbench() {
                 systemPrompt,
                 userPrompt,
                 context,
+                negativePrompt,
                 variables: varsAsObject,
                 temperature,
             });
@@ -115,10 +118,9 @@ export function PromptEngineerWorkbench() {
 
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full p-4 md:p-6 lg:p-8">
-            {/* Main Column: Editor */}
-            <div className="lg:col-span-5 h-full flex flex-col gap-6">
-                <Card className="flex-1 flex flex-col shadow-lg">
+        <ThreeColumnLayout>
+            <ThreeColumnLayout.Left>
+                 <Card className="flex-1 flex flex-col shadow-lg">
                     <CardHeader>
                         <CardTitle className="font-headline flex items-center gap-2">
                            <Sparkles className="h-6 w-6 text-accent" />
@@ -128,8 +130,8 @@ export function PromptEngineerWorkbench() {
                             在此设计和编排您的提示词。在用户指令中使用 `{{variable}}` 语法来定义可替换的变量。
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1 grid grid-cols-1 gap-4">
-                       <div className="space-y-4">
+                    <CardContent className="flex-1 grid grid-cols-1 gap-4 overflow-y-auto">
+                       <div className="grid gap-4">
                             <div>
                                 <Label htmlFor="system-prompt">系统提示 (System)</Label>
                                 <Textarea id="system-prompt" placeholder="例如：你是一个专业的翻译家..." value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} className="h-24" />
@@ -139,7 +141,7 @@ export function PromptEngineerWorkbench() {
                                 <Textarea id="user-prompt" placeholder="例如：将下面的文本翻译成 {{language}}: '{{text}}'" value={userPrompt} onChange={(e) => setUserPrompt(e.target.value)} className="h-28" />
                             </div>
                        </div>
-                       <div className="space-y-4">
+                       <div className="grid gap-4">
                             <div>
                                 <Label htmlFor="context">示例/上下文 (Context)</Label>
                                 <Textarea id="context" placeholder="提供一些一次性或少样本示例..." value={context} onChange={(e) => setContext(e.target.value)} className="h-24" />
@@ -151,10 +153,9 @@ export function PromptEngineerWorkbench() {
                        </div>
                     </CardContent>
                 </Card>
-            </div>
+            </ThreeColumnLayout.Left>
             
-             {/* Middle Column: Config & Test */}
-            <div className="lg:col-span-4 h-full flex flex-col gap-6">
+            <ThreeColumnLayout.Main>
                  <Card className="shadow-lg">
                      <CardHeader>
                         <CardTitle className="font-headline flex items-center gap-2">
@@ -192,28 +193,25 @@ export function PromptEngineerWorkbench() {
                         <CardTitle>输出结果</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
-                        {isGenerating && (
-                            <div className="flex items-center justify-center h-full">
-                                <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
-                        )}
-                        {testResult && (
-                           <div className="prose prose-sm dark:prose-invert max-w-none h-full overflow-y-auto">
-                                <p className="whitespace-pre-wrap">{testResult}</p>
-                           </div>
-                        )}
-                         {!isGenerating && !testResult && (
-                            <div className="text-center text-sm text-muted-foreground h-full flex items-center justify-center">
-                                <p>点击“生成”按钮以查看模型输出。</p>
-                            </div>
-                        )}
+                         <div className="prose prose-sm dark:prose-invert max-w-none h-full overflow-y-auto relative">
+                            {isGenerating && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                                    <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
+                            {testResult ? (
+                               <p className="whitespace-pre-wrap">{testResult}</p>
+                            ) : (
+                                <div className="text-center text-sm text-muted-foreground h-full flex items-center justify-center">
+                                    <p>点击“生成”按钮以查看模型输出。</p>
+                                </div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
-            </div>
+            </ThreeColumnLayout.Main>
 
-
-            {/* Right Column: Metadata */}
-            <div className="lg:col-span-3 h-full flex flex-col gap-6">
+            <ThreeColumnLayout.Right>
                 <Card className="shadow-lg">
                      <CardHeader>
                         <CardTitle className="font-headline flex items-center gap-2">
@@ -237,13 +235,14 @@ export function PromptEngineerWorkbench() {
                         <CardTitle>生成的元数据</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
+                        <div className="h-full overflow-y-auto relative">
                          {isAnalyzing && (
-                            <div className="flex items-center justify-center h-full">
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
                                 <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
                             </div>
                         )}
-                        {metadata && (
-                           <div className="space-y-4 text-sm h-full overflow-y-auto">
+                        {metadata ? (
+                           <div className="space-y-4 text-sm">
                                <div>
                                    <h4 className="font-semibold mb-1">适用范围</h4>
                                    <p className="text-muted-foreground">{metadata.scope}</p>
@@ -261,15 +260,15 @@ export function PromptEngineerWorkbench() {
                                    <p className="text-muted-foreground whitespace-pre-wrap">{metadata.scenario}</p>
                                </div>
                            </div>
-                        )}
-                         {!isAnalyzing && !metadata && (
+                        ) : (
                             <div className="text-center text-sm text-muted-foreground h-full flex items-center justify-center">
                                 <p>点击上方按钮以生成元数据。</p>
                             </div>
                         )}
+                        </div>
                     </CardContent>
                 </Card>
-            </div>
-        </div>
+            </ThreeColumnLayout.Right>
+        </ThreeColumnLayout>
     );
 }
