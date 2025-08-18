@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Sparkles, BrainCircuit, Save, Library, BookCopy } from 'lucide-react';
+import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Sparkles, BrainCircuit, Save, Library, BookCopy, Zap as Apply } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
@@ -16,7 +16,6 @@ import { savePrompt } from '@/ai/flows/save-prompt-flow';
 import { getPrompts, GetPromptsOutput } from '@/ai/flows/get-prompts-flow';
 import { ThreeColumnLayout } from './layouts/three-column-layout';
 import { PromptLibrary, Prompt } from './prompt-library';
-import { Apply } from 'lucide-react';
 
 type Variable = {
     id: string;
@@ -376,4 +375,5 @@ export function PromptEngineerWorkbench() {
             </ThreeColumnLayout.Right>
         </ThreeColumnLayout>
     );
-}
+
+    
