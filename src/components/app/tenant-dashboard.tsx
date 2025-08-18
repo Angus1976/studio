@@ -1328,9 +1328,6 @@ export function TenantDashboard() {
                                 导出列表
                             </Button>
                            <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
-                           <RoleManagementDialog roles={roles} setRoles={setRoles} triggerAsChild>
-                               <Button variant="outline"><Palette className="mr-2 h-4 w-4" />配置角色</Button>
-                           </RoleManagementDialog>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -1392,7 +1389,7 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
-                            <RoleManagementDialog roles={roles} setRoles={setRoles} triggerAsChild>
+                            <RoleManagementDialog roles={roles} setRoles={setRoles}>
                                 <Button>配置角色</Button>
                             </RoleManagementDialog>
                         </CardContent>
