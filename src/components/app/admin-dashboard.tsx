@@ -35,6 +35,15 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
+import {
+    getTenantsAndUsers,
+    saveTenant,
+    deleteTenant,
+    saveUser,
+    deleteUser,
+    Tenant,
+    IndividualUser
+} from '@/ai/flows/admin-management-flows';
 
 
 // --- Tenant Management ---
@@ -44,18 +53,6 @@ const tenantSchema = z.object({
   adminEmail: z.string().email({ message: "请输入有效的邮箱地址。" }),
   status: z.enum(["活跃", "待审核", "已禁用"]),
 });
-
-type Tenant = z.infer<typeof tenantSchema> & {
-  id: string;
-  registeredDate: string;
-};
-
-// SIMULATED DATA - In a real app, this would come from a database.
-const initialTenants: Tenant[] = [
-    { id: "tenant-1", companyName: "Tech Innovators Inc.", adminEmail: "admin@techinnovators.com", registeredDate: "2024-07-20", status: "活跃" },
-    { id: "tenant-2", companyName: "A.I. Solutions Ltd.", adminEmail: "contact@aisolutions.com", registeredDate: "2024-07-18", status: "已禁用" },
-    { id: "tenant-3", companyName: "Future Dynamics", adminEmail: "ceo@futuredynamics.io", registeredDate: "2024-07-15", status: "待审核" },
-];
 
 function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, onSubmit: (values: z.infer<typeof tenantSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof tenantSchema>>({
@@ -130,41 +127,37 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 }
 
 
-function TenantManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function TenantManagementDialog({ tenants, setTenants, buttonText, title, description }: { tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>, buttonText: string, title: string, description: string }) {
+  const [isLoading, setIsLoading] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // In a real app, you would fetch this data from an API
-    // For now, we simulate a loading state and use mock data.
-    setTimeout(() => {
-      setTenants(initialTenants);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  const handleAddOrUpdateTenant = (values: z.infer<typeof tenantSchema>) => {
-    // SIMULATED API CALL
-    if (editingTenant) {
-      // Update
-      const updatedTenants = tenants.map(t => t.id === editingTenant.id ? { ...t, ...values } : t);
-      setTenants(updatedTenants);
-      toast({ title: "租户已更新", description: `${values.companyName} 的信息已更新。` });
-    } else {
-      // Add
-      const newTenant: Tenant = {
-        ...values,
-        id: `tenant-${Date.now()}`,
-        registeredDate: new Date().toISOString().split('T')[0],
-      };
-      setTenants([newTenant, ...tenants]);
-      toast({ title: "租户已添加", description: `${values.companyName} 已成功添加到平台。` });
+  const handleAddOrUpdateTenant = async (values: z.infer<typeof tenantSchema>) => {
+    setIsLoading(true);
+    try {
+        const result = await saveTenant({
+            id: editingTenant?.id,
+            ...values
+        });
+        if(result.success) {
+            toast({ title: result.message });
+            // Refresh tenants list
+            if (editingTenant) {
+                setTenants(tenants.map(t => t.id === result.id ? { ...t, ...values, id: result.id! } : t));
+            } else {
+                setTenants([...tenants, { ...values, id: result.id!, registeredDate: new Date().toISOString() }]);
+            }
+        } else {
+            toast({ title: "操作失败", description: result.message, variant: "destructive" });
+        }
+    } catch(error: any) {
+        toast({ title: "发生错误", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+        setEditingTenant(null);
+        setIsFormOpen(false);
     }
-    setEditingTenant(null);
-    setIsFormOpen(false);
   };
   
   const handleEdit = (tenant: Tenant) => {
@@ -177,10 +170,21 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
     setIsFormOpen(true);
   };
 
-  const handleDelete = (tenantId: string) => {
-    // SIMULATED API CALL
-    setTenants(tenants.filter(t => t.id !== tenantId));
-    toast({ title: "租户已删除", variant: "destructive" });
+  const handleDelete = async (tenantId: string) => {
+    setIsLoading(true);
+    try {
+        const result = await deleteTenant({ id: tenantId });
+        if(result.success) {
+            toast({ title: result.message });
+            setTenants(tenants.filter(t => t.id !== tenantId));
+        } else {
+             toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        }
+    } catch(error: any) {
+        toast({ title: "发生错误", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
   };
   
   const handleCancelForm = () => {
@@ -208,10 +212,8 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
                         <CardContent>
                             <ScrollArea className="h-[400px]">
                                 {isLoading ? (
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-12 w-full" />
+                                    <div className="flex items-center justify-center h-full">
+                                        <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
                                     </div>
                                 ) : (
                                 <Table>
@@ -284,21 +286,9 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
 const userSchema = z.object({
   name: z.string().min(2, { message: "用户姓名至少需要2个字符。" }),
   email: z.string().email({ message: "请输入有效的邮箱地址。" }),
-  role: z.enum(["个人用户", "技术工程师"]),
+  role: z.enum(["个人用户", "技术工程师", "租户管理员", "平台管理员"]),
   status: z.enum(["活跃", "待审核", "已禁用"]),
 });
-
-type IndividualUser = z.infer<typeof userSchema> & {
-  id: string;
-  registeredDate: string;
-};
-
-// SIMULATED DATA
-const initialUsers: IndividualUser[] = [
-    { id: "user-1", name: "李四", email: "lisi@example.com", registeredDate: "2024-07-21", role: "个人用户", status: "活跃" },
-    { id: "user-2", name: "王五", email: "wangwu@example.com", registeredDate: "2024-07-20", role: "技术工程师", status: "待审核" },
-    { id: "user-3", name: "赵六", email: "zhaoliu@example.com", registeredDate: "2024-07-19", role: "个人用户", status: "已禁用" },
-];
 
 function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
     const form = useForm<z.infer<typeof userSchema>>({
@@ -356,6 +346,8 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
                                 <SelectContent>
                                     <SelectItem value="个人用户">个人用户</SelectItem>
                                     <SelectItem value="技术工程师">技术工程师</SelectItem>
+                                    <SelectItem value="租户管理员">租户管理员</SelectItem>
+                                    <SelectItem value="平台管理员">平台管理员</SelectItem>
                                 </SelectContent>
                             </Select>
                             <FormMessage />
@@ -393,38 +385,38 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
     );
 }
 
-function UserManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [users, setUsers] = useState<IndividualUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function UserManagementDialog({ users, setUsers, buttonText, title, description }: { users: IndividualUser[], setUsers: React.Dispatch<React.SetStateAction<IndividualUser[]>>, buttonText: string, title: string, description: string }) {
+  const [isLoading, setIsLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
-   useEffect(() => {
-    // In a real app, you would fetch this data from an API
-    setTimeout(() => {
-      setUsers(initialUsers);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  const handleAddOrUpdateUser = (values: z.infer<typeof userSchema>) => {
-    // SIMULATED API CALL
-    if (editingUser) {
-      const updatedUsers = users.map(u => u.id === editingUser.id ? { ...u, ...values } : u);
-      setUsers(updatedUsers);
-      toast({ title: "用户已更新", description: `${values.name} 的信息已更新。` });
-    } else {
-      const newUser: IndividualUser = {
-        ...values,
-        id: `user-${Date.now()}`,
-        registeredDate: new Date().toISOString().split('T')[0],
-      };
-      setUsers([newUser, ...users]);
-      toast({ title: "用户已添加", description: `${values.name} 已成功添加到平台。` });
+  const handleAddOrUpdateUser = async (values: z.infer<typeof userSchema>) => {
+    setIsLoading(true);
+     try {
+        const result = await saveUser({
+            id: editingUser?.id,
+            ...values,
+            // These fields are not in the form but are required by the type
+            tenantId: editingUser?.tenantId || '', 
+        });
+        if(result.success) {
+            toast({ title: result.message });
+            if (editingUser) {
+                setUsers(users.map(u => u.id === result.id ? { ...u, ...values, id: result.id! } : u));
+            } else {
+                setUsers([...users, { ...values, id: result.id!, registeredDate: new Date().toISOString() }]);
+            }
+        } else {
+            toast({ title: "操作失败", description: result.message, variant: "destructive" });
+        }
+    } catch(error: any) {
+        toast({ title: "发生错误", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+        setEditingUser(null);
+        setIsFormOpen(false);
     }
-    setEditingUser(null);
-    setIsFormOpen(false);
   };
   
   const handleEdit = (user: IndividualUser) => {
@@ -437,10 +429,21 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
     setIsFormOpen(true);
   };
 
-  const handleDelete = (userId: string) => {
-    // SIMULATED API CALL
-    setUsers(users.filter(u => u.id !== userId));
-    toast({ title: "用户已删除", variant: "destructive" });
+  const handleDelete = async (userId: string) => {
+    setIsLoading(true);
+    try {
+        const result = await deleteUser({ id: userId });
+        if(result.success) {
+            toast({ title: result.message });
+            setUsers(users.filter(u => u.id !== userId));
+        } else {
+             toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        }
+    } catch(error: any) {
+        toast({ title: "发生错误", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   const handleCancelForm = () => {
@@ -468,10 +471,8 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                         <CardContent>
                             <ScrollArea className="h-[400px]">
                                 {isLoading ? (
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-12 w-full" />
-                                        <Skeleton className="h-12 w-full" />
+                                    <div className="flex items-center justify-center h-full">
+                                        <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
                                     </div>
                                 ) : (
                                 <Table>
@@ -916,13 +917,6 @@ const kpiData = [
     { title: "个人用户", value: "15,723", change: "+201", icon: User },
 ];
 
-const recentUsers = [
-    { name: "Tech Innovators Inc.", role: "企业租户", date: "2024-07-20", status: "活跃" },
-    { name: "张三", role: "技术工程师", date: "2024-07-19", status: "待审核" },
-    { name: "李四", role: "个人用户", date: "2024-07-19", status: "活跃" },
-    { name: "A.I. Solutions Ltd.", role: "企业租户", date: "2024-07-18", status: "已禁用" },
-];
-
 const managementPanels = [
     { 
         id: "tenants",
@@ -955,6 +949,35 @@ const managementPanels = [
 ];
 
 export function AdminDashboard() {
+  const { toast } = useToast();
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [users, setUsers] = useState<IndividualUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+        setIsLoading(true);
+        try {
+            const { tenants: fetchedTenants, users: fetchedUsers } = await getTenantsAndUsers();
+            setTenants(fetchedTenants);
+            setUsers(fetchedUsers);
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "数据加载失败",
+                description: "无法从数据库获取管理员数据。",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }
+    fetchData();
+  }, [toast]);
+  
+  const recentActivity = [...tenants, ...users]
+    .sort((a, b) => new Date(b.registeredDate).getTime() - new Date(a.registeredDate).getTime())
+    .slice(0, 4);
+
   return (
     <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
         <h1 className="text-3xl font-bold font-headline">管理员仪表盘</h1>
@@ -987,12 +1010,16 @@ export function AdminDashboard() {
                         <CardFooter>
                             {panel.id === 'tenants' ? (
                                 <TenantManagementDialog 
+                                    tenants={tenants}
+                                    setTenants={setTenants}
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
                                 />
                             ) : panel.id === 'users' ? (
                                 <UserManagementDialog 
+                                    users={users}
+                                    setUsers={setUsers}
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
@@ -1022,6 +1049,13 @@ export function AdminDashboard() {
                         <CardDescription>最近加入或有状态变更的用户。</CardDescription>
                     </CardHeader>
                     <CardContent>
+                       {isLoading ? (
+                            <div className="space-y-4">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -1031,19 +1065,20 @@ export function AdminDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {recentUsers.map(user => (
-                                    <TableRow key={user.name}>
-                                        <TableCell className="font-medium">{user.name}</TableCell>
-                                        <TableCell>{user.role}</TableCell>
+                                {recentActivity.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="font-medium">{'companyName' in item ? item.companyName : item.name}</TableCell>
+                                        <TableCell>{'companyName' in item ? '企业租户' : item.role}</TableCell>
                                         <TableCell>
-                                            <Badge variant={user.status === '活跃' ? 'default' : user.status === '待审核' ? 'secondary' : 'destructive'}>
-                                                {user.status}
+                                            <Badge variant={item.status === '活跃' ? 'default' : item.status === '待审核' ? 'secondary' : 'destructive'}>
+                                                {item.status}
                                             </Badge>
                                         </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
+                       )}
                     </CardContent>
                 </Card>
             </div>
@@ -1052,4 +1087,4 @@ export function AdminDashboard() {
   );
 }
 
-  
+    
