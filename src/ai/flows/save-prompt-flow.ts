@@ -4,38 +4,13 @@
  * @fileOverview A flow to save a prompt to the Firestore database.
  *
  * - savePrompt - A function that takes prompt data and saves/updates it in Firestore.
- * - SavePromptInput - The input type for the savePrompt function.
- * - SavePromptOutput - The return type for the savePrompt function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-
-export const SavePromptInputSchema = z.object({
-  id: z.string().optional(),
-  name: z.string(),
-  expertId: z.string(),
-  systemPrompt: z.string().optional(),
-  userPrompt: z.string(),
-  context: z.string().optional(),
-  negativePrompt: z.string().optional(),
-  metadata: z.object({
-    scope: z.string(),
-    recommendedModel: z.string(),
-    constraints: z.string(),
-    scenario: z.string(),
-  }).optional(),
-});
-export type SavePromptInput = z.infer<typeof SavePromptInputSchema>;
-
-
-export const SavePromptOutputSchema = z.object({
-  id: z.string(),
-  success: z.boolean(),
-  message: z.string(),
-});
-export type SavePromptOutput = z.infer<typeof SavePromptOutputSchema>;
+import {
+    type SavePromptInput,
+    type SavePromptOutput,
+} from '@/lib/data-types';
 
 
 export async function savePrompt(input: SavePromptInput): Promise<SavePromptOutput> {

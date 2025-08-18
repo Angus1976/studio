@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { LoaderCircle, Send, Check, X, Bot, Wand2, Lightbulb } from 'lucide-react';
-import { taskDispatch, TaskDispatchOutput } from '@/ai/flows/task-dispatch-flow';
+import { taskDispatch, type TaskDispatchOutput } from '@/ai/flows/task-dispatch-flow';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Task, TaskCard, TaskDependencyArrow } from './task-card';
+import { TaskCard } from './task-card';
+import type { Task } from '@/lib/data-types';
+import { TaskDependencyArrow } from './task-card';
 
 type TaskDispatchCenterProps = {
     // We can add props to load/save tasks later

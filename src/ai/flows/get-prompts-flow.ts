@@ -6,29 +6,8 @@
  * - getPrompts - A function that returns a list of all prompts.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-
-// This can be expanded later to include access control based on user/tenant
-const GetPromptsInputSchema = z.object({}); 
-
-const PromptSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    expertId: z.string(),
-    tenantId: z.string().optional(),
-    systemPrompt: z.string().optional(),
-    userPrompt: z.string(),
-    context: z.string().optional(),
-    negativePrompt: z.string().optional(),
-    createdAt: z.any().optional(),
-    updatedAt: z.any().optional(),
-    archived: z.boolean().optional(),
-});
-
-const GetPromptsOutputSchema = z.array(PromptSchema);
-export type GetPromptsOutput = z.infer<typeof GetPromptsOutputSchema>;
+import { type GetPromptsOutput } from '@/lib/data-types';
 
 
 export async function getPrompts(): Promise<GetPromptsOutput> {

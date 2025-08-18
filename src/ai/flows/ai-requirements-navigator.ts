@@ -3,29 +3,16 @@
  * @fileOverview An AI flow to guide a user through a requirements gathering conversation.
  *
  * - aiRequirementsNavigator - A function that handles the conversation for requirements gathering.
- * - RequirementsNavigatorInput - The input type for the function.
- * - RequirementsNavigatorOutput - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
+import { 
+    RequirementsNavigatorInputSchema, 
+    RequirementsNavigatorOutputSchema,
+    type RequirementsNavigatorInput,
+    type RequirementsNavigatorOutput 
+} from '@/lib/data-types';
 
-export const RequirementsNavigatorInputSchema = z.object({
-  conversationHistory: z.array(z.object({
-    role: z.enum(['user', 'model']),
-    parts: z.array(z.object({
-        text: z.string(),
-    })),
-  })).describe("The history of the conversation so far."),
-});
-export type RequirementsNavigatorInput = z.infer<typeof RequirementsNavigatorInputSchema>;
-
-export const RequirementsNavigatorOutputSchema = z.object({
-  response: z.string().describe("The AI's next response in the conversation."),
-  isFinished: z.boolean().describe("Set to true only when the AI has gathered all necessary information and the user has confirmed."),
-  suggestedPromptId: z.string().optional().describe("If isFinished is true, this should contain the ID of the expert prompt that best matches the user's needs."),
-});
-export type RequirementsNavigatorOutput = z.infer<typeof RequirementsNavigatorOutputSchema>;
 
 export async function aiRequirementsNavigator(input: RequirementsNavigatorInput): Promise<RequirementsNavigatorOutput> {
   return requirementsNavigatorFlow(input);

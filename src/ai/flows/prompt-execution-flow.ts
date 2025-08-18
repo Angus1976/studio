@@ -4,31 +4,18 @@
  * @fileOverview A generic flow to execute a structured prompt with variables.
  *
  * - executePrompt - A function that takes prompt components and variables to generate a response.
- * - PromptExecutionInput - The input type for the executePrompt function.
- * - PromptExecutionOutput - The return type for the executePrompt function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import Handlebars from 'handlebars';
 import { Part } from 'genkit/cohere';
-
-const PromptExecutionInputSchema = z.object({
-  systemPrompt: z.string().optional().describe('The system prompt to guide the AI.'),
-  userPrompt: z.string().describe('The main user prompt, which can contain Handlebars variables like {{variable}}.'),
-  context: z.string().optional().describe('Additional context or examples for the AI.'),
-  negativePrompt: z.string().optional().describe('Content that the model should avoid generating.'),
-  variables: z.record(z.string()).optional().describe('A key-value object for replacing variables in the user prompt.'),
-  temperature: z.number().min(0).max(1).optional().describe('The temperature for the model.'),
-});
-
-export type PromptExecutionInput = z.infer<typeof PromptExecutionInputSchema>;
-
-const PromptExecutionOutputSchema = z.object({
-  response: z.string().describe('The generated response from the AI.'),
-});
-
-export type PromptExecutionOutput = z.infer<typeof PromptExecutionOutputSchema>;
+import { 
+    PromptExecutionInputSchema,
+    PromptExecutionOutputSchema,
+    type PromptExecutionInput,
+    type PromptExecutionOutput,
+} from '@/lib/data-types';
 
 export async function executePrompt(
   input: PromptExecutionInput

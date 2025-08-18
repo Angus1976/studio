@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle, Sparkles, BrainCircuit, Zap as Apply } from 'lucide-react';
-import { analyzePromptMetadata, AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
+import { analyzePromptMetadata } from '@/ai/flows/analyze-prompt-metadata';
 import type { PromptData } from './prompt-editor';
+import type { AnalyzePromptMetadataOutput } from '@/lib/data-types';
 
 type MetadataAnalyzerProps = {
     prompt: PromptData;
@@ -105,4 +106,3 @@ export function MetadataAnalyzer({ prompt, onApply }: MetadataAnalyzerProps) {
         </Card>
     );
 }
-

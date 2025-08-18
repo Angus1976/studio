@@ -11,18 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PackageSearch, BookCopy, LoaderCircle, Trash2, Bot } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import type { Prompt } from '@/lib/data-types';
 
-
-export type Prompt = {
-    id: string;
-    name: string;
-    expertId: string;
-    tenantId?: string;
-    systemPrompt?: string;
-    userPrompt: string;
-    context?: string;
-    negativePrompt?: string;
-};
 
 const expertDomains: { [key: string]: string } = {
     'recruitment-expert': '招聘',

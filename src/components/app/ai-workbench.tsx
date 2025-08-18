@@ -9,7 +9,7 @@ import { ScenarioArchitectView } from './scenario-architect-view';
 import { UserActionPanel } from './user-action-panel';
 import { useToast } from '@/hooks/use-toast';
 import { getPrompts } from '@/ai/flows/get-prompts-flow';
-import type { Prompt } from './prompt-library';
+import type { Prompt } from '@/lib/data-types';
 import { TaskDispatchCenter } from './task-dispatch-center';
 import { Button } from '../ui/button';
 import { Lightbulb, Wand2, Bot } from 'lucide-react';

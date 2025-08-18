@@ -3,15 +3,16 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { getPrompts, GetPromptsOutput } from '@/ai/flows/get-prompts-flow';
+import { getPrompts, type GetPromptsOutput } from '@/ai/flows/get-prompts-flow';
 import { ThreeColumnLayout } from './layouts/three-column-layout';
-import { PromptLibrary, Prompt } from './prompt-library';
+import { PromptLibrary } from './prompt-library';
 import { PromptEditor, PromptData } from './prompt-editor';
 import { PromptTestbed } from './prompt-testbed';
 import { MetadataAnalyzer } from './metadata-analyzer';
 import { savePrompt } from '@/ai/flows/save-prompt-flow';
 import { deletePrompt } from '@/ai/flows/delete-prompt-flow';
-import { analyzePromptMetadata, AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
+import { analyzePromptMetadata, type AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
+import type { Prompt } from '@/lib/data-types';
 
 export function PromptEngineerWorkbench() {
     const { toast } = useToast();

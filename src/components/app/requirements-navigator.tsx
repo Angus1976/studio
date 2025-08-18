@@ -11,11 +11,9 @@ import { aiRequirementsNavigator } from '@/ai/flows/ai-requirements-navigator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import type { RequirementsNavigatorInput } from '@/lib/data-types';
 
-type Message = {
-    role: 'user' | 'model';
-    parts: { text: string }[];
-};
+type Message = RequirementsNavigatorInput['conversationHistory'][number];
 
 // This component is kept for potential future use, but is currently not active in the main user flow.
 export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: string) => void }) {

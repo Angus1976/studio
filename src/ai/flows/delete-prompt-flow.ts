@@ -4,24 +4,13 @@
  * @fileOverview A flow to logically delete a prompt in the Firestore database.
  *
  * - deletePrompt - A function that marks a prompt as 'archived'.
- * - DeletePromptInput - The input type for the deletePrompt function.
- * - DeletePromptOutput - The return type for the deletePrompt function.
  */
 
-import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-
-export const DeletePromptInputSchema = z.object({
-  id: z.string(),
-});
-export type DeletePromptInput = z.infer<typeof DeletePromptInputSchema>;
-
-
-export const DeletePromptOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-export type DeletePromptOutput = z.infer<typeof DeletePromptOutputSchema>;
+import { 
+    type DeletePromptInput, 
+    type DeletePromptOutput 
+} from '@/lib/data-types';
 
 
 export async function deletePrompt(input: DeletePromptInput): Promise<DeletePromptOutput> {

@@ -3,28 +3,15 @@
  * @fileOverview An AI flow to analyze a given prompt and generate relevant metadata.
  *
  * - analyzePromptMetadata - A function that takes prompt components and returns structured metadata.
- * - AnalyzePromptMetadataInput - The input type for the analyzePromptMetadata function.
- * - AnalyzePromptMetadataOutput - The return type for the analyzePromptMetadata function.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-export const AnalyzePromptMetadataInputSchema = z.object({
-  systemPrompt: z.string().optional(),
-  userPrompt: z.string(),
-  context: z.string().optional(),
-  negativePrompt: z.string().optional(),
-});
-export type AnalyzePromptMetadataInput = z.infer<typeof AnalyzePromptMetadataInputSchema>;
-
-export const AnalyzePromptMetadataOutputSchema = z.object({
-  scope: z.string().describe('分析提示词的适用范围，例如：“客户服务”、“代码生成”、“营销文案”等。'),
-  recommendedModel: z.string().describe('根据提示词的复杂度和任务类型，推荐最适合的 LLM 模型，例如：“gemini-1.5-flash”或“gemini-1.5-pro”。'),
-  constraints: z.string().describe('分析并列出使用此提示词时需要注意的约束条件或潜在限制。'),
-  scenario: z.string().describe('描述一个或多个具体的业务场景，说明此提示词可以在何种情况下发挥作用。'),
-});
-export type AnalyzePromptMetadataOutput = z.infer<typeof AnalyzePromptMetadataOutputSchema>;
+import { 
+    AnalyzePromptMetadataInputSchema,
+    AnalyzePromptMetadataOutputSchema,
+    type AnalyzePromptMetadataInput,
+    type AnalyzePromptMetadataOutput
+} from '@/lib/data-types';
 
 
 export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): Promise<AnalyzePromptMetadataOutput> {

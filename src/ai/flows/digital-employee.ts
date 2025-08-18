@@ -4,22 +4,17 @@
  * @fileOverview A digital employee flow that executes a prompt from a library.
  *
  * - digitalEmployee - A function that handles the execution of a prompt by ID.
- * - DigitalEmployeeInput - The input type for the digitalEmployee function.
- * - DigitalEmployeeOutput - The return type for the digitalEmployee function.
  */
 
 import { ai } from "@/ai/genkit";
 import { z } from "zod";
-import { executePrompt, PromptExecutionOutput } from "./prompt-execution-flow";
+import { executePrompt, type PromptExecutionOutput } from "./prompt-execution-flow";
 import { getPrompts } from "./get-prompts-flow";
+import { 
+    DigitalEmployeeInputSchema,
+    type DigitalEmployeeInput,
+} from "@/lib/data-types";
 
-export const DigitalEmployeeInputSchema = z.object({
-  promptId: z.string().describe("The ID of the prompt scenario to execute."),
-  variables: z.record(z.string()).optional().describe("Key-value pairs for variables in the prompt."),
-  temperature: z.number().min(0).max(1).optional().describe("The temperature for the model."),
-  promptContent: z.string().optional().describe("Direct prompt content to use instead of fetching by ID. Used for testing tuned prompts.")
-});
-export type DigitalEmployeeInput = z.infer<typeof DigitalEmployeeInputSchema>;
 
 export async function digitalEmployee(
   input: DigitalEmployeeInput

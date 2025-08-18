@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -5,15 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Loader, AlertCircle, Play, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type Task = {
-  id: string;
-  agent: string;
-  description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-  dependencies?: string[];
-  output_type?: string;
-};
+import type { Task } from "@/lib/data-types";
 
 type TaskCardProps = {
   task: Task;

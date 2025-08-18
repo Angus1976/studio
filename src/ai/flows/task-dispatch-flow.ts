@@ -4,38 +4,15 @@
  * and present a plan for execution.
  *
  * - taskDispatchFlow - The main flow function.
- * - TaskDispatchInput - The input schema for the flow.
- * - TaskDispatchOutput - The output schema for the flow.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-const TaskSchema = z.object({
-  id: z.string().describe('一个唯一的任务ID，例如 "task-1"。'),
-  agent: z.string().describe('执行此任务所需的虚拟AI Agent，例如 "数据分析Agent" 或 "邮件撰写Agent"。'),
-  description: z.string().describe('对此具体任务步骤的清晰描述。'),
-  status: z.enum(['pending', 'in_progress', 'completed', 'failed']).describe('任务的当前状态。'),
-  dependencies: z.array(z.string()).optional().describe('执行此任务前需要先完成的其他任务的ID列表。'),
-  output_type: z.string().optional().describe('此任务预期的输出类型, 例如 "报告" 或 "邮件"。'),
-});
-
-export const TaskDispatchInputSchema = z.object({
-  userCommand: z.string().describe("用户的原始自然语言指令。"),
-  conversationHistory: z.array(z.object({
-    role: z.enum(['user', 'model']),
-    content: z.string(),
-  })).optional().describe("如果需要，可以提供之前的对话历史。"),
-});
-export type TaskDispatchInput = z.infer<typeof TaskDispatchInputSchema>;
-
-
-export const TaskDispatchOutputSchema = z.object({
-  planSummary: z.string().describe('对整个任务计划的自然语言总结，用于和用户确认。例如：“好的，我将首先...然后...最后...您确认后立即执行。”'),
-  tasks: z.array(TaskSchema).describe('分解后的任务列表。'),
-  isClarificationNeeded: z.boolean().describe('如果用户信息不足以制定计划，则设置为 true，并在 planSummary 中提出澄清问题。'),
-});
-export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
+import { 
+    TaskDispatchInputSchema,
+    TaskDispatchOutputSchema,
+    type TaskDispatchInput,
+    type TaskDispatchOutput
+} from '@/lib/data-types';
 
 
 export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispatchOutput> {
