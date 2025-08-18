@@ -1,7 +1,8 @@
+
 "use client";
 
 import * as LucideReact from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -24,6 +25,36 @@ import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
+
+// --- Utility for LocalStorage ---
+function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+    const [storedValue, setStoredValue] = useState<T>(() => {
+        if (typeof window === "undefined") {
+            return initialValue;
+        }
+        try {
+            const item = window.localStorage.getItem(key);
+            return item ? JSON.parse(item) : initialValue;
+        } catch (error) {
+            console.error(error);
+            return initialValue;
+        }
+    });
+
+    const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
+        try {
+            const valueToStore = value instanceof Function ? value(storedValue) : value;
+            setStoredValue(valueToStore);
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    return [storedValue, setValue];
+}
 
 
 const usageData = [
@@ -617,7 +648,7 @@ function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeo
 
 function ApiKeyManagementDialog() {
   const { toast } = useToast();
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(initialApiKeys);
+  const [apiKeys, setApiKeys] = useLocalStorage<ApiKey[]>("tenant_api_keys", initialApiKeys);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -1058,10 +1089,10 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
 
 export function TenantDashboard() {
   const { toast } = useToast();
-  const [users, setUsers] = useState(initialUsers);
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [users, setUsers] = useLocalStorage<User[]>("tenant_users", initialUsers);
+  const [orders, setOrders] = useLocalStorage<Order[]>("tenant_orders", initialOrders);
+  const [roles, setRoles] = useLocalStorage<Role[]>("tenant_roles", initialRoles);
+  const [activeTab, setActiveTab] = useLocalStorage<string>("tenant_active_tab", "overview");
 
   const handleCreatePreOrder = (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
       const newOrder: Order = {

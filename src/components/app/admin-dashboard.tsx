@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,6 +34,37 @@ import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+
+
+// --- Utility for LocalStorage ---
+function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+    const [storedValue, setStoredValue] = useState<T>(() => {
+        if (typeof window === "undefined") {
+            return initialValue;
+        }
+        try {
+            const item = window.localStorage.getItem(key);
+            return item ? JSON.parse(item) : initialValue;
+        } catch (error) {
+            console.error(error);
+            return initialValue;
+        }
+    });
+
+    const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
+        try {
+            const valueToStore = value instanceof Function ? value(storedValue) : value;
+            setStoredValue(valueToStore);
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    return [storedValue, setValue];
+}
 
 
 // --- Tenant Management ---
@@ -129,7 +160,7 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 
 
 function TenantManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
+  const [tenants, setTenants] = useLocalStorage<Tenant[]>("admin_tenants", initialTenants);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
@@ -371,7 +402,7 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
 }
 
 function UserManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [users, setUsers] = useState<IndividualUser[]>(initialUsers);
+  const [users, setUsers] = useLocalStorage<IndividualUser[]>("admin_users", initialUsers);
   const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
@@ -538,9 +569,9 @@ const initialSoftwareAssets: SoftwareAsset[] = [
 
 function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
     const { toast } = useToast();
-    const [llmModels, setLlmModels] = useState(initialLlmModels);
-    const [tokens, setTokens] = useState(initialTokens);
-    const [softwareAssets, setSoftwareAssets] = useState(initialSoftwareAssets);
+    const [llmModels, setLlmModels] = useLocalStorage<LlmModel[]>('admin_llm_models', initialLlmModels);
+    const [tokens, setTokens] = useLocalStorage<Token[]>('admin_tokens', initialTokens);
+    const [softwareAssets, setSoftwareAssets] = useLocalStorage<SoftwareAsset[]>('admin_software_assets', initialSoftwareAssets);
 
     const handleDelete = (type: 'llm' | 'token' | 'asset', id: string) => {
         if (type === 'llm') setLlmModels(prev => prev.filter(item => item.id !== id));
@@ -768,7 +799,7 @@ const initialOrders: Order[] = [
 ];
 
 function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-    const [orders, setOrders] = useState<Order[]>(initialOrders);
+    const [orders, setOrders] = useLocalStorage<Order[]>("admin_orders", initialOrders);
     const { toast } = useToast();
 
     const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
