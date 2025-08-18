@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PackageSearch, BookCopy, LoaderCircle } from "lucide-react";
+import { PackageSearch, BookCopy, LoaderCircle, Trash2 } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 export type Prompt = {
     id: string;
@@ -23,7 +25,7 @@ export type Prompt = {
 };
 
 
-export function PromptLibrary({ prompts, onSelectPrompt, isLoading }: { prompts: Prompt[], onSelectPrompt: (prompt: Prompt) => void, isLoading: boolean }) {
+export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeletePrompt }: { prompts: Prompt[], onSelectPrompt: (prompt: Prompt) => void, isLoading: boolean, onDeletePrompt: (promptId: string) => void }) {
     const [search, setSearch] = useState('');
 
     const filteredPrompts = prompts.filter(p =>
@@ -57,7 +59,7 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading }: { prompts:
                             <TableRow>
                                 <TableHead>名称</TableHead>
                                 <TableHead>范围</TableHead>
-                                <TableHead></TableHead>
+                                <TableHead className="text-right">操作</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -66,7 +68,7 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading }: { prompts:
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                                        <TableCell><Skeleton className="h-8 w-14" /></TableCell>
+                                        <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredPrompts.length > 0 ? (
@@ -78,14 +80,35 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading }: { prompts:
                                                 {prompt.scope}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right space-x-1">
                                             <Button size="sm" variant="outline" onClick={() => onSelectPrompt(prompt)}>选用</Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button size="sm" variant="destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>确认删除?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            此操作无法撤销。这将把提示词存档，您将无法再使用它。
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>取消</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => onDeletePrompt(prompt.id)}>
+                                                            确认删除
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                    <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                                         没有找到提示词。
                                     </TableCell>
                                 </TableRow>

@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow to fetch all prompts from the Firestore database.
@@ -23,6 +24,7 @@ const PromptSchema = z.object({
     negativePrompt: z.string().optional(),
     createdAt: z.any().optional(),
     updatedAt: z.any().optional(),
+    archived: z.boolean().optional(),
 });
 
 const GetPromptsOutputSchema = z.array(PromptSchema);
@@ -33,7 +35,11 @@ export async function getPrompts(): Promise<GetPromptsOutput> {
   const db = admin.firestore();
   
   try {
-    const promptsSnapshot = await db.collection('prompts').orderBy('updatedAt', 'desc').get();
+    // Filter out archived prompts.
+    const promptsSnapshot = await db.collection('prompts')
+        .where('archived', '!=', true)
+        .orderBy('updatedAt', 'desc')
+        .get();
     
     if (promptsSnapshot.empty) {
       return [];
@@ -50,6 +56,7 @@ export async function getPrompts(): Promise<GetPromptsOutput> {
             context: data.context,
             negativePrompt: data.negativePrompt,
             tenantId: data.tenantId,
+            archived: data.archived || false,
         };
     });
     

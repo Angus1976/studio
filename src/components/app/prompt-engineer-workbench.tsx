@@ -10,6 +10,8 @@ import { PromptEditor, PromptData } from './prompt-editor';
 import { PromptTestbed } from './prompt-testbed';
 import { MetadataAnalyzer } from './metadata-analyzer';
 import { savePrompt } from '@/ai/flows/save-prompt-flow';
+import { deletePrompt } from '@/ai/flows/delete-prompt-flow';
+import { AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 
 export function PromptEngineerWorkbench() {
     const { toast } = useToast();
@@ -70,7 +72,7 @@ export function PromptEngineerWorkbench() {
         });
     };
 
-    const handleSavePrompt = async (promptToSave: PromptData, metadata: any) => {
+    const handleSavePrompt = async (promptToSave: PromptData, metadata?: AnalyzePromptMetadataOutput) => {
         setIsSaving(true);
         try {
             const result = await savePrompt({
@@ -104,6 +106,32 @@ export function PromptEngineerWorkbench() {
             setIsSaving(false);
         }
     };
+    
+    const handleDeletePrompt = async (promptId: string) => {
+        try {
+            const result = await deletePrompt({ id: promptId });
+            if (result.success) {
+                toast({ title: "提示词已删除" });
+                await fetchPrompts(); // Refresh the list
+                 if(activePrompt.id === promptId) {
+                    // Clear the editor if the active prompt was deleted
+                    setActivePrompt({
+                        id: null, name: '新的提示词', scope: '通用',
+                        systemPrompt: '', userPrompt: '', context: '', negativePrompt: ''
+                    });
+                }
+            } else {
+                toast({ variant: "destructive", title: "删除失败", description: result.message });
+            }
+        } catch (error) {
+            console.error("Error deleting prompt:", error);
+            toast({ variant: "destructive", title: "删除时发生错误" });
+        }
+    }
+
+    const handleApplyMetadata = (metadata: AnalyzePromptMetadataOutput) => {
+        setActivePrompt(p => ({...p, name: `${metadata.scope} - ${metadata.scenario}`}));
+    };
 
     return (
         <ThreeColumnLayout>
@@ -112,6 +140,7 @@ export function PromptEngineerWorkbench() {
                     prompts={prompts} 
                     onSelectPrompt={handleSelectPrompt}
                     isLoading={isLoadingPrompts}
+                    onDeletePrompt={handleDeletePrompt}
                 />
             </ThreeColumnLayout.Left>
             
@@ -127,9 +156,7 @@ export function PromptEngineerWorkbench() {
             <ThreeColumnLayout.Right>
                 <div className="flex flex-col gap-6 h-full">
                    <PromptTestbed prompt={activePrompt} />
-                   <MetadataAnalyzer prompt={activePrompt} onApply={(metadata) => {
-                       setActivePrompt(p => ({...p, name: `${metadata.scope} - ${metadata.scenario}`}));
-                   }} />
+                   <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
                 </div>
             </ThreeColumnLayout.Right>
         </ThreeColumnLayout>

@@ -1,3 +1,4 @@
+
 "use server";
 /**
  * @fileOverview A digital employee flow that executes a prompt from a library.
@@ -9,9 +10,8 @@
 
 import { ai } from "@/ai/genkit";
 import { z } from "zod";
-import Handlebars from 'handlebars';
-import { promptScenarios } from "@/lib/prompt-scenarios"; // Using mock data for now
-import { executePrompt, PromptExecutionInputSchema, PromptExecutionOutput } from "./prompt-execution-flow";
+import { executePrompt, PromptExecutionOutput } from "./prompt-execution-flow";
+import { getPrompts } from "./get-prompts-flow";
 
 export const DigitalEmployeeInputSchema = z.object({
   promptId: z.string().describe("The ID of the prompt scenario to execute."),
@@ -36,25 +36,35 @@ const digitalEmployeeFlow = ai.defineFlow(
   },
   async ({ promptId, variables, temperature, promptContent }) => {
 
-    let finalPrompt: string;
+    let finalPromptContent: string;
+    let systemPrompt: string | undefined;
+    let context: string | undefined;
+    let negativePrompt: string | undefined;
+
 
     if (promptContent) {
-        finalPrompt = promptContent;
+        finalPromptContent = promptContent;
     } else {
-        const scenario = promptScenarios.find(s => s.id === promptId);
+        // Fetch all prompts and find the one with the matching ID
+        const allPrompts = await getPrompts();
+        const scenario = allPrompts.find(s => s.id === promptId);
+        
         if (!scenario) {
             throw new Error(`Prompt with ID '${promptId}' not found in the library.`);
         }
-        finalPrompt = scenario.prompt;
+        
+        finalPromptContent = scenario.userPrompt;
+        systemPrompt = scenario.systemPrompt;
+        context = scenario.context;
+        negativePrompt = scenario.negativePrompt;
     }
     
     // We can reuse the main execution flow. 
-    // The "digital employee" is an abstraction over this.
-    // For now, it's a simple passthrough, but it could have more complex logic later.
     const result = await executePrompt({
-        // For simplicity, we are passing the entire scenario prompt as the user prompt.
-        // In a more advanced setup, this could be parsed into system/user/context parts.
-        userPrompt: finalPrompt,
+        systemPrompt: systemPrompt,
+        userPrompt: finalPromptContent,
+        context: context,
+        negativePrompt: negativePrompt,
         variables,
         temperature
     });
