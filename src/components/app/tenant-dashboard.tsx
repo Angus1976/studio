@@ -4,7 +4,7 @@
 import * as LucideReact from "lucide-react";
 import React, { useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { FileText, Users, DollarSign, Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Briefcase, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, AlertTriangle, Video, FileEdit, Send, Info, Pencil, Trash2, Copy, Upload, Download, Building2 } from "lucide-react";
+import { Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, Video, FileEdit, Send, Pencil, Trash2, Copy, Upload, Download, Users, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -42,12 +42,6 @@ const chartConfig = {
     color: "hsl(var(--accent))",
   },
 };
-
-const initialInvoices = [
-    { id: "INV-2024-005", date: "2024-06-01", amount: "¥1,500.00", status: "已支付" },
-    { id: "INV-2024-004", date: "2024-05-01", amount: "¥1,250.00", status: "已支付" },
-    { id: "INV-2024-003", date: "2024-04-01", amount: "¥1,100.00", status: "已支付" },
-]
 
 type User = {
     name: string;
@@ -1334,7 +1328,7 @@ export function TenantDashboard() {
                                 导出列表
                             </Button>
                            <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
-                           <RoleManagementDialog roles={roles} setRoles={setRoles}>
+                           <RoleManagementDialog roles={roles} setRoles={setRoles} triggerAsChild>
                                <Button variant="outline"><Palette className="mr-2 h-4 w-4" />配置角色</Button>
                            </RoleManagementDialog>
                         </div>
@@ -1398,7 +1392,7 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
-                            <RoleManagementDialog roles={roles} setRoles={setRoles}>
+                            <RoleManagementDialog roles={roles} setRoles={setRoles} triggerAsChild>
                                 <Button>配置角色</Button>
                             </RoleManagementDialog>
                         </CardContent>
@@ -1409,15 +1403,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
-
-
-    
-
-
