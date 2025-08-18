@@ -9,12 +9,17 @@ import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
 import { registerUser } from "@/ai/flows/user-auth-flow";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 
 
-// Define a separate schema for the signup form
-const signupFormSchema = z.object({
+const roleMap: { [key: string]: string } = {
+    'admin': '平台方 - 管理员',
+    'engineer': '平台方 - 技术工程师',
+    'tenant': '用户方 - 企业租户',
+    'individual': '用户方 - 个人用户',
+};
+
+// This schema is used by the AuthForm component
+const signupSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
@@ -26,28 +31,10 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  
-  const form = useForm<z.infer<typeof signupFormSchema>>({
-    resolver: zodResolver(signupFormSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-      role: undefined,
-    },
-  });
 
-
-  const handleSignup = async (values: z.infer<typeof signupFormSchema>) => {
+  const handleSignup = async (values: z.infer<typeof signupSchema>) => {
     setIsLoading(true);
     
-    // This maps the form role key (e.g., 'individual') to the full role name
-    const roleMap: { [key: string]: string } = {
-        'admin': '平台方 - 管理员',
-        'engineer': '平台方 - 技术工程师',
-        'tenant': '用户方 - 企业租户',
-        'individual': '用户方 - 个人用户',
-    };
     const fullRoleName = roleMap[values.role];
 
     if (!fullRoleName) {

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -11,7 +10,6 @@ import { digitalEmployee, type DigitalEmployeeInput, type DigitalEmployeeOutput 
 
 import type { Scenario } from "@/components/app/designer";
 import { sampleScenarios } from "@/components/app/designer";
-import { createReminderFlow, type CreateReminderOutput } from "@/ai/flows/create-reminder-flow";
 
 
 import { AppHeader } from "@/components/app/header";
@@ -32,42 +30,57 @@ import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer"
 import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
 import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-center";
 import { cn } from "@/lib/utils";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 
 type ConversationMessage = {
   role: "user" | "assistant";
   content: string;
-  metadata?: {
-    reminder?: CreateReminderOutput;
-  }
 };
 
-// 模拟检查用户是否已登录
-// 在真实应用中，这应该来自您的认证上下文或会话管理
+// A more robust authentication hook that relies on both localStorage for speed
+// and onAuthStateChanged for correctness.
 const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // 在真实应用中，您会在这里检查有效的会话或令牌
-        const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated');
+        // Try to set initial state from localStorage for a faster UI response
+        const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated') === 'true';
         const role = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+        setIsAuthenticated(loggedIn);
+        setUserRole(role);
         
-        // 为了演示，我们将其设置为true
-        setTimeout(() => {
-             setIsAuthenticated(!!loggedIn);
-             setUserRole(role);
-             setIsLoading(false);
-        }, 500);
+        // Firebase's onAuthStateChanged is the source of truth.
+        // It handles session persistence across reloads.
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in.
+                setIsAuthenticated(true);
+                // We still rely on localStorage for the role, as it's set on login.
+                const storedRole = localStorage.getItem('userRole');
+                setUserRole(storedRole);
+            } else {
+                // User is signed out.
+                localStorage.removeItem('isAuthenticated');
+                localStorage.removeItem('userRole');
+                setIsAuthenticated(false);
+                setUserRole(null);
+            }
+            // Finished checking auth state
+            setIsLoading(false);
+        });
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
     }, [])
 
-    const logout = () => {
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('userRole');
-        setIsAuthenticated(false);
-        setUserRole(null);
-        window.location.reload();
+    const logout = async () => {
+        await signOut(auth);
+        // State will be updated by the onAuthStateChanged listener.
+        window.location.href = '/login';
     }
 
     return { isAuthenticated, userRole, isLoading, logout };
@@ -86,7 +99,6 @@ export default function Home() {
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
   const [editingScenario, setEditingScenario] = useState<Scenario | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [pendingReminder, setPendingReminder] = useState<CreateReminderOutput | null>(null);
   const [isTaskCenterMaximized, setIsTaskCenterMaximized] = useState(false);
 
 
@@ -114,39 +126,6 @@ export default function Home() {
     });
   };
   
-    const handleConfirmReminder = (reminderDetails: CreateReminderOutput) => {
-        const newTask: Task = {
-            id: `task-${Date.now()}`,
-            icon: 'CalendarClock',
-            title: reminderDetails.title,
-            description: `截止时间: ${reminderDetails.dateTime}`,
-            timestamp: '刚刚',
-            status: '待确认',
-            tags: [{ text: '日程提醒', variant: 'primary' }]
-        };
-        setTasks(prev => [newTask, ...prev]);
-        setPendingReminder(null);
-        toast({
-            title: '任务已创建',
-            description: `“${reminderDetails.title}”已添加到您的任务中心。`,
-            action: (
-              <div className="flex items-center gap-2">
-                <CalendarPlus className="h-4 w-4" />
-                <span>添加到日历</span>
-              </div>
-            )
-        });
-    };
-
-    const handleCancelReminder = () => {
-        setPendingReminder(null);
-        toast({
-            title: '操作已取消',
-            description: '创建提醒的操作已被取消。',
-            variant: 'destructive',
-        });
-    };
-
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!currentInput.trim() || isLoading) return;
@@ -159,41 +138,29 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-        // Simple heuristic to detect if the user wants to create a reminder
-        if (latestUserInput.includes('提醒') || latestUserInput.includes('安排')) {
-             const result = await createReminderFlow({ userInput: latestUserInput });
-             const assistantMessage: ConversationMessage = {
-                role: 'assistant',
-                content: `好的，我将为您创建一个提醒：\n**${result.title}**\n时间：${result.dateTime}\n\n请确认信息是否正确。`,
-             };
-             setConversationHistory([...newHistory, assistantMessage]);
-             setPendingReminder(result);
-        } else {
-            // Fallback to requirements navigator
-            const result = await aiRequirementsNavigator({
-                userInput: latestUserInput,
-                // @ts-ignore
-                conversationHistory: conversationHistory,
-            });
+        const result = await aiRequirementsNavigator({
+            userInput: latestUserInput,
+            // @ts-ignore
+            conversationHistory: conversationHistory,
+        });
 
-            setConversationHistory([...newHistory, { role: "assistant", content: result.aiResponse }]);
-            
-            if (result.isFinished) {
-                setIsConversationFinished(true);
+        setConversationHistory([...newHistory, { role: "assistant", content: result.aiResponse }]);
+        
+        if (result.isFinished) {
+            setIsConversationFinished(true);
 
-                if (result.suggestedPromptId) {
-                    setPromptId(result.suggestedPromptId);
-                    let recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
-                    if (recommendations.length === 0) {
-                      recommendations = sampleScenarios;
-                    }
-                    setRecommendedScenarios(recommendations);
-                    
-                    toast({
-                        title: "需求分析完成！",
-                        description: "我们已经理解您的需求，并为您推荐了以下解决方案。",
-                    });
+            if (result.suggestedPromptId) {
+                setPromptId(result.suggestedPromptId);
+                let recommendations = sampleScenarios.filter(s => s.id.includes(result.suggestedPromptId!.split('-')[0]));
+                if (recommendations.length === 0) {
+                  recommendations = sampleScenarios;
                 }
+                setRecommendedScenarios(recommendations);
+                
+                toast({
+                    title: "需求分析完成！",
+                    description: "我们已经理解您的需求，并为您推荐了以下解决方案。",
+                });
             }
         }
     } catch (error) {
@@ -308,9 +275,6 @@ export default function Home() {
                 currentInput={currentInput}
                 setCurrentInput={setCurrentInput}
                 onFormSubmit={handleFormSubmit}
-                pendingReminder={pendingReminder}
-                onConfirmReminder={handleConfirmReminder}
-                onCancelReminder={handleCancelReminder}
             />
         </ThreeColumnLayout.Main>
 

@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
 import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth as clientAuth } from "@/lib/firebase";
 
 
 type DemoRole = {
@@ -21,13 +19,14 @@ type DemoRole = {
   email: string;
   icon: React.ElementType;
   group: 'platform' | 'user';
+  fullName: string;
 };
 
 const demoRoles: DemoRole[] = [
-    { key: 'admin', name: '平台方 - 管理员', email: 'admin@example.com', icon: Shield, group: 'platform' },
-    { key: 'engineer', name: '平台方 - 技术工程师', email: 'engineer@example.com', icon: Code, group: 'platform' },
-    { key: 'tenant', name: '用户方 - 企业租户', email: 'tenant@example.com', icon: Building, group: 'user' },
-    { key: 'individual', name: '用户方 - 个人用户', email: 'user@example.com', icon: Briefcase, group: 'user' },
+    { key: 'admin', name: '管理员', email: 'admin@example.com', icon: Shield, group: 'platform', fullName: '平台方 - 管理员' },
+    { key: 'engineer', name: '技术工程师', email: 'engineer@example.com', icon: Code, group: 'platform', fullName: '平台方 - 技术工程师' },
+    { key: 'tenant', name: '企业租户', email: 'tenant@example.com', icon: Building, group: 'user', fullName: '用户方 - 企业租户' },
+    { key: 'individual', name: '个人用户', email: 'user@example.com', icon: Briefcase, group: 'user', fullName: '用户方 - 个人用户' },
 ];
 
 
@@ -39,19 +38,18 @@ export default function LoginPage() {
   const handleLogin = async (values: any) => {
     setIsLoading(true);
     try {
-        const roleInfo = demoRoles.find(r => r.key === values.role);
-        if (!roleInfo) {
-            throw new Error("Invalid role selected.");
-        }
-
         const result = await loginUser({ email: values.email, password: values.password });
 
+        // On successful login, save auth state and role to localStorage
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', result.role);
+        
         toast({
             title: "登录成功",
             description: `欢迎回来, ${result.name}!`,
         });
+        
+        // Then redirect
         router.push('/');
 
     } catch (error: any) {
@@ -76,28 +74,30 @@ export default function LoginPage() {
       localStorage.setItem('userRole', result.role);
       toast({
         title: '演示登录成功',
-        description: `您现在以“${role.name}”的身份登录。`,
+        description: `您现在以“${role.fullName}”的身份登录。`,
       });
       router.push('/');
 
     } catch (error: any) {
-      // 2. If user does not exist, create it
+      // 2. If login fails because user does not exist, create the account
       if (error.message.includes('用户不存在')) {
         try {
+          // Create the user via the backend flow
           await registerUser({
             email: role.email,
             password: 'password',
-            role: role.name,
-            name: role.name.split(' - ')[1],
+            role: role.fullName,
+            name: role.name,
           });
           
-          // 3. After successful registration, log the user in
+          // 3. After successful registration, log the user in again
           const loginResult = await loginUser({ email: role.email, password: 'password' });
+
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userRole', loginResult.role);
           toast({
             title: '演示账户已创建并登录',
-            description: `欢迎体验“${role.name}”角色。`,
+            description: `欢迎体验“${role.fullName}”角色。`,
           });
           router.push('/');
 
@@ -110,7 +110,7 @@ export default function LoginPage() {
           });
         }
       } else {
-        // Handle other login errors
+        // Handle other login errors (e.g., wrong password for an existing demo account)
         console.error("Demo login failed:", error);
         toast({
           variant: "destructive",
@@ -145,7 +145,7 @@ export default function LoginPage() {
                             {demoRoles.filter(r => r.group === 'platform').map((role) => (
                                 <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
-                                    <span>{role.name.split(' - ')[1]}</span>
+                                    <span>{role.name}</span>
                                 </Button>
                             ))}
                         </div>
@@ -156,7 +156,7 @@ export default function LoginPage() {
                             {demoRoles.filter(r => r.group === 'user').map((role) => (
                                 <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
-                                    <span>{role.name.split(' - ')[1]}</span>
+                                    <span>{role.name}</span>
                                 </Button>
                             ))}
                         </div>
@@ -167,7 +167,7 @@ export default function LoginPage() {
 
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <p className="text-center text-sm text-muted-foreground mb-4">或者使用邮箱和角色登录</p>
+        <p className="text-center text-sm text-muted-foreground mb-4">或者使用您的邮箱和密码登录</p>
         <AuthForm
           mode="login"
           onSubmit={handleLogin}

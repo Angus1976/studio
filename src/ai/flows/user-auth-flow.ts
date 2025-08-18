@@ -3,12 +3,8 @@
 
 import admin from '@/lib/firebase-admin';
 import { z } from 'zod';
-import { ai } from '@/ai/genkit';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth as clientAuth } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
 
 const RegisterUserSchema = z.object({
   email: z.string().email(),
@@ -36,8 +32,10 @@ export async function registerUser(input: RegisterUserInput): Promise<{ uid: str
         return { uid: userRecord.uid };
     } catch (error: any) {
         console.error("Error in registerUser flow: ", error);
-        // Bubble up specific error messages if they are helpful
-        throw new Error(error.message || 'Failed to register user.');
+        if (error.code === 'auth/email-already-exists') {
+            throw new Error('此电子邮件地址已被注册。');
+        }
+        throw new Error(error.message || '注册失败，发生未知错误。');
     }
 }
 
@@ -45,7 +43,6 @@ export async function registerUser(input: RegisterUserInput): Promise<{ uid: str
 const LoginUserSchema = z.object({
   email: z.string().email(),
   password: z.string(),
-  role: z.string().optional(), // Role is optional for login check, but might be used
 });
 export type LoginUserInput = z.infer<typeof LoginUserSchema>;
 
@@ -61,42 +58,36 @@ export type LoginUserOutput = {
 
 export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput> {
   try {
-    // 1. Check if user exists in Firebase Auth
-    const userRecord = await admin.auth().getUserByEmail(input.email);
-    
-    // 2. Verify password by signing in on the client-side SDK instance
-    // This is a common pattern when using Admin SDK on the backend
-    await signInWithEmailAndPassword(clientAuth, input.email, input.password);
+    // 1. Check if user exists in Firebase Auth by trying to sign in on the client-side SDK instance
+    // This is the most reliable way to verify both user existence and password correctness.
+    const userCredential = await signInWithEmailAndPassword(clientAuth, input.email, input.password);
+    const user = userCredential.user;
 
-    // 3. Get user role and other info from Firestore
-    const userDocRef = admin.firestore().collection('users').doc(userRecord.uid);
+    // 2. Get user role and other info from Firestore using the verified UID
+    const userDocRef = admin.firestore().collection('users').doc(user.uid);
     const userDoc = await userDocRef.get();
 
     if (!userDoc.exists) {
-      throw new Error('User data not found in database.');
+      // This case is unlikely if registration is always paired with Firestore doc creation,
+      // but it's a good safeguard.
+      throw new Error('用户数据不存在，请联系管理员。');
     }
     
     const userData = userDoc.data()!;
-    const userRole = userData.role;
-
-    // Optional: If role is passed, verify it matches
-    if (input.role && input.role !== userRole) {
-        throw new Error(`Role mismatch. Expected ${input.role}, but user is a ${userRole}.`);
-    }
-
+    
     return {
-      uid: userRecord.uid,
-      email: userRecord.email || null,
-      role: userRole,
+      uid: user.uid,
+      email: user.email || null,
+      role: userData.role,
       name: userData.name || 'N/A',
       message: 'Login successful',
     };
 
   } catch (error: any) {
     console.error('Error in loginUser flow:', error.code, error.message);
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
       throw new Error('用户不存在或密码错误。');
     }
-    throw new Error(error.message || 'An unknown error occurred during login.');
+    throw new Error(error.message || '登录时发生未知错误。');
   }
 }
