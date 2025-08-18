@@ -185,9 +185,7 @@ export function PromptEngineerWorkbench() {
                 toast({
                     title: result.message,
                 });
-                // Refresh the prompt list to show the new/updated prompt
                 await fetchPrompts();
-                // If it was a new prompt, select it
                 if (!activePromptId) {
                    setActivePromptId(result.id);
                 }
@@ -375,5 +373,4 @@ export function PromptEngineerWorkbench() {
             </ThreeColumnLayout.Right>
         </ThreeColumnLayout>
     );
-
-    
+}
