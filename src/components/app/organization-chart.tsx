@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as LucideReact from "lucide-react";
@@ -1333,9 +1334,6 @@ export function TenantDashboard() {
                                 导出列表
                             </Button>
                            <InviteUserDialog roles={roles} onInvite={handleInviteUser} />
-                           <RoleManagementDialog roles={roles} setRoles={setRoles}>
-                               <Button variant="outline"><Palette className="mr-2 h-4 w-4" />配置角色</Button>
-                           </RoleManagementDialog>
                         </div>
                     </CardHeader>
                     <CardContent>

@@ -32,15 +32,17 @@ const useAuth = () => {
             }
         });
 
+        // Check local storage on initial load
         const localAuth = localStorage.getItem('isAuthenticated') === 'true';
         if (!auth.currentUser && localAuth) {
             const localRole = localStorage.getItem('userRole');
             setIsAuthenticated(true);
             setUserRole(localRole);
         } else if (!auth.currentUser && !localAuth) {
-            setIsAuthenticated(false);
-            setUserRole(null);
+             setIsAuthenticated(false);
+             setUserRole(null);
         }
+
 
         return () => unsubscribe();
     }, []);
@@ -49,6 +51,8 @@ const useAuth = () => {
         await signOut(auth);
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
+        setIsAuthenticated(false);
+        setUserRole(null);
         window.location.href = '/login';
     };
 
