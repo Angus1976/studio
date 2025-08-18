@@ -16,6 +16,7 @@ type Message = {
     parts: { text: string }[];
 };
 
+// This component is kept for potential future use, but is currently not active in the main user flow.
 export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: string) => void }) {
     const { toast } = useToast();
     const [conversation, setConversation] = useState<Message[]>([]);

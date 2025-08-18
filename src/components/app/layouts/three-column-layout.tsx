@@ -16,11 +16,11 @@ const ThreeColumnLayout = ({
 };
 
 const Left = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-  return <div className={cn("lg:col-span-4 h-full flex flex-col gap-6 transition-all duration-300", className)}>{children}</div>;
+  return <div className={cn("lg:col-span-3 h-full flex flex-col gap-6 transition-all duration-300", className)}>{children}</div>;
 };
 
 const Main = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-  return <div className={cn("lg:col-span-5 h-full flex flex-col gap-6 transition-all duration-300", className)}>{children}</div>;
+  return <div className={cn("lg:col-span-6 h-full flex flex-col gap-6 transition-all duration-300", className)}>{children}</div>;
 };
 
 const Right = ({ children, className }: { children: React.ReactNode; className?: string }) => {
