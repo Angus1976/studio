@@ -52,12 +52,6 @@ type User = {
 };
 
 
-const initialUsers: User[] = [
-    { id: 'user-1', name: "王经理", email: "wang.m@examplecorp.com", role: "管理员", status: "活跃" },
-    { id: 'user-2', name: "李工", email: "li.e@examplecorp.com", role: "成员", status: "活跃" },
-    { id: 'user-3', name: "赵分析师", email: "zhao.a@examplecorp.com", role: "成员", status: "已禁用" },
-]
-
 const procurementItems = [
     { id: 'prod-001', title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础", price: 50, unit: "用户/年" },
     { id: 'prod-002', title: "视频会议服务", description: "高清、流畅、支持多方协作的在线会议平台。", icon: "Video", tag: "办公基础", price: 100, unit: "许可/年" },
@@ -81,25 +75,6 @@ type Order = {
     createdAt: string;
     updatedAt: string;
 }
-
-const initialOrders: Order[] = [
-    {
-        id: `PO-${Date.now() - 100000}`,
-        items: [{...procurementItems[0], quantity: 10}],
-        totalAmount: 500,
-        status: "已完成",
-        createdAt: "2024-07-20",
-        updatedAt: "2024-07-21"
-    },
-     {
-        id: `PO-${Date.now() - 50000}`,
-        items: [{...procurementItems[4], quantity: 5}],
-        totalAmount: 500,
-        status: "待支付",
-        createdAt: "2024-07-22",
-        updatedAt: "2024-07-22"
-    }
-]
 
 const preOrderSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "数量必须大于0。" }),
@@ -249,13 +224,6 @@ const roleSchema = z.object({
 });
 
 type Role = z.infer<typeof roleSchema> & { id: string };
-
-const initialRoles: Role[] = [
-  { id: 'role-admin', name: '管理员', description: '拥有所有权限的超级用户。', permissions: permissionsList.map(p => p.id) },
-  { id: 'role-member', name: '成员', description: '可以查看仪表盘和自己的订单。', permissions: ['view_dashboard', 'view_orders'] },
-  { id: 'role-purchaser', name: '采购员', description: '可以管理集采和查看订单。', permissions: ['manage_procurement', 'view_orders'] },
-];
-
 
 const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
     const Icon = (LucideReact as any)[name] as React.ElementType;
@@ -620,9 +588,18 @@ function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeo
 
 function ApiKeyManagementDialog() {
   const { toast } = useToast();
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>(initialApiKeys);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // SIMULATE API CALL
+    setTimeout(() => {
+      setApiKeys(initialApiKeys);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
 
   const handleCreateKey = (values: z.infer<typeof apiKeySchema>) => {
       // SIMULATED API CALL
@@ -710,6 +687,12 @@ function ApiKeyManagementDialog() {
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="h-[40vh]">
+                          { isLoading ? (
+                             <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                          ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -743,6 +726,7 @@ function ApiKeyManagementDialog() {
                                     ))}
                                 </TableBody>
                             </Table>
+                          )}
                         </ScrollArea>
                     </CardContent>
                 </Card>
@@ -1077,14 +1061,18 @@ export function TenantDashboard() {
   
   useEffect(() => {
     // Simulate fetching data for all tabs when component mounts or tab changes
-    const fetchData = (dataType: keyof typeof isLoading) => {
+    const fetchData = async (dataType: keyof typeof isLoading) => {
       setIsLoading(prev => ({...prev, [dataType]: true}));
+      // In a real app, you would call your backend flows here.
+      // e.g. `const data = await getTenantDataFlow({ type: dataType });`
+      // For now, we simulate with a timeout.
       setTimeout(() => {
-        if(dataType === 'users') setUsers(initialUsers);
-        if(dataType === 'orders') setOrders(initialOrders);
-        if(dataType === 'roles') setRoles(initialRoles);
+        // This is where you would set the state with data from the database
+        // setUsers(initialUsers); 
+        // setOrders(initialOrders);
+        // setRoles(initialRoles);
         setIsLoading(prev => ({...prev, [dataType]: false}));
-      }, 1000);
+      }, 1500);
     }
     
     fetchData('users');
@@ -1449,3 +1437,5 @@ export function TenantDashboard() {
     </div>
   );
 }
+
+  
