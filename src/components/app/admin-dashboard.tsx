@@ -41,9 +41,8 @@ import {
     deleteTenant,
     saveUser,
     deleteUser,
-    Tenant,
-    IndividualUser
 } from '@/ai/flows/admin-management-flows';
+import type { Tenant, IndividualUser } from '@/lib/data-types';
 
 
 // --- Tenant Management ---
@@ -57,11 +56,19 @@ const tenantSchema = z.object({
 function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, onSubmit: (values: z.infer<typeof tenantSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof tenantSchema>>({
         resolver: zodResolver(tenantSchema),
-        defaultValues: tenant || { companyName: "", adminEmail: "", status: "待审核" },
+        defaultValues: tenant ? {
+            companyName: tenant.companyName,
+            adminEmail: tenant.adminEmail,
+            status: tenant.status,
+        } : { companyName: "", adminEmail: "", status: "待审核" },
     });
      
     React.useEffect(() => {
-        form.reset(tenant || { companyName: "", adminEmail: "", status: "待审核" });
+        form.reset(tenant ? {
+            companyName: tenant.companyName,
+            adminEmail: tenant.adminEmail,
+            status: tenant.status,
+        } : { companyName: "", adminEmail: "", status: "待审核" });
     }, [tenant, form]);
 
 
@@ -288,11 +295,21 @@ const userSchema = z.object({
 function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, onSubmit: (values: z.infer<typeof userSchema>) => void; onCancel: () => void }) {
     const form = useForm<z.infer<typeof userSchema>>({
         resolver: zodResolver(userSchema),
-        defaultValues: user || { name: "", email: "", role: "个人用户", status: "待审核" },
+        defaultValues: user ? {
+            name: user.name,
+            email: user.email,
+            role: user.role as any, // Cast because enum is restrictive
+            status: user.status
+        } : { name: "", email: "", role: "个人用户", status: "待审核" },
     });
 
     React.useEffect(() => {
-        form.reset(user || { name: "", email: "", role: "个人用户", status: "待审核" });
+        form.reset(user ? {
+            name: user.name,
+            email: user.email,
+            role: user.role as any,
+            status: user.status
+        } : { name: "", email: "", role: "个人用户", status: "待审核" });
     }, [user, form]);
 
 

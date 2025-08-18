@@ -6,28 +6,8 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-
-// --- Data Types ---
-export const TenantSchema = z.object({
-  id: z.string(),
-  companyName: z.string(),
-  adminEmail: z.string().email(),
-  status: z.enum(["活跃", "待审核", "已禁用"]),
-  registeredDate: z.string(),
-});
-export type Tenant = z.infer<typeof TenantSchema>;
-
-export const IndividualUserSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string().email(),
-  role: z.string(),
-  status: z.enum(["活跃", "待审核", "已禁用"]),
-  tenantId: z.string().optional(),
-  registeredDate: z.string(),
-});
-export type IndividualUser = z.infer<typeof IndividualUserSchema>;
-
+import type { Tenant, IndividualUser } from '@/lib/data-types';
+import { TenantSchema, IndividualUserSchema } from '@/lib/data-types';
 
 // --- Get all Tenants and Users ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -79,14 +59,10 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
 
 
 // --- Tenant Management Flows ---
-const SaveTenantInputSchema = z.object({
-    id: z.string().optional(),
-    companyName: z.string(),
-    adminEmail: z.string().email(),
-    status: z.enum(["活跃", "待审核", "已禁用"]),
-});
+const SaveTenantInputSchema = TenantSchema.omit({ id: true, registeredDate: true });
 
-export async function saveTenant(input: z.infer<typeof SaveTenantInputSchema>): Promise<{ success: boolean; message: string; id?: string }> {
+
+export async function saveTenant(input: z.infer<typeof SaveTenantInputSchema> & { id?: string }): Promise<{ success: boolean; message: string; id?: string }> {
   const db = admin.firestore();
   try {
     const { id, ...data } = input;
@@ -124,6 +100,7 @@ export async function deleteTenant(input: { id: string }): Promise<{ success: bo
 // --- User Management Flows ---
 const SaveUserInputSchema = IndividualUserSchema.omit({ registeredDate: true }).partial({ id: true, tenantId: true });
 
+
 export async function saveUser(input: z.infer<typeof SaveUserInputSchema>): Promise<{ success: boolean; message: string; id?: string }> {
   const db = admin.firestore();
   try {
@@ -132,12 +109,24 @@ export async function saveUser(input: z.infer<typeof SaveUserInputSchema>): Prom
         ...data,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
+    
+    // Map role back to English for storage if needed
+    const roleReverseMap: { [key: string]: string } = {
+        '平台管理员': 'Platform Admin',
+        '租户管理员': 'Tenant Admin',
+        '技术工程师': 'Prompt Engineer/Developer',
+        '个人用户': 'Individual User',
+    };
+    const storedRole = roleReverseMap[data.role] || data.role;
+
+
     if (id) {
-      await db.collection('users').doc(id).set(dataWithTimestamp, { merge: true });
+      await db.collection('users').doc(id).set({ ...dataWithTimestamp, role: storedRole }, { merge: true });
       return { success: true, message: '用户已更新。', id };
     } else {
       const docRef = await db.collection('users').add({
           ...dataWithTimestamp,
+          role: storedRole,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
       return { success: true, message: '用户已创建。', id: docRef.id };
