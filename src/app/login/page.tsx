@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
 import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, AuthErrorCodes } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 type DemoRole = {
@@ -38,6 +38,10 @@ export default function LoginPage() {
   const handleLogin = async (values: any) => {
     setIsLoading(true);
     try {
+        // Step 1: Sign in on the client to verify password
+        const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+        
+        // Step 2: If client auth is successful, get role data from our secure backend
         const result = await loginUser({ email: values.email, password: values.password });
 
         localStorage.setItem('isAuthenticated', 'true');
@@ -55,7 +59,7 @@ export default function LoginPage() {
         toast({
             variant: "destructive",
             title: "登录失败",
-            description: error.message || "发生未知错误。",
+            description: error.message === '用户不存在或密码错误。' ? error.message : "用户名或密码不正确，请重试。",
         });
     } finally {
         setIsLoading(false);
@@ -66,7 +70,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       // First, try to log in using the client SDK to verify password
-      const userCredential = await signInWithEmailAndPassword(auth, role.email, 'password');
+      await signInWithEmailAndPassword(auth, role.email, 'password');
       
       // If login is successful, get user data from our backend
       const result = await loginUser({ email: role.email, password: 'password' });
@@ -81,7 +85,7 @@ export default function LoginPage() {
 
     } catch (error: any) {
       // If login fails, check if it's because the user doesn't exist
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      if (error.code === AuthErrorCodes.USER_DELETED || error.code === AuthErrorCodes.INVALID_credential) {
         try {
           // User doesn't exist, so create them via our backend flow
           await registerUser({
@@ -92,7 +96,7 @@ export default function LoginPage() {
           });
 
           // After successful registration, sign in again using client SDK
-          const userCredential = await signInWithEmailAndPassword(auth, role.email, 'password');
+          await signInWithEmailAndPassword(auth, role.email, 'password');
           
           // And get user data from backend
           const result = await loginUser({ email: role.email, password: 'password' });

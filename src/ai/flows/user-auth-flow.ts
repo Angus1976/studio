@@ -58,10 +58,13 @@ export type LoginUserOutput = {
 
 export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput> {
   try {
-    const userCredential = await signInWithEmailAndPassword(clientAuth, input.email, input.password);
-    const user = userCredential.user;
-
-    const userDocRef = admin.firestore().collection('users').doc(user.uid);
+    // This part runs on the server, but signInWithEmailAndPassword is a client-side function.
+    // The call to this function from the frontend will handle the client-side auth.
+    // This backend function's primary job is to fetch the user's role and data from Firestore,
+    // which the client cannot securely do itself due to security rules.
+    
+    const userRecord = await admin.auth().getUserByEmail(input.email);
+    const userDocRef = admin.firestore().collection('users').doc(userRecord.uid);
     const userDoc = await userDocRef.get();
 
     if (!userDoc.exists) {
@@ -71,15 +74,14 @@ export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput>
     const userData = userDoc.data()!;
     
     return {
-      uid: user.uid,
-      email: user.email || null,
+      uid: userRecord.uid,
+      email: userRecord.email || null,
       role: userData.role,
       name: userData.name || 'N/A',
       message: 'Login successful',
     };
 
-  } catch (error: any)
-{
+  } catch (error: any) {
     console.error('Error in loginUser flow:', error.code, error.message);
     if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
       throw new Error('用户不存在或密码错误。');
