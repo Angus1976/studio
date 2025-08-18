@@ -11,7 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
-const GenerateMetadataInputSchema = z.object({
+export const GenerateMetadataInputSchema = z.object({
   systemPrompt: z.string().optional(),
   userPrompt: z.string(),
   context: z.string().optional(),
@@ -19,11 +19,11 @@ const GenerateMetadataInputSchema = z.object({
 });
 export type GenerateMetadataInput = z.infer<typeof GenerateMetadataInputSchema>;
 
-const GenerateMetadataOutputSchema = z.object({
+export const GenerateMetadataOutputSchema = z.object({
     scope: z.string().describe('分析此提示词最适合的适用范围，例如“通用文案写作”、“代码生成”、“特定行业分析”等。'),
-    model: z.string().describe('根据提示词的复杂度和任务类型，推荐一个最适合的LLM模型，例如 Gemini 1.5 Pro, GPT-4o, Llama3 等。'),
+    recommendedModel: z.string().describe('根据提示词的复杂度和任务类型，推荐一个最适合的LLM模型，例如 Gemini 1.5 Pro, GPT-4o, Llama3 等。'),
     constraints: z.string().describe('分析并列出使用此提示词时需要注意的约束条件或潜在限制。'),
-    use_case: z.string().describe('用一句话描述一个典型的适用场景。'),
+    scenario: z.string().describe('用一句话描述一个典型的适用场景。'),
 });
 export type GenerateMetadataOutput = z.infer<typeof GenerateMetadataOutputSchema>;
 
@@ -48,9 +48,9 @@ const generateMetadataFlow = ai.defineFlow(
 
 **分析维度:**
 1.  **适用范围 (scope)**: 分析此提示词最适合的应用领域。是通用写作，还是特定领域的任务（如代码生成、法律文书、市场营销文案）？
-2.  **推荐模型 (model)**: 基于提示词的复杂性、任务类型和潜在的推理需求，推荐一个最合适的LLM模型。
+2.  **推荐模型 (recommendedModel)**: 基于提示词的复杂性、任务类型和潜在的推理需求，推荐一个最合适的LLM模型。
 3.  **约束条件 (constraints)**: 指出使用此提示词时可能的限制或需要注意的地方。例如，它是否依赖特定的上下文格式？输出是否可能不稳定？
-4.  **适用场景 (use_case)**: 用一句话简明扼要地概括一个最典型的使用场景。
+4.  **适用场景 (scenario)**: 用一句话简明扼要地概括一个最典型的使用场景。
 
 **输入的提示词内容:**
 
