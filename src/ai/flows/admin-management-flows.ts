@@ -38,33 +38,34 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
 
         const tenants: Tenant[] = tenantsSnapshot.docs.map(doc => {
             const data = doc.data();
+            const registeredDate = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
             return {
                 id: doc.id,
-                companyName: data.companyName,
-                adminEmail: data.adminEmail,
-                status: data.status,
-                registeredDate: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                companyName: data.companyName || '',
+                adminEmail: data.adminEmail || '',
+                status: data.status || '待审核',
+                registeredDate: registeredDate,
             };
         });
 
         const users: IndividualUser[] = usersSnapshot.docs.map(doc => {
             const data = doc.data();
-            // Map Firestore role to UI role if necessary, for now we assume they are the same
             const roleMap: { [key: string]: string } = {
                 'Platform Admin': '平台管理员',
                 'Tenant Admin': '租户管理员',
                 'Prompt Engineer/Developer': '技术工程师',
                 'Individual User': '个人用户',
             };
+            const registeredDate = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
 
             return {
                 id: doc.id,
-                name: data.name,
-                email: data.email,
-                role: roleMap[data.role] || data.role,
+                name: data.name || '',
+                email: data.email || '',
+                role: roleMap[data.role] || data.role || '个人用户',
                 status: data.status || '活跃', // Default status if not set
                 tenantId: data.tenantId,
-                registeredDate: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                registeredDate: registeredDate,
             };
         });
 
@@ -89,12 +90,16 @@ export async function saveTenant(input: z.infer<typeof SaveTenantInputSchema>): 
   const db = admin.firestore();
   try {
     const { id, ...data } = input;
+    const dataWithTimestamp = {
+        ...data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
     if (id) {
-      await db.collection('tenants').doc(id).set(data, { merge: true });
+      await db.collection('tenants').doc(id).set(dataWithTimestamp, { merge: true });
       return { success: true, message: '租户已成功更新。', id };
     } else {
       const docRef = await db.collection('tenants').add({
-          ...data,
+          ...dataWithTimestamp,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
       return { success: true, message: '租户已成功创建。', id: docRef.id };
@@ -123,12 +128,16 @@ export async function saveUser(input: z.infer<typeof SaveUserInputSchema>): Prom
   const db = admin.firestore();
   try {
     const { id, ...data } = input;
+    const dataWithTimestamp = {
+        ...data,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
     if (id) {
-      await db.collection('users').doc(id).set(data, { merge: true });
+      await db.collection('users').doc(id).set(dataWithTimestamp, { merge: true });
       return { success: true, message: '用户已更新。', id };
     } else {
       const docRef = await db.collection('users').add({
-          ...data,
+          ...dataWithTimestamp,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
       return { success: true, message: '用户已创建。', id: docRef.id };
@@ -149,5 +158,3 @@ export async function deleteUser(input: { id: string }): Promise<{ success: bool
     return { success: false, message: error.message };
   }
 }
-
-    

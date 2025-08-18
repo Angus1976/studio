@@ -127,7 +127,7 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 }
 
 
-function TenantManagementDialog({ tenants, setTenants, buttonText, title, description }: { tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>, buttonText: string, title: string, description: string }) {
+function TenantManagementDialog({ tenants, setTenants, onRefresh, buttonText, title, description }: { tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>, onRefresh: () => Promise<void>, buttonText: string, title: string, description: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -142,12 +142,7 @@ function TenantManagementDialog({ tenants, setTenants, buttonText, title, descri
         });
         if(result.success) {
             toast({ title: result.message });
-            // Refresh tenants list
-            if (editingTenant) {
-                setTenants(tenants.map(t => t.id === result.id ? { ...t, ...values, id: result.id! } : t));
-            } else {
-                setTenants([...tenants, { ...values, id: result.id!, registeredDate: new Date().toISOString() }]);
-            }
+            await onRefresh();
         } else {
             toast({ title: "操作失败", description: result.message, variant: "destructive" });
         }
@@ -176,7 +171,7 @@ function TenantManagementDialog({ tenants, setTenants, buttonText, title, descri
         const result = await deleteTenant({ id: tenantId });
         if(result.success) {
             toast({ title: result.message });
-            setTenants(tenants.filter(t => t.id !== tenantId));
+            await onRefresh();
         } else {
              toast({ title: "删除失败", description: result.message, variant: "destructive" });
         }
@@ -385,7 +380,7 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
     );
 }
 
-function UserManagementDialog({ users, setUsers, buttonText, title, description }: { users: IndividualUser[], setUsers: React.Dispatch<React.SetStateAction<IndividualUser[]>>, buttonText: string, title: string, description: string }) {
+function UserManagementDialog({ users, onRefresh, buttonText, title, description }: { users: IndividualUser[], onRefresh: () => Promise<void>, buttonText: string, title: string, description: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -397,16 +392,11 @@ function UserManagementDialog({ users, setUsers, buttonText, title, description 
         const result = await saveUser({
             id: editingUser?.id,
             ...values,
-            // These fields are not in the form but are required by the type
-            tenantId: editingUser?.tenantId || '', 
+            tenantId: editingUser?.tenantId || undefined, 
         });
         if(result.success) {
             toast({ title: result.message });
-            if (editingUser) {
-                setUsers(users.map(u => u.id === result.id ? { ...u, ...values, id: result.id! } : u));
-            } else {
-                setUsers([...users, { ...values, id: result.id!, registeredDate: new Date().toISOString() }]);
-            }
+            await onRefresh();
         } else {
             toast({ title: "操作失败", description: result.message, variant: "destructive" });
         }
@@ -435,7 +425,7 @@ function UserManagementDialog({ users, setUsers, buttonText, title, description 
         const result = await deleteUser({ id: userId });
         if(result.success) {
             toast({ title: result.message });
-            setUsers(users.filter(u => u.id !== userId));
+            await onRefresh();
         } else {
              toast({ title: "删除失败", description: result.message, variant: "destructive" });
         }
@@ -954,29 +944,30 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<IndividualUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-        setIsLoading(true);
-        try {
-            const { tenants: fetchedTenants, users: fetchedUsers } = await getTenantsAndUsers();
-            setTenants(fetchedTenants);
-            setUsers(fetchedUsers);
-        } catch (error: any) {
-            toast({
-                variant: "destructive",
-                title: "数据加载失败",
-                description: "无法从数据库获取管理员数据。",
-            });
-        } finally {
-            setIsLoading(false);
-        }
+  const fetchData = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const { tenants: fetchedTenants, users: fetchedUsers } = await getTenantsAndUsers();
+        setTenants(fetchedTenants);
+        setUsers(fetchedUsers);
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "数据加载失败",
+            description: "无法从数据库获取管理员数据。",
+        });
+    } finally {
+        setIsLoading(false);
     }
-    fetchData();
   }, [toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
   
   const recentActivity = [...tenants, ...users]
     .sort((a, b) => new Date(b.registeredDate).getTime() - new Date(a.registeredDate).getTime())
-    .slice(0, 4);
+    .slice(0, 5);
 
   return (
     <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
@@ -1012,6 +1003,7 @@ export function AdminDashboard() {
                                 <TenantManagementDialog 
                                     tenants={tenants}
                                     setTenants={setTenants}
+                                    onRefresh={fetchData}
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
@@ -1019,7 +1011,7 @@ export function AdminDashboard() {
                             ) : panel.id === 'users' ? (
                                 <UserManagementDialog 
                                     users={users}
-                                    setUsers={setUsers}
+                                    onRefresh={fetchData}
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
@@ -1051,6 +1043,8 @@ export function AdminDashboard() {
                     <CardContent>
                        {isLoading ? (
                             <div className="space-y-4">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-10 w-full" />
                                 <Skeleton className="h-10 w-full" />
                                 <Skeleton className="h-10 w-full" />
                                 <Skeleton className="h-10 w-full" />
@@ -1086,5 +1080,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
