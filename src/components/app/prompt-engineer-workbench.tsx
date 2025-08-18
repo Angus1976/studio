@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
 import { analyzePromptMetadata, AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 import { ThreeColumnLayout } from './layouts/three-column-layout';
+import { PromptLibrary, Prompt } from './prompt-library';
 
 
 type Variable = {
@@ -115,12 +116,30 @@ export function PromptEngineerWorkbench() {
             setIsAnalyzing(false);
         }
     };
+    
+    const handleSelectPrompt = (prompt: Prompt) => {
+        setSystemPrompt(prompt.systemPrompt || '');
+        setUserPrompt(prompt.userPrompt);
+        setContext(prompt.context || '');
+        setNegativePrompt(prompt.negativePrompt || '');
+        
+        // Optionally, you could also load variables if they are part of the prompt definition
+        // For now, we'll just show a toast.
+        toast({
+            title: `提示词已加载: ${prompt.name}`,
+            description: "内容已填充到编辑器中。",
+        });
+    }
 
 
     return (
         <ThreeColumnLayout>
             <ThreeColumnLayout.Left>
-                 <Card className="flex-1 flex flex-col shadow-lg">
+                 <PromptLibrary onSelectPrompt={handleSelectPrompt} />
+            </ThreeColumnLayout.Left>
+            
+            <ThreeColumnLayout.Main>
+                 <Card className="shadow-lg">
                     <CardHeader>
                         <CardTitle className="font-headline flex items-center gap-2">
                            <Sparkles className="h-6 w-6 text-accent" />
@@ -153,10 +172,7 @@ export function PromptEngineerWorkbench() {
                        </div>
                     </CardContent>
                 </Card>
-            </ThreeColumnLayout.Left>
-            
-            <ThreeColumnLayout.Main>
-                 <Card className="shadow-lg">
+                <Card className="shadow-lg">
                      <CardHeader>
                         <CardTitle className="font-headline flex items-center gap-2">
                            <TestTube2 className="h-6 w-6 text-accent"/>
