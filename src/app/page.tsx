@@ -41,22 +41,12 @@ const useAuth = () => {
     const [userRole, setUserRole] = useState<string | null>(null);
 
     useEffect(() => {
-        const localAuth = localStorage.getItem('isAuthenticated') === 'true';
-        const localRole = localStorage.getItem('userRole');
-        setIsAuthenticated(localAuth);
-        setUserRole(localRole);
-
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                // If firebase says we are logged in, trust it.
-                // If local storage is out of sync, it will be updated on next login.
-                setIsAuthenticated(true);
                 const storedRole = localStorage.getItem('userRole');
-                if (storedRole) {
-                    setUserRole(storedRole);
-                }
+                setIsAuthenticated(true);
+                setUserRole(storedRole);
             } else {
-                // If firebase says we are logged out, clear local storage.
                 localStorage.removeItem('isAuthenticated');
                 localStorage.removeItem('userRole');
                 setIsAuthenticated(false);
@@ -64,11 +54,25 @@ const useAuth = () => {
             }
         });
 
+        // Also check local storage on initial load for faster UI response
+        const localAuth = localStorage.getItem('isAuthenticated') === 'true';
+        const localRole = localStorage.getItem('userRole');
+        if (localAuth && localRole) {
+            setIsAuthenticated(true);
+            setUserRole(localRole);
+        } else {
+            setIsAuthenticated(false);
+            setUserRole(null);
+        }
+
+
         return () => unsubscribe();
     }, []);
 
     const logout = async () => {
         await signOut(auth);
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userRole');
         window.location.href = '/login';
     };
 

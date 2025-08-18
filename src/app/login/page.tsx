@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
 import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 type DemoRole = {
   key: string;
@@ -63,8 +65,12 @@ export default function LoginPage() {
   const handleDemoLogin = async (role: DemoRole) => {
     setIsLoading(true);
     try {
-      // First, just try to log in.
+      // First, try to log in using the client SDK to verify password
+      const userCredential = await signInWithEmailAndPassword(auth, role.email, 'password');
+      
+      // If login is successful, get user data from our backend
       const result = await loginUser({ email: role.email, password: 'password' });
+
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userRole', result.role);
       toast({
@@ -72,10 +78,12 @@ export default function LoginPage() {
         description: `您现在以“${role.fullName}”的身份登录。`,
       });
       router.push('/');
+
     } catch (error: any) {
-      // If login fails because user doesn't exist, create it.
-      if (error.message && error.message.includes('用户不存在')) {
+      // If login fails, check if it's because the user doesn't exist
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
+          // User doesn't exist, so create them via our backend flow
           await registerUser({
             email: role.email,
             password: 'password',
@@ -83,8 +91,12 @@ export default function LoginPage() {
             name: role.name,
           });
 
-          // After successful registration, sign in again.
+          // After successful registration, sign in again using client SDK
+          const userCredential = await signInWithEmailAndPassword(auth, role.email, 'password');
+          
+          // And get user data from backend
           const result = await loginUser({ email: role.email, password: 'password' });
+
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('userRole', result.role);
           
@@ -102,12 +114,12 @@ export default function LoginPage() {
           });
         }
       } else {
-        // Handle other login errors (e.g., wrong password for an existing demo account)
+        // Handle other login errors
         console.error("Demo login failed:", error);
         toast({
           variant: "destructive",
           title: "演示账户登录失败",
-          description: error.message,
+          description: "请检查您的凭据或网络连接。",
         });
       }
     } finally {
