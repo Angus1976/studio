@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, Video, FileEdit, Send, Pencil, Trash2, Copy, Upload, Download, Users, Briefcase } from "lucide-react";
+import { Activity, PlusCircle, KeyRound, ShieldCheck, ShoppingCart, Mail, Cloud, Cpu, Bot, Router, Phone, Mail as MailIcon, Palette, Video, FileEdit, Send, Pencil, Trash2, Copy, Upload, Download, Users, Briefcase, LoaderCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -25,37 +25,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
-
-// --- Utility for LocalStorage ---
-function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-    const [storedValue, setStoredValue] = useState<T>(() => {
-        if (typeof window === "undefined") {
-            return initialValue;
-        }
-        try {
-            const item = window.localStorage.getItem(key);
-            return item ? JSON.parse(item) : initialValue;
-        } catch (error) {
-            console.error(error);
-            return initialValue;
-        }
-    });
-
-    const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
-        try {
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
-            setStoredValue(valueToStore);
-            if (typeof window !== "undefined") {
-                window.localStorage.setItem(key, JSON.stringify(valueToStore));
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    return [storedValue, setValue];
-}
-
+import { Skeleton } from "../ui/skeleton";
 
 const usageData = [
   { month: "一月", tokens: 120000 },
@@ -74,6 +44,7 @@ const chartConfig = {
 };
 
 type User = {
+    id: string;
     name: string;
     email: string;
     role: string;
@@ -82,9 +53,9 @@ type User = {
 
 
 const initialUsers: User[] = [
-    { name: "王经理", email: "wang.m@examplecorp.com", role: "管理员", status: "活跃" },
-    { name: "李工", email: "li.e@examplecorp.com", role: "成员", status: "活跃" },
-    { name: "赵分析师", email: "zhao.a@examplecorp.com", role: "成员", status: "已禁用" },
+    { id: 'user-1', name: "王经理", email: "wang.m@examplecorp.com", role: "管理员", status: "活跃" },
+    { id: 'user-2', name: "李工", email: "li.e@examplecorp.com", role: "成员", status: "活跃" },
+    { id: 'user-3', name: "赵分析师", email: "zhao.a@examplecorp.com", role: "成员", status: "已禁用" },
 ]
 
 const procurementItems = [
@@ -253,6 +224,7 @@ const inviteUserSchema = z.object({
 });
 
 const editUserSchema = z.object({
+  id: z.string(),
   email: z.string().email(),
   name: z.string(),
   role: z.string().min(1, { message: "请为用户选择一个角色。" }),
@@ -648,11 +620,12 @@ function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeo
 
 function ApiKeyManagementDialog() {
   const { toast } = useToast();
-  const [apiKeys, setApiKeys] = useLocalStorage<ApiKey[]>("tenant_api_keys", initialApiKeys);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>(initialApiKeys);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateKey = (values: z.infer<typeof apiKeySchema>) => {
+      // SIMULATED API CALL
       const newKey: ApiKey = {
           id: `key-${Date.now()}`,
           name: values.name,
@@ -666,6 +639,7 @@ function ApiKeyManagementDialog() {
   };
   
   const handleRevokeKey = (keyId: string) => {
+    // SIMULATED API CALL
     setApiKeys(prev => prev.map(key => key.id === keyId ? {...key, status: "已撤销"} : key));
     toast({
         title: "API 密钥已撤销",
@@ -892,6 +866,7 @@ function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { r
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const handleSaveRole = (values: Role) => {
+    // SIMULATED API CALL
     if (editingRole) {
       // Update
       setRoles(roles.map(r => r.id === values.id ? values : r));
@@ -906,6 +881,7 @@ function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { r
   };
 
   const handleDeleteRole = (roleId: string) => {
+     // SIMULATED API CALL
     if(roles.length <= 1){
         toast({ title: "删除失败", description: "至少需要保留一个角色。", variant: "destructive" });
         return;
@@ -1046,7 +1022,7 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
             return;
         }
 
-        newUsers.push({ name, email, role, status: '邀请中' });
+        newUsers.push({ id: `user-${Date.now() + i}`, name, email, role, status: '邀请中' });
     }
 
     onImport(newUsers);
@@ -1089,12 +1065,37 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
 
 export function TenantDashboard() {
   const { toast } = useToast();
-  const [users, setUsers] = useLocalStorage<User[]>("tenant_users", initialUsers);
-  const [orders, setOrders] = useLocalStorage<Order[]>("tenant_orders", initialOrders);
-  const [roles, setRoles] = useLocalStorage<Role[]>("tenant_roles", initialRoles);
-  const [activeTab, setActiveTab] = useLocalStorage<string>("tenant_active_tab", "overview");
+  const [users, setUsers] = useState<User[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoading, setIsLoading] = useState({
+    users: true,
+    orders: true,
+    roles: true,
+  });
+  const [activeTab, setActiveTab] = useState<string>("overview");
+  
+  useEffect(() => {
+    // Simulate fetching data for all tabs when component mounts or tab changes
+    const fetchData = (dataType: keyof typeof isLoading) => {
+      setIsLoading(prev => ({...prev, [dataType]: true}));
+      setTimeout(() => {
+        if(dataType === 'users') setUsers(initialUsers);
+        if(dataType === 'orders') setOrders(initialOrders);
+        if(dataType === 'roles') setRoles(initialRoles);
+        setIsLoading(prev => ({...prev, [dataType]: false}));
+      }, 1000);
+    }
+    
+    fetchData('users');
+    fetchData('orders');
+    fetchData('roles');
+
+  }, []);
+
 
   const handleCreatePreOrder = (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
+      // SIMULATED API CALL
       const newOrder: Order = {
           id: `PO-${Date.now()}`,
           items: [{ ...item, quantity: values.quantity }],
@@ -1108,12 +1109,12 @@ export function TenantDashboard() {
           title: "预购单已提交",
           description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
       });
-      // Switch to orders tab
       setActiveTab("orders");
   };
 
   const handlePayOrder = (orderId: string) => {
     // In a real app, this would redirect to a payment gateway
+    // SIMULATED API CALL
     setOrders(prev => prev.map(order => 
         order.id === orderId ? { ...order, status: "配置中", updatedAt: new Date().toISOString().split('T')[0] } : order
     ));
@@ -1124,7 +1125,8 @@ export function TenantDashboard() {
   };
 
   const handleInviteUser = (values: z.infer<typeof inviteUserSchema>) => {
-    const newUser = { ...values, name: "新成员", status: "邀请中" };
+    // SIMULATED API CALL
+    const newUser = { ...values, id: `user-${Date.now()}`, name: "新成员", status: "邀请中" };
     setUsers(prev => [...prev, newUser]);
     toast({
       title: "邀请已发送",
@@ -1133,7 +1135,8 @@ export function TenantDashboard() {
   };
 
   const handleUpdateUser = (values: z.infer<typeof editUserSchema>) => {
-    setUsers(prev => prev.map(u => u.email === values.email ? { ...u, ...values } : u));
+    // SIMULATED API CALL
+    setUsers(prev => prev.map(u => u.id === values.id ? { ...u, ...values } : u));
     toast({
       title: "成员已更新",
       description: `成员 ${values.name} 的信息已更新。`,
@@ -1141,6 +1144,7 @@ export function TenantDashboard() {
   };
   
   const handleBatchImport = (newUsers: User[]) => {
+    // SIMULATED API CALL
     setUsers(prev => [...prev, ...newUsers]);
   };
   
@@ -1296,6 +1300,12 @@ export function TenantDashboard() {
                         <CardDescription>查看和管理您的采购订单。</CardDescription>
                     </CardHeader>
                     <CardContent>
+                        {isLoading.orders ? (
+                             <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -1340,6 +1350,7 @@ export function TenantDashboard() {
                                 )}
                             </TableBody>
                         </Table>
+                        )}
                     </CardContent>
                 </Card>
             </TabsContent>
@@ -1361,6 +1372,13 @@ export function TenantDashboard() {
                         </div>
                     </CardHeader>
                     <CardContent>
+                       {isLoading.users ? (
+                            <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                       ) : (
                        <Table>
                             <TableHeader>
                                 <TableRow>
@@ -1373,7 +1391,7 @@ export function TenantDashboard() {
                             </TableHeader>
                             <TableBody>
                                 {users.map(user => (
-                                    <TableRow key={user.email}>
+                                    <TableRow key={user.id}>
                                         <TableCell className="font-medium">{user.name}</TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
@@ -1396,6 +1414,7 @@ export function TenantDashboard() {
                                 ))}
                             </TableBody>
                         </Table>
+                       )}
                     </CardContent>
                 </Card>
             </TabsContent>

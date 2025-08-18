@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -83,16 +84,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
 
 
     return (
-        <Card className="h-full flex flex-col shadow-lg">
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <Bot className="h-6 w-6 text-accent" />
-                    AI 需求导航器
-                </CardTitle>
-                <CardDescription>
-                    与 AI 对话，帮您梳理业务需求，并推荐最合适的 AI 能力。
-                </CardDescription>
-            </CardHeader>
+        <div className="h-full flex flex-col">
             <CardContent className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
                 <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
                     <div className="space-y-4">
@@ -149,6 +141,6 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                     </Button>
                 </form>
             </CardContent>
-        </Card>
+        </div>
     );
 }

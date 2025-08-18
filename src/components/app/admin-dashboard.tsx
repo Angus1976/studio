@@ -29,42 +29,12 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-
-
-// --- Utility for LocalStorage ---
-function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-    const [storedValue, setStoredValue] = useState<T>(() => {
-        if (typeof window === "undefined") {
-            return initialValue;
-        }
-        try {
-            const item = window.localStorage.getItem(key);
-            return item ? JSON.parse(item) : initialValue;
-        } catch (error) {
-            console.error(error);
-            return initialValue;
-        }
-    });
-
-    const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
-        try {
-            const valueToStore = value instanceof Function ? value(storedValue) : value;
-            setStoredValue(valueToStore);
-            if (typeof window !== "undefined") {
-                window.localStorage.setItem(key, JSON.stringify(valueToStore));
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    return [storedValue, setValue];
-}
+import { Skeleton } from "../ui/skeleton";
 
 
 // --- Tenant Management ---
@@ -80,6 +50,7 @@ type Tenant = z.infer<typeof tenantSchema> & {
   registeredDate: string;
 };
 
+// SIMULATED DATA - In a real app, this would come from a database.
 const initialTenants: Tenant[] = [
     { id: "tenant-1", companyName: "Tech Innovators Inc.", adminEmail: "admin@techinnovators.com", registeredDate: "2024-07-20", status: "活跃" },
     { id: "tenant-2", companyName: "A.I. Solutions Ltd.", adminEmail: "contact@aisolutions.com", registeredDate: "2024-07-18", status: "已禁用" },
@@ -160,12 +131,23 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 
 
 function TenantManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [tenants, setTenants] = useLocalStorage<Tenant[]>("admin_tenants", initialTenants);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    // In a real app, you would fetch this data from an API
+    // For now, we simulate a loading state and use mock data.
+    setTimeout(() => {
+      setTenants(initialTenants);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+
   const handleAddOrUpdateTenant = (values: z.infer<typeof tenantSchema>) => {
+    // SIMULATED API CALL
     if (editingTenant) {
       // Update
       const updatedTenants = tenants.map(t => t.id === editingTenant.id ? { ...t, ...values } : t);
@@ -196,6 +178,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
   };
 
   const handleDelete = (tenantId: string) => {
+    // SIMULATED API CALL
     setTenants(tenants.filter(t => t.id !== tenantId));
     toast({ title: "租户已删除", variant: "destructive" });
   };
@@ -224,6 +207,13 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="h-[400px]">
+                                {isLoading ? (
+                                    <div className="space-y-4">
+                                        <Skeleton className="h-12 w-full" />
+                                        <Skeleton className="h-12 w-full" />
+                                        <Skeleton className="h-12 w-full" />
+                                    </div>
+                                ) : (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -252,6 +242,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
                                         ))}
                                     </TableBody>
                                 </Table>
+                                )}
                             </ScrollArea>
                         </CardContent>
                     </Card>
@@ -302,6 +293,7 @@ type IndividualUser = z.infer<typeof userSchema> & {
   registeredDate: string;
 };
 
+// SIMULATED DATA
 const initialUsers: IndividualUser[] = [
     { id: "user-1", name: "李四", email: "lisi@example.com", registeredDate: "2024-07-21", role: "个人用户", status: "活跃" },
     { id: "user-2", name: "王五", email: "wangwu@example.com", registeredDate: "2024-07-20", role: "技术工程师", status: "待审核" },
@@ -402,19 +394,27 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
 }
 
 function UserManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-  const [users, setUsers] = useLocalStorage<IndividualUser[]>("admin_users", initialUsers);
+  const [users, setUsers] = useState<IndividualUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
+   useEffect(() => {
+    // In a real app, you would fetch this data from an API
+    setTimeout(() => {
+      setUsers(initialUsers);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+
   const handleAddOrUpdateUser = (values: z.infer<typeof userSchema>) => {
+    // SIMULATED API CALL
     if (editingUser) {
-      // Update
       const updatedUsers = users.map(u => u.id === editingUser.id ? { ...u, ...values } : u);
       setUsers(updatedUsers);
       toast({ title: "用户已更新", description: `${values.name} 的信息已更新。` });
     } else {
-      // Add
       const newUser: IndividualUser = {
         ...values,
         id: `user-${Date.now()}`,
@@ -438,6 +438,7 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
   };
 
   const handleDelete = (userId: string) => {
+    // SIMULATED API CALL
     setUsers(users.filter(u => u.id !== userId));
     toast({ title: "用户已删除", variant: "destructive" });
   };
@@ -466,6 +467,13 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="h-[400px]">
+                                {isLoading ? (
+                                    <div className="space-y-4">
+                                        <Skeleton className="h-12 w-full" />
+                                        <Skeleton className="h-12 w-full" />
+                                        <Skeleton className="h-12 w-full" />
+                                    </div>
+                                ) : (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -496,6 +504,7 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                                         ))}
                                     </TableBody>
                                 </Table>
+                                )}
                             </ScrollArea>
                         </CardContent>
                     </Card>
@@ -551,7 +560,7 @@ const softwareAssetSchema = z.object({
 });
 type SoftwareAsset = z.infer<typeof softwareAssetSchema> & { id: string };
 
-
+// SIMULATED DATA
 const initialLlmModels: LlmModel[] = [
   { id: 'llm-1', modelName: 'Gemini 1.5 Pro', provider: 'Google', apiKey: 'sk-...' },
   { id: 'llm-2', modelName: 'GPT-4o', provider: 'OpenAI', apiKey: 'sk-...' },
@@ -569,11 +578,12 @@ const initialSoftwareAssets: SoftwareAsset[] = [
 
 function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
     const { toast } = useToast();
-    const [llmModels, setLlmModels] = useLocalStorage<LlmModel[]>('admin_llm_models', initialLlmModels);
-    const [tokens, setTokens] = useLocalStorage<Token[]>('admin_tokens', initialTokens);
-    const [softwareAssets, setSoftwareAssets] = useLocalStorage<SoftwareAsset[]>('admin_software_assets', initialSoftwareAssets);
+    const [llmModels, setLlmModels] = useState<LlmModel[]>(initialLlmModels);
+    const [tokens, setTokens] = useState<Token[]>(initialTokens);
+    const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>(initialSoftwareAssets);
 
     const handleDelete = (type: 'llm' | 'token' | 'asset', id: string) => {
+        // SIMULATED API CALLS
         if (type === 'llm') setLlmModels(prev => prev.filter(item => item.id !== id));
         if (type === 'token') setTokens(prev => prev.filter(item => item.id !== id));
         if (type === 'asset') setSoftwareAssets(prev => prev.filter(item => item.id !== id));
@@ -771,6 +781,7 @@ type Order = {
     createdAt: string;
 };
 
+// SIMULATED DATA
 const initialOrders: Order[] = [
     {
         id: "PO-12345",
@@ -799,10 +810,21 @@ const initialOrders: Order[] = [
 ];
 
 function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-    const [orders, setOrders] = useLocalStorage<Order[]>("admin_orders", initialOrders);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
 
+    useEffect(() => {
+        // In a real app, you would fetch this data from an API
+        setTimeout(() => {
+          setOrders(initialOrders);
+          setIsLoading(false);
+        }, 1000);
+    }, []);
+
+
     const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
+        // SIMULATED API CALL
         setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
         toast({ title: "订单状态已更新", description: `订单 ${orderId} 的状态已更新为 ${newStatus}。` });
     };
@@ -832,6 +854,13 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
                     <CardHeader><CardTitle>所有订单</CardTitle></CardHeader>
                     <CardContent>
                         <ScrollArea className="h-[50vh]">
+                            {isLoading ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-12 w-full" />
+                                    <Skeleton className="h-12 w-full" />
+                                </div>
+                            ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -866,6 +895,7 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
                                     ))}
                                 </TableBody>
                             </Table>
+                            )}
                         </ScrollArea>
                     </CardContent>
                 </Card>

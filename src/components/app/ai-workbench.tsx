@@ -13,7 +13,7 @@ import type { Prompt } from './prompt-library';
 import { TaskDispatchCenter } from './task-dispatch-center';
 import { Button } from '../ui/button';
 import { Lightbulb, Wand2 } from 'lucide-react';
-import { Card, CardHeader } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
 export interface Scenario {
     id: string;
@@ -107,17 +107,44 @@ export function AIWorkbench() {
         }
         return <RequirementsNavigator onFinish={handleNavigationFinish} />;
     };
-    
-    const ToggleButton = () => {
+
+    const LeftPanelWrapper = ({children}: {children: React.ReactNode}) => {
         const isGuide = workbenchMode === 'guide';
         const text = isGuide ? "切换到专家模式" : "切换到引导模式";
         const Icon = isGuide ? Wand2 : Lightbulb;
         
         return (
-            <Button variant="ghost" size="sm" onClick={() => setWorkbenchMode(isGuide ? 'expert' : 'guide')} className="flex items-center gap-2">
-                <Icon className="h-4 w-4" />
-                {text}
-            </Button>
+            <Card className="h-full flex flex-col shadow-lg">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                         {isGuide ? (
+                             <CardTitle className="font-headline flex items-center gap-2">
+                                <Bot className="h-6 w-6 text-accent" />
+                                AI 需求导航器
+                            </CardTitle>
+                         ) : (
+                             <CardTitle className="font-headline flex items-center gap-2">
+                                <Bot className="h-6 w-6 text-accent" />
+                                AI 智能工作台
+                            </CardTitle>
+                         )}
+                        <Button variant="ghost" size="sm" onClick={() => setWorkbenchMode(isGuide ? 'expert' : 'guide')} className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            {text}
+                        </Button>
+                    </div>
+                     {isGuide ? (
+                        <CardDescription>
+                            与 AI 对话，帮您梳理业务需求，并推荐最合适的 AI 能力。
+                        </CardDescription>
+                     ) : (
+                        <CardDescription>
+                           通过自然语言下达指令，AI将为您分解任务、规划流程并自动执行。
+                        </CardDescription>
+                     )}
+                </CardHeader>
+                {children}
+            </Card>
         )
     }
 
@@ -125,15 +152,12 @@ export function AIWorkbench() {
   return (
     <ThreeColumnLayout>
         <ThreeColumnLayout.Left>
-            <Card className="shadow-none border-none bg-transparent">
-                <CardHeader className="p-0 mb-4">
-                     <ToggleButton />
-                </CardHeader>
+            <LeftPanelWrapper>
                 <LeftPanel />
-            </Card>
+            </LeftPanelWrapper>
         </ThreeColumnLayout.Left>
         
-        {workbenchMode === 'guide' && (
+        {workbenchMode === 'guide' ? (
             <>
                 <ThreeColumnLayout.Main>
                     <div className="h-full flex flex-col gap-6">
@@ -156,9 +180,7 @@ export function AIWorkbench() {
                      <UserActionPanel scenario={selectedScenario} />
                 </ThreeColumnLayout.Right>
             </>
-        )}
-        
-        {workbenchMode === 'expert' && (
+        ) : (
              <div className="lg:col-span-9 h-full flex flex-col gap-6">
                 <Card className="h-full flex items-center justify-center text-center">
                    <p className="text-muted-foreground">专家模式的任务历史和结果区域将在此处显示。</p>

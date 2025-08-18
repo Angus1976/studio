@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -98,16 +99,7 @@ export function TaskDispatchCenter({}: TaskDispatchCenterProps) {
     }
 
     return (
-        <Card className="h-full flex flex-col shadow-lg">
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <Bot className="h-6 w-6 text-accent" />
-                    AI 智能工作台
-                </CardTitle>
-                <CardDescription>
-                   通过自然语言下达指令，AI将为您分解任务、规划流程并自动执行。
-                </CardDescription>
-            </CardHeader>
+        <div className="h-full flex flex-col">
             <CardContent className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
                 <ScrollArea className="flex-1 pr-4">
                   {taskPlan ? (
@@ -170,6 +162,6 @@ export function TaskDispatchCenter({}: TaskDispatchCenterProps) {
                     </Button>
                 </form>
             </CardContent>
-        </Card>
+        </div>
     );
 }
