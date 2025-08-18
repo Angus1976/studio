@@ -1,14 +1,15 @@
 'use server';
 /**
- * @fileOverview A mock flow to save a prompt to the "database".
+ * @fileOverview A flow to save a prompt to the Firestore database.
  *
- * - savePrompt - A function that takes prompt data and simulates saving it.
+ * - savePrompt - A function that takes prompt data and saves/updates it in Firestore.
  * - SavePromptInput - The input type for the savePrompt function.
  * - SavePromptOutput - The return type for the savePrompt function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import admin from '@/lib/firebase-admin';
 
 export const SavePromptInputSchema = z.object({
   id: z.string().optional(),
@@ -18,7 +19,6 @@ export const SavePromptInputSchema = z.object({
   userPrompt: z.string(),
   context: z.string().optional(),
   negativePrompt: z.string().optional(),
-  // Metadata fields that are also part of the prompt object
   metadata: z.object({
     recommendedModel: z.string().optional(),
     constraints: z.string().optional(),
@@ -37,18 +37,44 @@ export type SavePromptOutput = z.infer<typeof SavePromptOutputSchema>;
 
 
 export async function savePrompt(input: SavePromptInput): Promise<SavePromptOutput> {
-  // This is a mock implementation.
-  // In a real application, this would write to Firestore.
-  console.log('Simulating saving prompt:', input);
+  const db = admin.firestore();
   
-  const newId = input.id || `prompt-${Date.now()}`;
-  
-  // Here you would add logic to save to the database.
-  // For now, we just return a success message.
-  
-  return {
-    id: newId,
-    success: true,
-    message: '提示词已成功保存（模拟）。',
-  };
+  try {
+    let docRef;
+    const { id, ...promptData } = input;
+    const dataToSave = {
+        ...promptData,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (id) {
+      // Update existing document
+      docRef = db.collection('prompts').doc(id);
+      await docRef.set(dataToSave, { merge: true });
+      return {
+        id: id,
+        success: true,
+        message: '提示词已成功更新。',
+      };
+    } else {
+      // Create new document
+      const dataWithTimestamp = {
+          ...dataToSave,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }
+      docRef = await db.collection('prompts').add(dataWithTimestamp);
+      return {
+        id: docRef.id,
+        success: true,
+        message: '提示词已成功保存。',
+      };
+    }
+  } catch (error) {
+    console.error("Error saving prompt to Firestore:", error);
+    return {
+        id: input.id || '',
+        success: false,
+        message: '保存提示词时发生错误。'
+    }
+  }
 }

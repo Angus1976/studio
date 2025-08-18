@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
 import { analyzePromptMetadata, AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 import { savePrompt } from '@/ai/flows/save-prompt-flow';
+import { getPrompts, GetPromptsOutput } from '@/ai/flows/get-prompts-flow';
 import { ThreeColumnLayout } from './layouts/three-column-layout';
 import { PromptLibrary, Prompt } from './prompt-library';
 
@@ -22,41 +23,6 @@ type Variable = {
     key: string;
     value: string;
 };
-
-const initialPrompts: Prompt[] = [
-    {
-        id: 'prompt-translate-pro',
-        name: '专业翻译器',
-        scope: '通用',
-        systemPrompt: 'You are a professional translator. Your task is to accurately translate the given text into the specified language, preserving the original tone and nuances.',
-        userPrompt: 'Translate the following text into {{language}}:\n\n"{{text}}"',
-    },
-    {
-        id: 'prompt-mktg-email',
-        name: '营销邮件生成器',
-        scope: '通用',
-        systemPrompt: 'You are an expert marketing copywriter specializing in high-converting email campaigns.',
-        userPrompt: 'Write a compelling marketing email for the following product:\n\nProduct Name: {{productName}}\nTarget Audience: {{audience}}\nKey Benefit: {{benefit}}',
-        context: 'Example successful subject line: "✨ Your Exclusive Offer Awaits!"',
-    },
-    {
-        id: 'prompt-tenant-support',
-        name: '专属客服机器人',
-        scope: '专属',
-        tenantId: 'tenant-1',
-        systemPrompt: 'You are a support agent for "Tech Innovators Inc.". Your tone should be helpful, patient, and professional. Always refer to our product as "The Innovator Suite". Do not mention competitors.',
-        userPrompt: 'Respond to the following customer query: "{{query}}"',
-        negativePrompt: 'Do not use informal language like "hey" or "cool".'
-    },
-     {
-        id: 'prompt-code-explainer',
-        name: '代码解释器',
-        scope: '通用',
-        systemPrompt: 'You are a senior software engineer skilled at explaining complex code in simple terms.',
-        userPrompt: 'Explain the following code snippet written in {{language}} and describe its time complexity:\n\n```\n{{codeBlock}}\n```',
-    }
-];
-
 
 export function PromptEngineerWorkbench() {
     const { toast } = useToast();
@@ -83,17 +49,27 @@ export function PromptEngineerWorkbench() {
     const [metadata, setMetadata] = useState<AnalyzePromptMetadataOutput | null>(null);
 
     // Prompt Library State
-    const [prompts, setPrompts] = useState<Prompt[]>([]);
+    const [prompts, setPrompts] = useState<GetPromptsOutput>([]);
     const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
 
-    useEffect(() => {
-        const fetchPrompts = async () => {
-            setIsLoadingPrompts(true);
-            // Simulate fetching from a database
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setPrompts(initialPrompts);
+     const fetchPrompts = async () => {
+        setIsLoadingPrompts(true);
+        try {
+            const fetchedPrompts = await getPrompts();
+            setPrompts(fetchedPrompts);
+        } catch (error) {
+            console.error("Error fetching prompts:", error);
+            toast({
+                variant: "destructive",
+                title: "加载提示词库失败",
+                description: "无法从数据库获取提示词列表。",
+            });
+        } finally {
             setIsLoadingPrompts(false);
-        };
+        }
+    };
+
+    useEffect(() => {
         fetchPrompts();
     }, []);
 
@@ -181,6 +157,7 @@ export function PromptEngineerWorkbench() {
         setUserPrompt(prompt.userPrompt);
         setContext(prompt.context || '');
         setNegativePrompt(prompt.negativePrompt || '');
+        setMetadata(null); // Clear metadata when loading a new prompt
         
         toast({
             title: `提示词已加载: ${prompt.name}`,
@@ -207,27 +184,15 @@ export function PromptEngineerWorkbench() {
             });
 
             if (result.success) {
-                const newPrompt: Prompt = {
-                    id: result.id,
-                    name: promptName,
-                    scope: promptScope,
-                    systemPrompt,
-                    userPrompt,
-                    context,
-                    negativePrompt
-                };
-                
-                if (activePromptId) {
-                    setPrompts(prompts.map(p => p.id === activePromptId ? newPrompt : p));
-                } else {
-                    setPrompts([newPrompt, ...prompts]);
-                    setActivePromptId(newPrompt.id); 
-                }
-
                 toast({
-                    title: "保存成功",
-                    description: `${promptName} 已成功保存到库中。`
+                    title: result.message,
                 });
+                // Refresh the prompt list to show the new/updated prompt
+                await fetchPrompts();
+                // If it was a new prompt, select it
+                if (!activePromptId) {
+                   setActivePromptId(result.id);
+                }
             } else {
                  toast({ variant: "destructive", title: "保存失败", description: result.message });
             }
