@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, AlertTriangle, Info, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -147,7 +147,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
         id: `tenant-${Date.now()}`,
         registeredDate: new Date().toISOString().split('T')[0],
       };
-      setTenants([...tenants, newTenant]);
+      setTenants([newTenant, ...tenants]);
       toast({ title: "租户已添加", description: `${values.companyName} 已成功添加到平台。` });
     }
     setEditingTenant(null);
@@ -239,7 +239,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
                                     onCancel={handleCancelForm}
                                 />
                             ) : (
-                                <div className="text-center text-sm text-muted-foreground py-10">
+                                <div className="text-center text-sm text-muted-foreground py-10 h-full flex items-center justify-center">
                                     <p>点击“添加新租户”或选择一个现有租户进行编辑。</p>
                                 </div>
                             )}
@@ -247,7 +247,7 @@ function TenantManagementDialog({ buttonText, title, description }: { buttonText
                     </Card>
                 </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-2">
                  <DialogClose asChild>
                     <Button variant="outline">关闭</Button>
                 </DialogClose>
@@ -389,7 +389,7 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
         id: `user-${Date.now()}`,
         registeredDate: new Date().toISOString().split('T')[0],
       };
-      setUsers([...users, newUser]);
+      setUsers([newUser, ...users]);
       toast({ title: "用户已添加", description: `${values.name} 已成功添加到平台。` });
     }
     setEditingUser(null);
@@ -479,7 +479,7 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                            {isFormOpen ? (
                                 <UserForm user={editingUser} onSubmit={handleAddOrUpdateUser} onCancel={handleCancelForm} />
                             ) : (
-                                <div className="text-center text-sm text-muted-foreground py-10">
+                                <div className="text-center text-sm text-muted-foreground py-10 h-full flex items-center justify-center">
                                     <p>点击“添加新用户”或选择一个现有用户进行编辑。</p>
                                 </div>
                             )}
@@ -487,7 +487,7 @@ function UserManagementDialog({ buttonText, title, description }: { buttonText: 
                     </Card>
                 </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="mt-2">
                  <DialogClose asChild>
                     <Button variant="outline">关闭</Button>
                 </DialogClose>
@@ -509,7 +509,7 @@ type LlmModel = z.infer<typeof llmModelSchema> & { id: string };
 const tokenSchema = z.object({
   key: z.string().min(1, "Key不能为空"),
   assignedTo: z.string().min(1, "必须分配给一个租户或用户"),
-  usageLimit: z.number().min(0, "用量限制不能为负"),
+  usageLimit: z.coerce.number().min(0, "用量限制不能为负"),
 });
 type Token = z.infer<typeof tokenSchema> & { id: string, used: number };
 
@@ -553,7 +553,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     const LlmForm = () => {
         const form = useForm({ resolver: zodResolver(llmModelSchema), defaultValues: {modelName: "", provider: "", apiKey: ""}});
         const onSubmit = (data: any) => {
-            setLlmModels(prev => [...prev, {...data, id: `llm-${Date.now()}`}]);
+            setLlmModels(prev => [{...data, id: `llm-${Date.now()}`}, ...prev]);
             toast({title: "LLM 模型已添加"});
             form.reset();
         };
@@ -572,7 +572,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
      const TokenForm = () => {
         const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {key: "", assignedTo: "", usageLimit: 0}});
         const onSubmit = (data: any) => {
-            setTokens(prev => [...prev, {...data, id: `token-${Date.now()}`, used: 0}]);
+            setTokens(prev => [{...data, id: `token-${Date.now()}`, used: 0}, ...prev]);
             toast({title: "Token 已分配"});
             form.reset();
         };
@@ -591,7 +591,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     const SoftwareAssetForm = () => {
         const form = useForm({ resolver: zodResolver(softwareAssetSchema), defaultValues: {name: "", type: "", licenseKey: ""}});
         const onSubmit = (data: any) => {
-            setSoftwareAssets(prev => [...prev, {...data, id: `asset-${Date.now()}`}]);
+            setSoftwareAssets(prev => [{...data, id: `asset-${Date.now()}`}, ...prev]);
             toast({title: "软件资产已添加"});
             form.reset();
         };
@@ -872,8 +872,8 @@ const managementPanels = [
     },
     {
         id: "users",
-        title: "个人用户管理",
-        description: "查看和管理所有个人用户。",
+        title: "用户与工程师管理",
+        description: "查看和管理所有个人用户与技术工程师。",
         icon: User,
         buttonText: "管理个人用户",
     },
@@ -887,9 +887,9 @@ const managementPanels = [
     {
         id: "permissions",
         title: "权限与资产管理",
-        description: "平台级权限分配，软件资源配置和管理",
+        description: "平台级权限分配，软件资源配置和管理。",
         icon: ShieldCheck,
-        buttonText: "配置权限",
+        buttonText: "配置资产",
     }
 ];
 
@@ -923,9 +923,6 @@ export function AdminDashboard() {
                             <CardTitle className="flex items-center gap-2"><panel.icon className="text-accent"/> {panel.title}</CardTitle>
                             <CardDescription>{panel.description}</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                           {/* Content can be added here if needed */}
-                        </CardContent>
                         <CardFooter>
                             {panel.id === 'tenants' ? (
                                 <TenantManagementDialog 
@@ -941,12 +938,6 @@ export function AdminDashboard() {
                                 />
                              ) : panel.id === 'transactions' ? (
                                 <TransactionManagementDialog
-                                    buttonText={panel.buttonText}
-                                    title={panel.title}
-                                    description={panel.description}
-                                />
-                            ) : panel.id === 'engineers' ? (
-                                <UserManagementDialog 
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
@@ -1000,4 +991,4 @@ export function AdminDashboard() {
   );
 }
 
-    
+      
