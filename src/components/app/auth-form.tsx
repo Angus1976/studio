@@ -44,8 +44,8 @@ const roles = {
         { value: 'admin', label: '平台管理员' },
     ],
     'user': [
-        { value: 'tenant', label: '租户管理员' },
-        { value: 'engineer', label: '提示词工程师' },
+        { value: 'tenant', label: '企业租户' },
+        { value: 'engineer', label: '技术工程师' },
         { value: 'user', label: '个人用户' },
     ]
 };

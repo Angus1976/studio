@@ -25,8 +25,8 @@ type DemoRole = {
 
 const demoRoles: DemoRole[] = [
     { key: 'admin', name: '平台管理员', email: 'admin@promptuniverse.com', icon: Shield, group: 'platform', fullName: 'Platform Admin' },
-    { key: 'tenant', name: '租户管理员', email: 'tenant@example.com', icon: Building, group: 'user', fullName: 'Tenant Admin' },
-    { key: 'engineer', name: '提示词工程师', email: 'engineer@example.com', icon: Code, group: 'user', fullName: 'Prompt Engineer/Developer' },
+    { key: 'tenant', name: '企业租户', email: 'tenant@example.com', icon: Building, group: 'user', fullName: 'Tenant Admin' },
+    { key: 'engineer', name: '技术工程师', email: 'engineer@example.com', icon: Code, group: 'user', fullName: 'Prompt Engineer/Developer' },
     { key: 'user', name: '个人用户', email: 'user@example.com', icon: User, group: 'user', fullName: 'Individual User' },
 ];
 
@@ -148,10 +148,10 @@ export default function LoginPage() {
                     <CardTitle className="text-lg text-center font-headline">一键登录演示账户</CardTitle>
                     <CardDescription className="text-center text-muted-foreground">以不同角色体验平台（首次点击将自动创建账户）</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <h3 className="text-center font-semibold mb-4 text-foreground">平台方</h3>
-                        <div className="flex justify-center">
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="md:col-span-1 text-center">
+                        <h3 className="font-semibold mb-4 text-foreground">平台方</h3>
+                         <div className="flex justify-center">
                            {demoRoles.filter(r => r.group === 'platform').map((role) => (
                                 <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base w-48" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
@@ -160,11 +160,11 @@ export default function LoginPage() {
                             ))}
                         </div>
                     </div>
-                     <div>
+                     <div className="md:col-span-2">
                         <h3 className="text-center font-semibold mb-4 text-foreground">用户方</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {demoRoles.filter(r => r.group === 'user').map((role) => (
-                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
+                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base w-full" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
                                     <span>{role.name}</span>
                                 </Button>
