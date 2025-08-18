@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,8 +5,6 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { aiRequirementsNavigator, type AIRequirementsNavigatorOutput, type AIRequirementsNavigatorInput } from "@/ai/flows/ai-requirements-navigator";
-import { digitalEmployee, type DigitalEmployeeInput, type DigitalEmployeeOutput } from "@/ai/flows/digital-employee";
-
 import type { Scenario } from "@/components/app/designer";
 import { sampleScenarios } from "@/components/app/designer";
 
@@ -19,13 +16,13 @@ import { Designer } from "@/components/app/designer";
 import { AdminDashboard } from "@/components/app/admin-dashboard";
 import { TenantDashboard } from "@/components/app/tenant-dashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText, CalendarPlus, Check, X } from "lucide-react";
+import { LoaderCircle, Wand2, LogIn, UserPlus, Users, Bot, ClipboardCheck, ArrowRight, ShieldCheck, ExternalLink, Link as LinkIcon, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SystemCapabilities } from "@/components/app/system-capabilities";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogClose } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScenarioLibraryViewer } from "@/components/app/scenario-library-viewer";
 import { ThreeColumnLayout } from "@/components/app/layouts/three-column-layout";
 import { TaskDispatchCenter, type Task } from "@/components/app/task-dispatch-center";
@@ -39,51 +36,38 @@ type ConversationMessage = {
   content: string;
 };
 
-// A more robust authentication hook that relies on both localStorage for speed
-// and onAuthStateChanged for correctness.
 const useAuth = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Try to set initial state from localStorage for a faster UI response
-        const loggedIn = typeof window !== 'undefined' && localStorage.getItem('isAuthenticated') === 'true';
-        const role = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-        setIsAuthenticated(loggedIn);
-        setUserRole(role);
-        
-        // Firebase's onAuthStateChanged is the source of truth.
-        // It handles session persistence across reloads.
+        const localAuth = localStorage.getItem('isAuthenticated') === 'true';
+        const localRole = localStorage.getItem('userRole');
+        setIsAuthenticated(localAuth);
+        setUserRole(localRole);
+
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in.
                 setIsAuthenticated(true);
-                // We still rely on localStorage for the role, as it's set on login.
                 const storedRole = localStorage.getItem('userRole');
                 setUserRole(storedRole);
             } else {
-                // User is signed out.
                 localStorage.removeItem('isAuthenticated');
                 localStorage.removeItem('userRole');
                 setIsAuthenticated(false);
                 setUserRole(null);
             }
-            // Finished checking auth state
-            setIsLoading(false);
         });
 
-        // Cleanup subscription on unmount
         return () => unsubscribe();
-    }, [])
+    }, []);
 
     const logout = async () => {
         await signOut(auth);
-        // State will be updated by the onAuthStateChanged listener.
         window.location.href = '/login';
-    }
+    };
 
-    return { isAuthenticated, userRole, isLoading, logout };
+    return { isAuthenticated, userRole, isLoading: isAuthenticated === null, logout };
 };
 
 
@@ -104,11 +88,10 @@ export default function Home() {
 
   useEffect(() => {
     if (isAuthenticated && !['平台方 - 技术工程师', '平台方 - 管理员', '用户方 - 企业租户'].includes(userRole || '')) {
-        // Start with a welcome message from the assistant
         setConversationHistory([
         {
             role: "assistant",
-            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求，或者您可以直接告诉我需要创建什么提醒或任务。",
+            content: "你好！我在这里帮助您定义 AI 驱动工作流的需求。",
         },
         ]);
     }
@@ -170,7 +153,6 @@ export default function Home() {
         title: "发生错误。",
         description: "从 AI 获取响应失败。请重试。",
       });
-      // Revert to previous history on error and put user's message back in input
       setConversationHistory(conversationHistory); 
       setCurrentInput(latestUserInput);
     } finally {

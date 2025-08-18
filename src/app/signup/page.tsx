@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -18,7 +17,6 @@ const roleMap: { [key: string]: string } = {
     'individual': '用户方 - 个人用户',
 };
 
-// This schema is used by the AuthForm component
 const signupSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),

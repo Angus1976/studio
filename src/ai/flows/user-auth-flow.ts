@@ -1,4 +1,3 @@
-
 'use server';
 
 import admin from '@/lib/firebase-admin';
@@ -13,6 +12,7 @@ const RegisterUserSchema = z.object({
   name: z.string(),
 });
 export type RegisterUserInput = z.infer<typeof RegisterUserSchema>;
+
 
 export async function registerUser(input: RegisterUserInput): Promise<{ uid: string }> {
     try {
@@ -58,18 +58,13 @@ export type LoginUserOutput = {
 
 export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput> {
   try {
-    // 1. Check if user exists in Firebase Auth by trying to sign in on the client-side SDK instance
-    // This is the most reliable way to verify both user existence and password correctness.
     const userCredential = await signInWithEmailAndPassword(clientAuth, input.email, input.password);
     const user = userCredential.user;
 
-    // 2. Get user role and other info from Firestore using the verified UID
     const userDocRef = admin.firestore().collection('users').doc(user.uid);
     const userDoc = await userDocRef.get();
 
     if (!userDoc.exists) {
-      // This case is unlikely if registration is always paired with Firestore doc creation,
-      // but it's a good safeguard.
       throw new Error('用户数据不存在，请联系管理员。');
     }
     

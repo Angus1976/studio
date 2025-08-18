@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -11,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
 import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth as clientAuth } from '@/lib/firebase';
 
 
 type DemoRole = {
@@ -40,7 +41,6 @@ export default function LoginPage() {
     try {
         const result = await loginUser({ email: values.email, password: values.password });
 
-        // On successful login, save auth state and role to localStorage
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', result.role);
         
@@ -49,7 +49,6 @@ export default function LoginPage() {
             description: `欢迎回来, ${result.name}!`,
         });
         
-        // Then redirect
         router.push('/');
 
     } catch (error: any) {
@@ -67,9 +66,7 @@ export default function LoginPage() {
   const handleDemoLogin = async (role: DemoRole) => {
     setIsLoading(true);
     try {
-      // 1. Attempt to log in first
       const result = await loginUser({ email: role.email, password: 'password' });
-      
       localStorage.setItem('isAuthenticated', 'true');
       localStorage.setItem('userRole', result.role);
       toast({
@@ -77,30 +74,26 @@ export default function LoginPage() {
         description: `您现在以“${role.fullName}”的身份登录。`,
       });
       router.push('/');
-
     } catch (error: any) {
-      // 2. If login fails because user does not exist, create the account
-      if (error.message.includes('用户不存在')) {
+      if (error.message && error.message.includes('用户不存在')) {
         try {
-          // Create the user via the backend flow
           await registerUser({
             email: role.email,
             password: 'password',
             role: role.fullName,
             name: role.name,
           });
-          
-          // 3. After successful registration, log the user in again
-          const loginResult = await loginUser({ email: role.email, password: 'password' });
+
+          await signInWithEmailAndPassword(clientAuth, role.email, 'password');
 
           localStorage.setItem('isAuthenticated', 'true');
-          localStorage.setItem('userRole', loginResult.role);
+          localStorage.setItem('userRole', role.fullName);
+          
           toast({
             title: '演示账户已创建并登录',
             description: `欢迎体验“${role.fullName}”角色。`,
           });
           router.push('/');
-
         } catch (registerError: any) {
           console.error("Demo account creation failed:", registerError);
           toast({
@@ -110,7 +103,6 @@ export default function LoginPage() {
           });
         }
       } else {
-        // Handle other login errors (e.g., wrong password for an existing demo account)
         console.error("Demo login failed:", error);
         toast({
           variant: "destructive",
@@ -122,6 +114,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 bg-background">

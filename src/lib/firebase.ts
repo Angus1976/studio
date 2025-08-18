@@ -12,8 +12,6 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// This robust initialization function prevents re-initialization errors in Next.js's hot-reloading environment.
-// It ensures that the Firebase app is initialized only once.
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth = getAuth(app);
