@@ -7,9 +7,8 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
 import Handlebars from 'handlebars';
-import { Part } from 'genkit/cohere';
+import { Part } from 'genkit/ai';
 import { 
     PromptExecutionInputSchema,
     PromptExecutionOutputSchema,
@@ -55,17 +54,11 @@ const promptExecutionFlow = ai.defineFlow(
         safetySettings.push({
             category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
             threshold: 'BLOCK_ONLY_HIGH',
-            // This is a way to use safety settings to simulate a negative prompt
-            // by blocking content that matches the negative prompt.
-            // Note: This is a creative use of the feature and effectiveness may vary.
-            // A more robust solution might require a different model or fine-tuning.
-            // For this implementation, we are informing the model to avoid this content.
-            // The prompt structure will also be updated to reflect this.
         });
         // Also, add the negative prompt to the system prompt if possible
         const updatedSystemPrompt = `${systemPrompt || ''}\n\nIMPORTANT: Do not include any of the following in your response: "${negativePrompt}"`.trim();
         const systemPromptIndex = prompt.findIndex(p => p.role === 'system');
-        if (systemPromptIndex !== -1) {
+        if (systemPromptIndex !== -1 && prompt[systemPromptIndex]?.content) {
             prompt[systemPromptIndex] = { role: 'system', content: [{text: updatedSystemPrompt}]};
         } else {
              prompt.unshift({ role: 'system', content: [{text: updatedSystemPrompt}] });
