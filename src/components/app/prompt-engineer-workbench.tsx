@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Sparkles, BrainCircuit, Save, Library, Apply } from 'lucide-react';
+import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Sparkles, BrainCircuit, Save, Library, BookCopy, Apply } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
