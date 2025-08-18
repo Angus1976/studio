@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as LucideReact from "lucide-react";
@@ -26,7 +25,6 @@ import { ScrollArea } from "../ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
-import { OrganizationChart } from "./organization-chart";
 
 
 const usageData = [
@@ -1168,9 +1166,8 @@ export function TenantDashboard() {
         <h1 className="text-3xl font-bold font-headline">企业仪表盘</h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 md:grid-cols-6">
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
                 <TabsTrigger value="overview"><Activity className="mr-2"/>概览</TabsTrigger>
-                <TabsTrigger value="organization"><Building2 className="mr-2"/>组织架构</TabsTrigger>
                 <TabsTrigger value="procurement"><ShoppingCart className="mr-2"/>集采市场</TabsTrigger>
                 <TabsTrigger value="orders"><FileEdit className="mr-2"/>我的订单</TabsTrigger>
                 <TabsTrigger value="users"><Users className="mr-2"/>成员管理</TabsTrigger>
@@ -1234,10 +1231,6 @@ export function TenantDashboard() {
                 </div>
             </TabsContent>
             
-            <TabsContent value="organization" className="mt-6">
-              <OrganizationChart />
-            </TabsContent>
-
              <TabsContent value="procurement" className="mt-6">
                 <Card>
                     <CardHeader>
@@ -1426,4 +1419,5 @@ export function TenantDashboard() {
 
 
     
+
 
