@@ -22,6 +22,7 @@ type UserActionPanelProps = {
 };
 
 const extractVariables = (text: string): string[] => {
+    if (!text) return [];
     const regex = /{{\s*(\w+)\s*}}/g;
     const matches = new Set<string>();
     let match;
@@ -72,8 +73,10 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
                 return acc;
             }, {} as Record<string, string>);
 
+            // If the scenario has an ID, we use it. If not, it's a tuned scenario without an ID, so we pass the content directly.
             const result = await digitalEmployee({
-                promptId: scenario.id,
+                promptId: scenario.id ? scenario.id : undefined,
+                userPrompt: scenario.prompt, // Always pass the current prompt content for testing
                 variables: varsAsObject,
             });
             
@@ -131,13 +134,13 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
                         提示库连接器
                     </CardTitle>
                      <CardDescription>
-                       当前已连接到能力场景。
+                       {scenario.id ? "当前已连接到库中的能力场景。" : "当前正在使用一个微调后的临时场景。"}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                    <div className="flex items-center gap-2 rounded-md bg-muted p-3">
                         <span className="text-sm font-medium text-muted-foreground">ID:</span>
-                        <span className="text-sm font-mono text-foreground truncate">{scenario.id}</span>
+                        <span className="text-sm font-mono text-foreground truncate">{scenario.id || 'N/A (未保存)'}</span>
                    </div>
                 </CardContent>
             </Card>

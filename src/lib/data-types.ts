@@ -129,10 +129,16 @@ export type PromptExecutionOutput = z.infer<typeof PromptExecutionOutputSchema>;
 // --- Digital Employee ---
 
 export const DigitalEmployeeInputSchema = z.object({
-  promptId: z.string().describe("The ID of the prompt scenario to execute."),
+  promptId: z.string().optional().describe("The ID of the prompt scenario to execute from the library."),
   variables: z.record(z.string()).optional().describe("Key-value pairs for variables in the prompt."),
   temperature: z.number().min(0).max(1).optional().describe("The temperature for the model."),
-  promptContent: z.string().optional().describe("Direct prompt content to use instead of fetching by ID. Used for testing tuned prompts.")
+  // The following are used for testing prompts that haven't been saved yet.
+  systemPrompt: z.string().optional(),
+  userPrompt: z.string().optional(),
+  context: z.string().optional(),
+  negativePrompt: z.string().optional(),
+}).refine(data => data.promptId || data.userPrompt, {
+    message: "Either promptId or userPrompt must be provided.",
 });
 export type DigitalEmployeeInput = z.infer<typeof DigitalEmployeeInputSchema>;
 

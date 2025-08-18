@@ -29,17 +29,14 @@ const digitalEmployeeFlow = ai.defineFlow(
     inputSchema: DigitalEmployeeInputSchema,
     outputSchema: z.object({ response: z.string() }),
   },
-  async ({ promptId, variables, temperature, promptContent }) => {
+  async ({ promptId, variables, temperature, systemPrompt, userPrompt, context, negativePrompt }) => {
 
-    let finalPromptContent: string;
-    let systemPrompt: string | undefined;
-    let context: string | undefined;
-    let negativePrompt: string | undefined;
+    let finalSystemPrompt: string | undefined = systemPrompt;
+    let finalUserPrompt: string | undefined = userPrompt;
+    let finalContext: string | undefined = context;
+    let finalNegativePrompt: string | undefined = negativePrompt;
 
-
-    if (promptContent) {
-        finalPromptContent = promptContent;
-    } else {
+    if (promptId) {
         // Fetch all prompts and find the one with the matching ID
         const allPrompts = await getPrompts();
         const scenario = allPrompts.find(s => s.id === promptId);
@@ -48,18 +45,22 @@ const digitalEmployeeFlow = ai.defineFlow(
             throw new Error(`Prompt with ID '${promptId}' not found in the library.`);
         }
         
-        finalPromptContent = scenario.userPrompt;
-        systemPrompt = scenario.systemPrompt;
-        context = scenario.context;
-        negativePrompt = scenario.negativePrompt;
+        finalUserPrompt = scenario.userPrompt;
+        finalSystemPrompt = scenario.systemPrompt;
+        finalContext = scenario.context;
+        finalNegativePrompt = scenario.negativePrompt;
+    }
+    
+    if(!finalUserPrompt) {
+        throw new Error("A user prompt is required to execute the flow.");
     }
     
     // We can reuse the main execution flow. 
     const result = await executePrompt({
-        systemPrompt: systemPrompt,
-        userPrompt: finalPromptContent,
-        context: context,
-        negativePrompt: negativePrompt,
+        systemPrompt: finalSystemPrompt,
+        userPrompt: finalUserPrompt,
+        context: finalContext,
+        negativePrompt: finalNegativePrompt,
         variables,
         temperature
     });
