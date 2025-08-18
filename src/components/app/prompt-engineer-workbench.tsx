@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Sparkles, BrainCircuit, Save, Apply, Library } from 'lucide-react';
+import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Sparkles, BrainCircuit, Save, Library, Apply } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
@@ -89,6 +89,7 @@ export function PromptEngineerWorkbench() {
     useEffect(() => {
         const fetchPrompts = async () => {
             setIsLoadingPrompts(true);
+            // Simulate fetching from a database
             await new Promise(resolve => setTimeout(resolve, 500));
             setPrompts(initialPrompts);
             setIsLoadingPrompts(false);
@@ -216,12 +217,11 @@ export function PromptEngineerWorkbench() {
                     negativePrompt
                 };
                 
-                // Update local prompt list
                 if (activePromptId) {
                     setPrompts(prompts.map(p => p.id === activePromptId ? newPrompt : p));
                 } else {
                     setPrompts([newPrompt, ...prompts]);
-                    setActivePromptId(newPrompt.id); // Set the new ID for future saves
+                    setActivePromptId(newPrompt.id); 
                 }
 
                 toast({
@@ -272,7 +272,7 @@ export function PromptEngineerWorkbench() {
                             在此设计和编排您的提示词。在用户指令中使用 `{"{{variable}}"`} 语法来定义可替换的变量。
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1 grid grid-cols-1 gap-4 overflow-y-auto">
+                    <CardContent className="flex-1 grid grid-cols-1 gap-4 overflow-y-auto p-4">
                        <div className="space-y-1">
                             <Label htmlFor="prompt-name">提示词名称</Label>
                             <Input id="prompt-name" value={promptName} onChange={(e) => setPromptName(e.target.value)} />
