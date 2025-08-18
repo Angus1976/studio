@@ -11,7 +11,7 @@ import { PromptTestbed } from './prompt-testbed';
 import { MetadataAnalyzer } from './metadata-analyzer';
 import { savePrompt } from '@/ai/flows/save-prompt-flow';
 import { deletePrompt } from '@/ai/flows/delete-prompt-flow';
-import { AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
+import { analyzePromptMetadata, AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 
 export function PromptEngineerWorkbench() {
     const { toast } = useToast();
@@ -53,7 +53,7 @@ export function PromptEngineerWorkbench() {
     // Initial fetch of prompts
     useEffect(() => {
         fetchPrompts();
-    }, [toast]);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSelectPrompt = (prompt: Prompt) => {
         setActivePrompt({
@@ -72,9 +72,20 @@ export function PromptEngineerWorkbench() {
         });
     };
 
-    const handleSavePrompt = async (promptToSave: PromptData, metadata?: AnalyzePromptMetadataOutput) => {
+    const handleSavePrompt = async (promptToSave: PromptData) => {
         setIsSaving(true);
         try {
+            // Step 1: Always analyze metadata first
+            toast({ title: "正在分析元数据...", description: "AI 正在为您的提示词生成元数据。" });
+            const metadata = await analyzePromptMetadata({
+                systemPrompt: promptToSave.systemPrompt,
+                userPrompt: promptToSave.userPrompt,
+                context: promptToSave.context,
+                negativePrompt: promptToSave.negativePrompt,
+            });
+
+            // Step 2: Save the prompt with the generated metadata
+            toast({ title: "正在保存提示词...", description: "元数据分析完成，正在保存..." });
             const result = await savePrompt({
                 id: promptToSave.id || undefined,
                 name: promptToSave.name,
@@ -83,11 +94,7 @@ export function PromptEngineerWorkbench() {
                 userPrompt: promptToSave.userPrompt,
                 context: promptToSave.context,
                 negativePrompt: promptToSave.negativePrompt,
-                metadata: metadata ? {
-                    recommendedModel: metadata.recommendedModel,
-                    constraints: metadata.constraints,
-                    scenario: metadata.scenario
-                } : undefined
+                metadata: metadata,
             });
 
             if (result.success) {

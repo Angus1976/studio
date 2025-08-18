@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow to save a prompt to the Firestore database.
@@ -20,9 +21,10 @@ export const SavePromptInputSchema = z.object({
   context: z.string().optional(),
   negativePrompt: z.string().optional(),
   metadata: z.object({
-    recommendedModel: z.string().optional(),
-    constraints: z.string().optional(),
-    scenario: z.string().optional(),
+    scope: z.string(),
+    recommendedModel: z.string(),
+    constraints: z.string(),
+    scenario: z.string(),
   }).optional(),
 });
 export type SavePromptInput = z.infer<typeof SavePromptInputSchema>;
@@ -61,6 +63,7 @@ export async function savePrompt(input: SavePromptInput): Promise<SavePromptOutp
       const dataWithTimestamp = {
           ...dataToSave,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          archived: false, // Ensure new prompts are not archived
       }
       docRef = await db.collection('prompts').add(dataWithTimestamp);
       return {
