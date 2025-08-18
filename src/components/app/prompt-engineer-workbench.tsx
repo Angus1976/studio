@@ -21,7 +21,7 @@ export function PromptEngineerWorkbench() {
     const [activePrompt, setActivePrompt] = useState<PromptData>({
         id: null,
         name: '新的提示词',
-        scope: '通用',
+        expertId: 'general-expert',
         systemPrompt: 'You are a helpful assistant.',
         userPrompt: 'Translate the following text to {{language}}: "{{text}}"',
         context: '',
@@ -53,13 +53,13 @@ export function PromptEngineerWorkbench() {
     // Initial fetch of prompts
     useEffect(() => {
         fetchPrompts();
-    }, []);
+    }, [toast]);
 
     const handleSelectPrompt = (prompt: Prompt) => {
         setActivePrompt({
             id: prompt.id,
             name: prompt.name,
-            scope: prompt.scope,
+            expertId: prompt.expertId,
             systemPrompt: prompt.systemPrompt || '',
             userPrompt: prompt.userPrompt,
             context: prompt.context || '',
@@ -78,7 +78,7 @@ export function PromptEngineerWorkbench() {
             const result = await savePrompt({
                 id: promptToSave.id || undefined,
                 name: promptToSave.name,
-                scope: promptToSave.scope,
+                expertId: promptToSave.expertId,
                 systemPrompt: promptToSave.systemPrompt,
                 userPrompt: promptToSave.userPrompt,
                 context: promptToSave.context,
@@ -116,7 +116,7 @@ export function PromptEngineerWorkbench() {
                  if(activePrompt.id === promptId) {
                     // Clear the editor if the active prompt was deleted
                     setActivePrompt({
-                        id: null, name: '新的提示词', scope: '通用',
+                        id: null, name: '新的提示词', expertId: 'general-expert',
                         systemPrompt: '', userPrompt: '', context: '', negativePrompt: ''
                     });
                 }

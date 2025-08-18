@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Scenario } from "@/lib/prompt-scenarios";
+import { Scenario } from "./ai-workbench";
 import { AlertTriangle, BookCopy, Wrench, Check, Users } from "lucide-react";
 import { ContactEngineersDialog } from "./contact-engineers-dialog";
 

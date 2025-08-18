@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Link, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { digitalEmployee } from '@/ai/flows/digital-employee';
-import type { Scenario } from '@/lib/prompt-scenarios';
+import type { Scenario } from './ai-workbench';
 
 type Variable = {
     id: string;

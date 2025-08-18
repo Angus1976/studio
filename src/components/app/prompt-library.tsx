@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PackageSearch, BookCopy, LoaderCircle, Trash2 } from "lucide-react";
+import { PackageSearch, BookCopy, LoaderCircle, Trash2, Bot } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -16,7 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 export type Prompt = {
     id: string;
     name: string;
-    scope: '通用' | '专属';
+    expertId: string;
     tenantId?: string;
     systemPrompt?: string;
     userPrompt: string;
@@ -24,6 +24,14 @@ export type Prompt = {
     negativePrompt?: string;
 };
 
+const expertDomains: { [key: string]: string } = {
+    'recruitment-expert': '招聘',
+    'marketing-expert': '营销',
+    'sales-expert': '销售',
+    'code-expert': '代码',
+    'copywriting-expert': '文案',
+    'general-expert': '通用',
+};
 
 export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeletePrompt }: { prompts: Prompt[], onSelectPrompt: (prompt: Prompt) => void, isLoading: boolean, onDeletePrompt: (promptId: string) => void }) {
     const [search, setSearch] = useState('');
@@ -58,7 +66,7 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
                         <TableHeader>
                             <TableRow>
                                 <TableHead>名称</TableHead>
-                                <TableHead>范围</TableHead>
+                                <TableHead>领域</TableHead>
                                 <TableHead className="text-right">操作</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -76,8 +84,9 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
                                     <TableRow key={prompt.id}>
                                         <TableCell className="font-medium">{prompt.name}</TableCell>
                                         <TableCell>
-                                            <Badge variant={prompt.scope === '通用' ? 'secondary' : 'default'}>
-                                                {prompt.scope}
+                                            <Badge variant={'secondary'}>
+                                                <Bot className="h-3 w-3 mr-1" />
+                                                {expertDomains[prompt.expertId] || '未知'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right space-x-1">

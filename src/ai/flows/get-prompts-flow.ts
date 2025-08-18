@@ -16,7 +16,7 @@ const GetPromptsInputSchema = z.object({});
 const PromptSchema = z.object({
     id: z.string(),
     name: z.string(),
-    scope: z.enum(['通用', '专属']),
+    expertId: z.string(),
     tenantId: z.string().optional(),
     systemPrompt: z.string().optional(),
     userPrompt: z.string(),
@@ -50,7 +50,7 @@ export async function getPrompts(): Promise<GetPromptsOutput> {
         return {
             id: doc.id,
             name: data.name || '未命名',
-            scope: data.scope || '通用',
+            expertId: data.expertId || 'general-expert', // Default to a general expert if not set
             userPrompt: data.userPrompt || '',
             systemPrompt: data.systemPrompt,
             context: data.context,

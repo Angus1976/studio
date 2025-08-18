@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from '@/components/ui/input';
-import { LoaderCircle, Save, Sparkles } from 'lucide-react';
+import { LoaderCircle, Save, Sparkles, Bot } from 'lucide-react';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export type PromptData = {
     id: string | null;
     name: string;
-    scope: '通用' | '专属';
+    expertId: string;
     systemPrompt: string;
     userPrompt: string;
     context: string;
@@ -25,6 +26,16 @@ type PromptEditorProps = {
     onSave: (prompt: PromptData, metadata?: any) => void;
     isSaving: boolean;
 };
+
+const expertDomains = [
+    { id: 'recruitment-expert', name: '招聘专家' },
+    { id: 'marketing-expert', name: '营销专家' },
+    { id: 'sales-expert', name: '销售专家' },
+    { id: 'code-expert', name: '代码专家' },
+    { id: 'copywriting-expert', name: '通用文案专家' },
+    { id: 'general-expert', name: '通用专家' },
+];
+
 
 export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: PromptEditorProps) {
     
@@ -44,9 +55,29 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 grid grid-cols-1 gap-4 overflow-y-auto p-4">
-               <div className="space-y-1">
-                    <Label htmlFor="prompt-name">提示词名称</Label>
-                    <Input id="prompt-name" value={prompt.name} onChange={(e) => handleChange('name', e.target.value)} />
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <Label htmlFor="prompt-name">提示词名称</Label>
+                        <Input id="prompt-name" value={prompt.name} onChange={(e) => handleChange('name', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="expert-id">专家领域</Label>
+                         <Select onValueChange={(value) => handleChange('expertId', value)} value={prompt.expertId}>
+                            <SelectTrigger id="expert-id">
+                                <SelectValue placeholder="选择一个专家领域..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>专家领域</SelectLabel>
+                                    {expertDomains.map(domain => (
+                                        <SelectItem key={domain.id} value={domain.id}>
+                                            <span className="flex items-center gap-2"><Bot className="h-4 w-4" />{domain.name}</span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
                </div>
                <div className="grid gap-4">
                     <div>

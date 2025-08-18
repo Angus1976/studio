@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from '@/components/ui/input';
 import { Wrench, Save, XCircle } from 'lucide-react';
-import { Scenario } from '@/lib/prompt-scenarios';
+import { Scenario } from './ai-workbench';
 
 type ScenarioArchitectViewProps = {
     scenario: Scenario;
@@ -22,7 +22,7 @@ export function ScenarioArchitectView({ scenario, onSave, onCancel }: ScenarioAr
         setTunedScenario(scenario);
     }, [scenario]);
 
-    const handleChange = (field: keyof Scenario, value: string) => {
+    const handleChange = (field: keyof Omit<Scenario, 'id' | 'expertId'>, value: string) => {
         setTunedScenario(prev => ({ ...prev, [field]: value }));
     };
 

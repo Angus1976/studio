@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,15 +7,29 @@ import { ScenarioLibraryViewer } from './scenario-library-viewer';
 import { ScenarioArchitectView } from './scenario-architect-view';
 import { UserActionPanel } from './user-action-panel';
 import { useToast } from '@/hooks/use-toast';
-import { getPrompts, GetPromptsOutput } from '@/ai/flows/get-prompts-flow';
-import type { Scenario } from '@/lib/prompt-scenarios';
+import { getPrompts } from '@/ai/flows/get-prompts-flow';
+import type { Prompt } from './prompt-library';
+import { TaskDispatchCenter } from './task-dispatch-center';
+import { Button } from '../ui/button';
+import { Lightbulb, Wand2 } from 'lucide-react';
+import { Card, CardHeader } from '../ui/card';
 
+export interface Scenario {
+    id: string;
+    title: string;
+    description: string;
+    prompt: string;
+    expertId: string;
+}
+
+type WorkbenchMode = 'guide' | 'expert';
 
 export function AIWorkbench() {
     const { toast } = useToast();
     const [allScenarios, setAllScenarios] = useState<Scenario[]>([]);
     const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>('guide');
     
     const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
     const [tuningScenario, setTuningScenario] = useState<Scenario | null>(null);
@@ -25,13 +38,13 @@ export function AIWorkbench() {
     useEffect(() => {
         async function fetchScenarios() {
             try {
-                const fetchedPrompts = await getPrompts();
-                const scenarios = fetchedPrompts.map(p => ({
+                const fetchedPrompts: Prompt[] = await getPrompts();
+                const scenarios: Scenario[] = fetchedPrompts.map(p => ({
                     id: p.id,
                     title: p.name,
                     description: p.context || '未提供描述。',
                     prompt: p.userPrompt,
-                    expertId: p.scope === '专属' ? 'tenant-specific' : 'recruitment-expert', // This mapping can be improved
+                    expertId: p.expertId, 
                 }));
                 setAllScenarios(scenarios);
             } catch (error) {
@@ -86,32 +99,72 @@ export function AIWorkbench() {
     const handleCancelTuning = () => {
         setTuningScenario(null);
     };
+    
+    const LeftPanel = () => {
+        if (workbenchMode === 'expert') {
+            return <TaskDispatchCenter />;
+        }
+        return <RequirementsNavigator onFinish={handleNavigationFinish} />;
+    };
+    
+    const ToggleButton = () => {
+        const isGuide = workbenchMode === 'guide';
+        const text = isGuide ? "切换到专家模式" : "切换到引导模式";
+        const Icon = isGuide ? Wand2 : Lightbulb;
+        
+        return (
+            <Button variant="ghost" size="sm" onClick={() => setWorkbenchMode(isGuide ? 'expert' : 'guide')} className="flex items-center gap-2">
+                <Icon className="h-4 w-4" />
+                {text}
+            </Button>
+        )
+    }
+
 
   return (
     <ThreeColumnLayout>
         <ThreeColumnLayout.Left>
-             <RequirementsNavigator onFinish={handleNavigationFinish} />
+            <Card className="shadow-none border-none bg-transparent">
+                <CardHeader className="p-0 mb-4">
+                     <ToggleButton />
+                </CardHeader>
+                <LeftPanel />
+            </Card>
         </ThreeColumnLayout.Left>
-        <ThreeColumnLayout.Main>
-            <div className="h-full flex flex-col gap-6">
-                <ScenarioLibraryViewer
-                    scenarios={recommendedScenarios}
-                    isLoading={isLoading && !expertId}
-                    onSelect={handleSelectScenario}
-                    onTune={handleTuneScenario}
-                />
-                {tuningScenario && (
-                    <ScenarioArchitectView
-                        scenario={tuningScenario}
-                        onSave={handleSaveTunedScenario}
-                        onCancel={handleCancelTuning}
-                    />
-                )}
-            </div>
-        </ThreeColumnLayout.Main>
-        <ThreeColumnLayout.Right>
-             <UserActionPanel scenario={selectedScenario} />
-        </ThreeColumnLayout.Right>
+        
+        {workbenchMode === 'guide' && (
+            <>
+                <ThreeColumnLayout.Main>
+                    <div className="h-full flex flex-col gap-6">
+                        <ScenarioLibraryViewer
+                            scenarios={recommendedScenarios}
+                            isLoading={isLoading && !expertId}
+                            onSelect={handleSelectScenario}
+                            onTune={handleTuneScenario}
+                        />
+                        {tuningScenario && (
+                            <ScenarioArchitectView
+                                scenario={tuningScenario}
+                                onSave={handleSaveTunedScenario}
+                                onCancel={handleCancelTuning}
+                            />
+                        )}
+                    </div>
+                </ThreeColumnLayout.Main>
+                <ThreeColumnLayout.Right>
+                     <UserActionPanel scenario={selectedScenario} />
+                </ThreeColumnLayout.Right>
+            </>
+        )}
+        
+        {workbenchMode === 'expert' && (
+             <div className="lg:col-span-9 h-full flex flex-col gap-6">
+                <Card className="h-full flex items-center justify-center text-center">
+                   <p className="text-muted-foreground">专家模式的任务历史和结果区域将在此处显示。</p>
+                </Card>
+             </div>
+        )}
+
     </ThreeColumnLayout>
   );
 }

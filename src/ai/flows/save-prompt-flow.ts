@@ -14,7 +14,7 @@ import admin from '@/lib/firebase-admin';
 export const SavePromptInputSchema = z.object({
   id: z.string().optional(),
   name: z.string(),
-  scope: z.enum(['通用', '专属']),
+  expertId: z.string(),
   systemPrompt: z.string().optional(),
   userPrompt: z.string(),
   context: z.string().optional(),
