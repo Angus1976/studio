@@ -46,6 +46,7 @@ const roles = {
     'user': [
         { value: 'tenant', label: '租户管理员' },
         { value: 'engineer', label: '提示词工程师' },
+        { value: 'user', label: '个人用户' },
     ]
 };
 

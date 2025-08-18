@@ -101,6 +101,7 @@ export default function Home() {
         case 'Tenant Admin':
             return <TenantDashboard />;
         case 'Prompt Engineer/Developer':
+        case 'Individual User':
         default:
             return <PromptEngineerWorkbench />;
     }

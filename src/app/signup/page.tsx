@@ -14,6 +14,7 @@ const roleMap: { [key: string]: string } = {
     'admin': 'Platform Admin',
     'tenant': 'Tenant Admin',
     'engineer': 'Prompt Engineer/Developer',
+    'user': 'Individual User'
 };
 
 const signupSchema = z.object({

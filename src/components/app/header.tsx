@@ -8,6 +8,7 @@ const roleDisplayMap: { [key: string]: string } = {
   'Platform Admin': '平台管理员',
   'Tenant Admin': '租户管理员',
   'Prompt Engineer/Developer': '提示词工程师',
+  'Individual User': '个人用户',
 };
 
 

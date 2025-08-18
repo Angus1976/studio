@@ -27,6 +27,7 @@ const demoRoles: DemoRole[] = [
     { key: 'admin', name: '平台管理员', email: 'admin@promptuniverse.com', icon: Shield, group: 'platform', fullName: 'Platform Admin' },
     { key: 'tenant', name: '租户管理员', email: 'tenant@example.com', icon: Building, group: 'user', fullName: 'Tenant Admin' },
     { key: 'engineer', name: '提示词工程师', email: 'engineer@example.com', icon: Code, group: 'user', fullName: 'Prompt Engineer/Developer' },
+    { key: 'user', name: '个人用户', email: 'user@example.com', icon: User, group: 'user', fullName: 'Individual User' },
 ];
 
 
@@ -161,7 +162,7 @@ export default function LoginPage() {
                     </div>
                      <div>
                         <h3 className="text-center font-semibold mb-4 text-foreground">用户方</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {demoRoles.filter(r => r.group === 'user').map((role) => (
                                 <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
