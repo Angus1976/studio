@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PackageSearch, BookCopy } from "lucide-react";
+import { PackageSearch, BookCopy, LoaderCircle } from "lucide-react";
+import { Skeleton } from '@/components/ui/skeleton';
 
 export type Prompt = {
     id: string;
@@ -21,44 +22,11 @@ export type Prompt = {
     negativePrompt?: string;
 };
 
-const mockPrompts: Prompt[] = [
-    {
-        id: 'prompt-translate-pro',
-        name: '专业翻译器',
-        scope: '通用',
-        systemPrompt: 'You are a professional translator. Your task is to accurately translate the given text into the specified language, preserving the original tone and nuances.',
-        userPrompt: 'Translate the following text into {{language}}:\n\n"{{text}}"',
-    },
-    {
-        id: 'prompt-mktg-email',
-        name: '营销邮件生成器',
-        scope: '通用',
-        systemPrompt: 'You are an expert marketing copywriter specializing in high-converting email campaigns.',
-        userPrompt: 'Write a compelling marketing email for the following product:\n\nProduct Name: {{productName}}\nTarget Audience: {{audience}}\nKey Benefit: {{benefit}}',
-        context: 'Example successful subject line: "✨ Your Exclusive Offer Awaits!"',
-    },
-    {
-        id: 'prompt-tenant-support',
-        name: '专属客服机器人',
-        scope: '专属',
-        tenantId: 'tenant-1',
-        systemPrompt: 'You are a support agent for "Tech Innovators Inc.". Your tone should be helpful, patient, and professional. Always refer to our product as "The Innovator Suite". Do not mention competitors.',
-        userPrompt: 'Respond to the following customer query: "{{query}}"',
-        negativePrompt: 'Do not use informal language like "hey" or "cool".'
-    },
-     {
-        id: 'prompt-code-explainer',
-        name: '代码解释器',
-        scope: '通用',
-        systemPrompt: 'You are a senior software engineer skilled at explaining complex code in simple terms.',
-        userPrompt: 'Explain the following code snippet written in {{language}} and describe its time complexity:\n\n```\n{{codeBlock}}\n```',
-    }
-];
 
-export function PromptLibrary({ onSelectPrompt }: { onSelectPrompt: (prompt: Prompt) => void }) {
+export function PromptLibrary({ prompts, onSelectPrompt, isLoading }: { prompts: Prompt[], onSelectPrompt: (prompt: Prompt) => void, isLoading: boolean }) {
     const [search, setSearch] = useState('');
 
-    const filteredPrompts = mockPrompts.filter(p =>
+    const filteredPrompts = prompts.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -93,19 +61,35 @@ export function PromptLibrary({ onSelectPrompt }: { onSelectPrompt: (prompt: Pro
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredPrompts.map((prompt) => (
-                                <TableRow key={prompt.id}>
-                                    <TableCell className="font-medium">{prompt.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={prompt.scope === '通用' ? 'secondary' : 'default'}>
-                                            {prompt.scope}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button size="sm" variant="outline" onClick={() => onSelectPrompt(prompt)}>选用</Button>
+                            {isLoading ? (
+                                Array.from({ length: 4 }).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-14" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredPrompts.length > 0 ? (
+                                filteredPrompts.map((prompt) => (
+                                    <TableRow key={prompt.id}>
+                                        <TableCell className="font-medium">{prompt.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={prompt.scope === '通用' ? 'secondary' : 'default'}>
+                                                {prompt.scope}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button size="sm" variant="outline" onClick={() => onSelectPrompt(prompt)}>选用</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                        没有找到提示词。
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </ScrollArea>

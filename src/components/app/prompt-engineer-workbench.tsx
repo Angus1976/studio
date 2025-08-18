@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,6 +22,41 @@ type Variable = {
     value: string;
 };
 
+const mockPrompts: Prompt[] = [
+    {
+        id: 'prompt-translate-pro',
+        name: '专业翻译器',
+        scope: '通用',
+        systemPrompt: 'You are a professional translator. Your task is to accurately translate the given text into the specified language, preserving the original tone and nuances.',
+        userPrompt: 'Translate the following text into {{language}}:\n\n"{{text}}"',
+    },
+    {
+        id: 'prompt-mktg-email',
+        name: '营销邮件生成器',
+        scope: '通用',
+        systemPrompt: 'You are an expert marketing copywriter specializing in high-converting email campaigns.',
+        userPrompt: 'Write a compelling marketing email for the following product:\n\nProduct Name: {{productName}}\nTarget Audience: {{audience}}\nKey Benefit: {{benefit}}',
+        context: 'Example successful subject line: "✨ Your Exclusive Offer Awaits!"',
+    },
+    {
+        id: 'prompt-tenant-support',
+        name: '专属客服机器人',
+        scope: '专属',
+        tenantId: 'tenant-1',
+        systemPrompt: 'You are a support agent for "Tech Innovators Inc.". Your tone should be helpful, patient, and professional. Always refer to our product as "The Innovator Suite". Do not mention competitors.',
+        userPrompt: 'Respond to the following customer query: "{{query}}"',
+        negativePrompt: 'Do not use informal language like "hey" or "cool".'
+    },
+     {
+        id: 'prompt-code-explainer',
+        name: '代码解释器',
+        scope: '通用',
+        systemPrompt: 'You are a senior software engineer skilled at explaining complex code in simple terms.',
+        userPrompt: 'Explain the following code snippet written in {{language}} and describe its time complexity:\n\n```\n{{codeBlock}}\n```',
+    }
+];
+
+
 export function PromptEngineerWorkbench() {
     const { toast } = useToast();
     const [isGenerating, setIsGenerating] = useState(false);
@@ -41,6 +76,24 @@ export function PromptEngineerWorkbench() {
     ]);
     const [testResult, setTestResult] = useState('');
     const [metadata, setMetadata] = useState<AnalyzePromptMetadataOutput | null>(null);
+
+    // Prompt Library State
+    const [prompts, setPrompts] = useState<Prompt[]>([]);
+    const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
+
+    useEffect(() => {
+        // In a real app, you would fetch this from a database.
+        // For now, we'll simulate a fetch with a timeout.
+        const fetchPrompts = async () => {
+            setIsLoadingPrompts(true);
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 500));
+            setPrompts(mockPrompts);
+            setIsLoadingPrompts(false);
+        };
+        fetchPrompts();
+    }, []);
+
 
     const handleAddVariable = () => {
         setVariables([...variables, { id: `var${Date.now()}`, key: '', value: '' }]);
@@ -135,7 +188,11 @@ export function PromptEngineerWorkbench() {
     return (
         <ThreeColumnLayout>
             <ThreeColumnLayout.Left>
-                 <PromptLibrary onSelectPrompt={handleSelectPrompt} />
+                 <PromptLibrary 
+                    prompts={prompts} 
+                    onSelectPrompt={handleSelectPrompt}
+                    isLoading={isLoadingPrompts}
+                />
             </ThreeColumnLayout.Left>
             
             <ThreeColumnLayout.Main>
@@ -262,6 +319,7 @@ export function PromptEngineerWorkbench() {
                                <div>
                                    <h4 className="font-semibold mb-1">适用范围</h4>
                                    <p className="text-muted-foreground">{metadata.scope}</p>
+
                                </div>
                                <div>
                                    <h4 className="font-semibold mb-1">推荐模型</h4>
