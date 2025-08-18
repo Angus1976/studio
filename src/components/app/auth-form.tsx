@@ -17,15 +17,25 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { LoaderCircle } from "lucide-react";
 
-const formSchema = z.object({
+// Schema for the login form
+const loginSchema = z.object({
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
   role: z.string({ required_error: "请选择一个角色。" }),
 });
 
+// Schema for the signup form
+const signupSchema = z.object({
+  name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
+  email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
+  password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
+  role: z.string({ required_error: "请选择一个角色。" }),
+});
+
+
 type AuthFormProps = {
   mode: "login" | "signup";
-  onSubmit: (values: z.infer<typeof formSchema>) => void;
+  onSubmit: (values: any) => void;
   isLoading: boolean;
 };
 
@@ -41,18 +51,31 @@ const roles = {
 };
 
 export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      role: undefined,
-    },
+  const form = useForm({
+    resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
+    defaultValues: mode === 'login' 
+        ? { email: "", password: "", role: undefined } 
+        : { name: "", email: "", password: "", role: undefined },
   });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {mode === 'signup' && (
+           <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>姓名</FormLabel>
+                  <FormControl>
+                    <Input placeholder="您的姓名" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+        )}
         <FormField
           control={form.control}
           name="email"

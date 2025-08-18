@@ -10,20 +10,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Shield, Code, Building, Briefcase } from "lucide-react";
+import { loginUser, registerUser } from "@/ai/flows/user-auth-flow";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth as clientAuth } from "@/lib/firebase";
+
 
 type DemoRole = {
   key: string;
   name: string;
+  email: string;
   icon: React.ElementType;
   group: 'platform' | 'user';
 };
 
-// This now matches the labels in AuthForm for consistency
 const demoRoles: DemoRole[] = [
-    { key: 'admin', name: '平台方 - 管理员', icon: Shield, group: 'platform' },
-    { key: 'engineer', name: '平台方 - 技术工程师', icon: Code, group: 'platform' },
-    { key: 'tenant', name: '用户方 - 企业租户', icon: Building, group: 'user' },
-    { key: 'individual', name: '用户方 - 个人用户', icon: Briefcase, group: 'user' },
+    { key: 'admin', name: '平台方 - 管理员', email: 'admin@example.com', icon: Shield, group: 'platform' },
+    { key: 'engineer', name: '平台方 - 技术工程师', email: 'engineer@example.com', icon: Code, group: 'platform' },
+    { key: 'tenant', name: '用户方 - 企业租户', email: 'tenant@example.com', icon: Building, group: 'user' },
+    { key: 'individual', name: '用户方 - 个人用户', email: 'user@example.com', icon: Briefcase, group: 'user' },
 ];
 
 
@@ -34,33 +38,89 @@ export default function LoginPage() {
 
   const handleLogin = async (values: any) => {
     setIsLoading(true);
-    console.log("登录信息:", values);
-    // In a real app, you'd have your login logic here
-    // e.g. const response = await api.login(values);
-    setTimeout(() => {
-        // Find the full role name from the key
-        const role = demoRoles.find(r => r.key === values.role);
-        
+    try {
+        const roleInfo = demoRoles.find(r => r.key === values.role);
+        if (!roleInfo) {
+            throw new Error("Invalid role selected.");
+        }
+
+        const result = await loginUser({ email: values.email, password: values.password });
+
         localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userRole', role ? role.name : values.role);
+        localStorage.setItem('userRole', result.role);
         toast({
             title: "登录成功",
-            description: "欢迎回来！",
+            description: `欢迎回来, ${result.name}!`,
         });
-        setIsLoading(false);
-        // Redirect to homepage on successful login
         router.push('/');
-    }, 1000);
+
+    } catch (error: any) {
+        console.error("Login failed:", error);
+        toast({
+            variant: "destructive",
+            title: "登录失败",
+            description: error.message || "发生未知错误。",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
   
-  const handleDemoLogin = (role: DemoRole) => {
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('userRole', role.name);
-    toast({
-      title: '演示登录成功',
-      description: `您现在以“${role.name}”的身份登录。`,
-    });
-    router.push('/');
+  const handleDemoLogin = async (role: DemoRole) => {
+    setIsLoading(true);
+    try {
+      // 1. Attempt to log in first
+      const result = await loginUser({ email: role.email, password: 'password' });
+      
+      localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userRole', result.role);
+      toast({
+        title: '演示登录成功',
+        description: `您现在以“${role.name}”的身份登录。`,
+      });
+      router.push('/');
+
+    } catch (error: any) {
+      // 2. If user does not exist, create it
+      if (error.message.includes('用户不存在')) {
+        try {
+          await registerUser({
+            email: role.email,
+            password: 'password',
+            role: role.name,
+            name: role.name.split(' - ')[1],
+          });
+          
+          // 3. After successful registration, log the user in
+          const loginResult = await loginUser({ email: role.email, password: 'password' });
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('userRole', loginResult.role);
+          toast({
+            title: '演示账户已创建并登录',
+            description: `欢迎体验“${role.name}”角色。`,
+          });
+          router.push('/');
+
+        } catch (registerError: any) {
+          console.error("Demo account creation failed:", registerError);
+          toast({
+            variant: "destructive",
+            title: "演示账户创建失败",
+            description: registerError.message,
+          });
+        }
+      } else {
+        // Handle other login errors
+        console.error("Demo login failed:", error);
+        toast({
+          variant: "destructive",
+          title: "演示账户登录失败",
+          description: error.message,
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,14 +136,14 @@ export default function LoginPage() {
             <Card className="mb-8 shadow-lg border-accent/20">
                 <CardHeader>
                     <CardTitle className="text-lg text-center font-headline">一键登录演示账户</CardTitle>
-                    <CardDescription className="text-center text-muted-foreground">以不同角色体验平台</CardDescription>
+                    <CardDescription className="text-center text-muted-foreground">以不同角色体验平台（首次点击将自动创建账户）</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                         <h3 className="text-center font-semibold mb-4 text-foreground">平台方</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {demoRoles.filter(r => r.group === 'platform').map((role) => (
-                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base">
+                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
                                     <span>{role.name.split(' - ')[1]}</span>
                                 </Button>
@@ -94,7 +154,7 @@ export default function LoginPage() {
                         <h3 className="text-center font-semibold mb-4 text-foreground">用户方</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {demoRoles.filter(r => r.group === 'user').map((role) => (
-                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base">
+                                <Button key={role.key} variant="outline" onClick={() => handleDemoLogin(role)} className="flex items-center justify-center h-12 text-base" disabled={isLoading}>
                                     <role.icon className="mr-2 h-5 w-5 text-accent" />
                                     <span>{role.name.split(' - ')[1]}</span>
                                 </Button>

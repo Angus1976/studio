@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,26 +7,82 @@ import Link from "next/link";
 import { AppLogo } from "@/components/app/icons";
 import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
+import { registerUser } from "@/ai/flows/user-auth-flow";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+
+// Define a separate schema for the signup form
+const signupFormSchema = z.object({
+  name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
+  email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
+  password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
+  role: z.string({ required_error: "请选择一个角色。" }),
+});
+
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  
+  const form = useForm<z.infer<typeof signupFormSchema>>({
+    resolver: zodResolver(signupFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      role: undefined,
+    },
+  });
 
-  const handleSignup = async (values: any) => {
+
+  const handleSignup = async (values: z.infer<typeof signupFormSchema>) => {
     setIsLoading(true);
-    console.log("注册信息:", values);
-    // 在此处添加您的注册逻辑
-    // 例如: const response = await api.signup(values);
-    setTimeout(() => {
+    
+    // This maps the form role key (e.g., 'individual') to the full role name
+    const roleMap: { [key: string]: string } = {
+        'admin': '平台方 - 管理员',
+        'engineer': '平台方 - 技术工程师',
+        'tenant': '用户方 - 企业租户',
+        'individual': '用户方 - 个人用户',
+    };
+    const fullRoleName = roleMap[values.role];
+
+    if (!fullRoleName) {
+        toast({
+            variant: "destructive",
+            title: "注册失败",
+            description: "选择了无效的角色。",
+        });
+        setIsLoading(false);
+        return;
+    }
+
+    try {
+        await registerUser({
+            email: values.email,
+            password: values.password,
+            role: fullRoleName,
+            name: values.name
+        });
+
         toast({
             title: "注册成功",
             description: "已为您创建账户，请登录。",
         });
-        setIsLoading(false);
-        // 注册成功后重定向到登录页面
         router.push('/login');
-    }, 1000);
+    } catch (error: any) {
+        console.error("Signup failed:", error);
+        toast({
+            variant: "destructive",
+            title: "注册失败",
+            description: error.message || "发生未知错误。",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
