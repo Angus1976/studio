@@ -12,7 +12,7 @@ import { getPrompts } from '@/ai/flows/get-prompts-flow';
 import type { Prompt } from './prompt-library';
 import { TaskDispatchCenter } from './task-dispatch-center';
 import { Button } from '../ui/button';
-import { Lightbulb, Wand2 } from 'lucide-react';
+import { Lightbulb, Wand2, Bot } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 
 export interface Scenario {
