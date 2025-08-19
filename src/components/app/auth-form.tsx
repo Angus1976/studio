@@ -21,7 +21,6 @@ import { LoaderCircle } from "lucide-react";
 const loginSchema = z.object({
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
-  role: z.string().optional(), // Role is not needed for login, but keep for form consistency
 });
 
 // Schema for the signup form
