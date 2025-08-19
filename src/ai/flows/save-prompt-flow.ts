@@ -6,26 +6,12 @@
  * - savePrompt - A function that takes prompt data and saves/updates it in Firestore.
  */
 
-import * as admin from 'firebase-admin';
+import admin from '@/lib/firebase-admin';
 import {
     type SavePromptInput,
     type SavePromptOutput,
 } from '@/lib/data-types';
 
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-    try {
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-            }),
-        });
-    } catch (error: any) {
-        console.error('Firebase admin initialization error in save-prompt-flow', error.stack);
-    }
-}
 
 export async function savePrompt(input: SavePromptInput): Promise<SavePromptOutput> {
   const db = admin.firestore();

@@ -7,8 +7,10 @@ import Link from "next/link";
 import { AppLogo } from "@/components/app/icons";
 import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
-import { registerUser } from "@/ai/flows/user-auth-flow";
+import { createUserRecord } from "@/ai/flows/user-auth-flow";
 import { z } from "zod";
+import { auth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const roleMap: { [key: string]: string } = {
     'admin': 'Platform Admin',
@@ -46,11 +48,15 @@ export default function SignupPage() {
     }
 
     try {
-        await registerUser({
+        // Step 1: Create user on the client using Firebase Auth SDK
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        
+        // Step 2: Call the server action to create the user record in Firestore
+        await createUserRecord({
+            uid: userCredential.user.uid,
             email: values.email,
-            password: values.password,
             role: fullRoleName,
-            name: values.name
+            name: values.name,
         });
 
         toast({
@@ -58,10 +64,12 @@ export default function SignupPage() {
             description: "已为您创建账户，请登录。",
         });
         router.push('/login');
+
     } catch (error: any) {
         console.error("Signup failed:", error);
         let description = "发生未知错误。";
-        if (error.message.includes('auth/email-already-exists')) {
+        // Firebase Auth errors have a 'code' property
+        if (error.code === 'auth/email-already-in-use') {
             description = '此电子邮件地址已被注册。';
         } else if (error.message) {
             description = error.message;

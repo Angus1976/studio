@@ -12,28 +12,24 @@ const RegisterUserSchema = z.object({
 });
 export type RegisterUserInput = z.infer<typeof RegisterUserSchema>;
 
-export async function registerUser(input: RegisterUserInput): Promise<{ uid: string }> {
-  try {
-    const userRecord = await admin.auth().createUser({
-      email: input.email,
-      password: input.password,
-      displayName: input.name,
-    });
 
-    await admin.firestore().collection('users').doc(userRecord.uid).set({
+export async function createUserRecord(input: { uid: string, email: string, role: string, name: string }): Promise<{ success: boolean }> {
+  try {
+    await admin.firestore().collection('users').doc(input.uid).set({
       email: input.email,
       role: input.role,
       name: input.name,
+      status: '活跃', // Set default status
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
-    return { uid: userRecord.uid };
+    return { success: true };
   } catch (error: any) {
-    console.error("Error in registerUser flow: ", error.code, error.message);
-    // You can create more specific error messages based on the error.code
-    throw new Error(error.message || '在服务器上注册用户失败。');
+    console.error("Error in createUserRecord flow: ", error);
+    throw new Error('无法在数据库中创建用户记录。');
   }
 }
+
 
 const LoginUserSchema = z.object({
   uid: z.string(),
@@ -67,5 +63,29 @@ export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput>
   } catch (error: any) {
     console.error('Error in loginUser flow:', error.code, error.message);
     throw new Error(error.message || '登录时发生未知错误。');
+  }
+}
+
+// This is deprecated and should not be used from the client. Kept for potential admin panel usage.
+export async function registerUser(input: RegisterUserInput): Promise<{ uid: string }> {
+  try {
+    const userRecord = await admin.auth().createUser({
+      email: input.email,
+      password: input.password,
+      displayName: input.name,
+    });
+
+    await admin.firestore().collection('users').doc(userRecord.uid).set({
+      email: input.email,
+      role: input.role,
+      name: input.name,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    
+    return { uid: userRecord.uid };
+  } catch (error: any) {
+    console.error("Error in registerUser flow: ", error.code, error.message);
+    // You can create more specific error messages based on the error.code
+    throw new Error(error.message || '在服务器上注册用户失败。');
   }
 }
