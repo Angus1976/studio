@@ -1,8 +1,27 @@
 
 'use server';
 
-import admin from '@/lib/firebase-admin';
+import * as admin from 'firebase-admin';
 import { z } from 'zod';
+
+// Initialize Firebase Admin SDK if not already initialized
+// This ensures that the admin SDK is ready for use in this server-side flow.
+if (!admin.apps.length) {
+    try {
+        admin.initializeApp({
+            credential: admin.credential.cert({
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                // The private key must be correctly formatted. Replace escaped newlines.
+                privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+            }),
+        });
+    } catch (error: any) {
+        // Log any initialization errors.
+        console.error('Firebase admin initialization error in user-auth-flow', error.stack);
+    }
+}
+
 
 const CreateUserRecordSchema = z.object({
   uid: z.string(),
