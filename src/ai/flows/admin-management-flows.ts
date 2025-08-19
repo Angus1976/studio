@@ -3,6 +3,8 @@
  * @fileOverview A set of flows for administrators to manage tenants and users.
  */
 
+import { config } from 'dotenv';
+config();
 import { z } from 'zod';
 import * as admin from 'firebase-admin';
 import type { Tenant, IndividualUser } from '@/lib/data-types';
