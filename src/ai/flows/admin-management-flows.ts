@@ -1,30 +1,12 @@
+
 'use server';
 /**
  * @fileOverview A set of flows for administrators to manage tenants and users.
  */
 
-import { config } from 'dotenv';
-config();
 import { z } from 'zod';
-import * as admin from 'firebase-admin';
+import admin from '@/lib/firebase-admin';
 import type { Tenant, IndividualUser } from '@/lib/data-types';
-import { TenantSchema, IndividualUserSchema } from '@/lib/data-types';
-
-
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
-    try {
-        admin.initializeApp({
-            credential: admin.credential.cert({
-                projectId: process.env.FIREBASE_PROJECT_ID,
-                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-            }),
-        });
-    } catch (error: any) {
-        console.error('Firebase admin initialization error in admin-management-flows', error.stack);
-    }
-}
 
 
 // --- Get all Tenants and Users ---
@@ -77,10 +59,14 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
 
 
 // --- Tenant Management Flows ---
-const SaveTenantInputSchema = TenantSchema.omit({ id: true, registeredDate: true });
+const SaveTenantInputSchema = z.object({
+    id: z.string().optional(),
+    companyName: z.string().min(2),
+    adminEmail: z.string().email(),
+    status: z.enum(["活跃", "待审核", "已禁用"]),
+});
 
-
-export async function saveTenant(input: z.infer<typeof SaveTenantInputSchema> & { id?: string }): Promise<{ success: boolean; message: string; id?: string }> {
+export async function saveTenant(input: z.infer<typeof SaveTenantInputSchema>): Promise<{ success: boolean; message: string; id?: string }> {
   const db = admin.firestore();
   try {
     const { id, ...data } = input;
@@ -116,8 +102,14 @@ export async function deleteTenant(input: { id: string }): Promise<{ success: bo
 }
 
 // --- User Management Flows ---
-const SaveUserInputSchema = IndividualUserSchema.omit({ registeredDate: true }).partial({ id: true, tenantId: true });
-
+const SaveUserInputSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2),
+  email: z.string().email(),
+  role: z.enum(["个人用户", "技术工程师", "租户管理员", "平台管理员"]),
+  status: z.enum(["活跃", "待审核", "已禁用"]),
+  tenantId: z.string().optional(),
+});
 
 export async function saveUser(input: z.infer<typeof SaveUserInputSchema>): Promise<{ success: boolean; message: string; id?: string }> {
   const db = admin.firestore();
