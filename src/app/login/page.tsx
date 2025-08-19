@@ -20,9 +20,13 @@ export default function LoginPage() {
   const handleLogin = async (values: any) => {
     setIsLoading(true);
     try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        const result = await loginUser({ email: values.email, password: values.password });
+        // Step 1: Sign in on the client using Firebase Auth SDK
+        const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+        
+        // Step 2: Call the server action to get additional user data (like role)
+        const result = await loginUser({ uid: userCredential.user.uid });
 
+        // Step 3: Store session info and navigate
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', result.role);
         
@@ -35,14 +39,18 @@ export default function LoginPage() {
 
     } catch (error: any) {
         console.error("Login failed:", error);
-        let description = "用户名或密码不正确，请重试。";
-        if (error instanceof Error) {
-           if (error.message.includes("auth/invalid-credential") || error.message.includes("auth/user-not-found") || error.message.includes("auth/wrong-password")) {
+        let description = "登录时发生未知错误。";
+        // Firebase Auth errors have a 'code' property
+        switch (error.code) {
+            case "auth/user-not-found":
+            case "auth/wrong-password":
+            case "auth/invalid-credential":
                 description = "用户不存在或密码错误。";
-           } else {
-                description = error.message;
-           }
+                break;
+            default:
+                description = error.message || description;
         }
+        
         toast({
             variant: "destructive",
             title: "登录失败",

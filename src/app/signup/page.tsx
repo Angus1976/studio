@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,8 +7,10 @@ import Link from "next/link";
 import { AppLogo } from "@/components/app/icons";
 import { AuthForm } from "@/components/app/auth-form";
 import { useToast } from "@/hooks/use-toast";
-import { registerUser } from "@/ai/flows/user-auth-flow";
+import { createUserRecord } from "@/ai/flows/user-auth-flow";
 import { z } from "zod";
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 
 const roleMap: { [key: string]: string } = {
@@ -46,9 +49,14 @@ export default function SignupPage() {
     }
 
     try {
-        await registerUser({
+        // Step 1: Create the user on the client-side using the Firebase Auth SDK
+        const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+        const user = userCredential.user;
+
+        // Step 2: Call the server action to create the corresponding Firestore document
+        await createUserRecord({
+            uid: user.uid,
             email: values.email,
-            password: values.password,
             role: fullRoleName,
             name: values.name
         });
@@ -60,10 +68,17 @@ export default function SignupPage() {
         router.push('/login');
     } catch (error: any) {
         console.error("Signup failed:", error);
+        let description = "发生未知错误。";
+        if (error.code === 'auth/email-already-in-use') {
+            description = '此电子邮件地址已被注册。';
+        } else if (error.message) {
+            description = error.message;
+        }
+
         toast({
             variant: "destructive",
             title: "注册失败",
-            description: error.message || "发生未知错误。",
+            description,
         });
     } finally {
         setIsLoading(false);

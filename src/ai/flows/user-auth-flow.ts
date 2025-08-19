@@ -1,48 +1,40 @@
+
 'use server';
 
 import admin from '@/lib/firebase-admin';
 import { z } from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth as clientAuth } from '@/lib/firebase';
 
-const RegisterUserSchema = z.object({
+const CreateUserRecordSchema = z.object({
+  uid: z.string(),
   email: z.string().email(),
-  password: z.string().min(6),
   role: z.string(),
   name: z.string(),
 });
-export type RegisterUserInput = z.infer<typeof RegisterUserSchema>;
+export type CreateUserRecordInput = z.infer<typeof CreateUserRecordSchema>;
 
 
-export async function registerUser(input: RegisterUserInput): Promise<{ uid: string }> {
+export async function createUserRecord(input: CreateUserRecordInput): Promise<{ success: boolean }> {
     try {
-        const userRecord = await admin.auth().createUser({
-            email: input.email,
-            password: input.password,
-            displayName: input.name,
-        });
-
-        await admin.firestore().collection('users').doc(userRecord.uid).set({
+        await admin.firestore().collection('users').doc(input.uid).set({
             email: input.email,
             role: input.role,
             name: input.name,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: '活跃', // Set a default status
         });
         
-        return { uid: userRecord.uid };
+        return { success: true };
     } catch (error: any) {
-        console.error("Error in registerUser flow: ", error);
-        if (error.code === 'auth/email-already-exists') {
-            throw new Error('此电子邮件地址已被注册。');
-        }
-        throw new Error(error.message || '注册失败，发生未知错误。');
+        console.error("Error in createUserRecord flow: ", error);
+        // We can't easily delete the auth user here if this fails,
+        // so we just log the error. A more robust solution might involve a cleanup function.
+        throw new Error(error.message || '在数据库中创建用户记录失败。');
     }
 }
 
 
 const LoginUserSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
+  uid: z.string(),
 });
 export type LoginUserInput = z.infer<typeof LoginUserSchema>;
 
@@ -58,24 +50,36 @@ export type LoginUserOutput = {
 
 export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput> {
   try {
-    // This part runs on the server, but signInWithEmailAndPassword is a client-side function.
-    // The call to this function from the frontend will handle the client-side auth.
-    // This backend function's primary job is to fetch the user's role and data from Firestore,
-    // which the client cannot securely do itself due to security rules.
-    
-    const userRecord = await admin.auth().getUserByEmail(input.email);
-    const userDocRef = admin.firestore().collection('users').doc(userRecord.uid);
+    const userDocRef = admin.firestore().collection('users').doc(input.uid);
     const userDoc = await userDocRef.get();
 
     if (!userDoc.exists) {
-      throw new Error('用户数据不存在，请联系管理员。');
+      // This case might happen if Firestore record creation failed after auth creation.
+      // We should probably create the record here as a fallback.
+      const userRecord = await admin.auth().getUser(input.uid);
+      const userData = {
+        email: userRecord.email!,
+        name: userRecord.displayName || '新用户',
+        role: 'Individual User', // Default role
+        status: '活跃',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      await userDocRef.set(userData);
+
+      return {
+        uid: input.uid,
+        email: userRecord.email || null,
+        role: 'Individual User',
+        name: userRecord.displayName || '新用户',
+        message: 'Login successful, created missing user record.',
+      };
     }
     
     const userData = userDoc.data()!;
     
     return {
-      uid: userRecord.uid,
-      email: userRecord.email || null,
+      uid: input.uid,
+      email: userData.email || null,
       role: userData.role,
       name: userData.name || 'N/A',
       message: 'Login successful',
@@ -83,9 +87,6 @@ export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput>
 
   } catch (error: any) {
     console.error('Error in loginUser flow:', error.code, error.message);
-    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-      throw new Error('用户不存在或密码错误。');
-    }
     throw new Error(error.message || '登录时发生未知错误。');
   }
 }
