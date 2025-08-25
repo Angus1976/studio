@@ -226,6 +226,41 @@ export async function deleteUser(input: { id: string }): Promise<{ success: bool
   }
 }
 
+
+// --- Transaction Management ---
+export async function getAllOrders(): Promise<(Order & { tenantCompanyName?: string })[]> {
+    const db = admin.firestore();
+    try {
+        const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+        const tenantsSnapshot = await db.collection('tenants').get();
+        
+        const tenantsMap = new Map<string, string>();
+        tenantsSnapshot.forEach(doc => {
+            tenantsMap.set(doc.id, doc.data().companyName);
+        });
+
+        const orders: (Order & { tenantCompanyName?: string })[] = ordersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                items: data.items || [],
+                totalAmount: data.totalAmount || 0,
+                status: data.status || '已取消',
+                tenantId: data.tenantId,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : '',
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString().split('T')[0] : '',
+                tenantCompanyName: tenantsMap.get(data.tenantId) || '未知租户',
+            };
+        });
+
+        return orders;
+    } catch (error) {
+        console.error("Error fetching all orders:", error);
+        throw new Error('无法从数据库加载订单数据。');
+    }
+}
+
+
 // --- Tenant-specific Flows ---
 
 // This is a simplified version. A real app would have more robust logic.
@@ -449,3 +484,5 @@ export async function deleteSoftwareAsset(input: { id: string }): Promise<{ succ
         return { success: true, message: "软件资产已删除" };
     } catch (e: any) { return { success: false, message: e.message }; }
 }
+
+    

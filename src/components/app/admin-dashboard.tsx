@@ -48,7 +48,8 @@ import {
     saveTokenAllocation,
     deleteTokenAllocation,
     saveSoftwareAsset,
-    deleteSoftwareAsset
+    deleteSoftwareAsset,
+    getAllOrders,
 } from '@/ai/flows/admin-management-flows';
 
 
@@ -879,36 +880,28 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
 type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
 
 
-// SIMULATED DATA
-const initialOrders: Order[] = [
-    {
-        id: "PO-12345",
-        tenantId: "mock-id",
-        items: [{ id: "item-1", title: "企业邮箱服务", quantity: 10, description: "", icon: "", tag: "", price: 50, unit: "用户/年" }],
-        totalAmount: 500,
-        status: "待平台确认",
-        createdAt: "2024-07-25",
-        updatedAt: "2024-07-25",
-    },
-];
+type OrderWithTenantInfo = Order & { tenantCompanyName?: string };
 
 function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<OrderWithTenantInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
 
-    useEffect(() => {
-        // In a real app, you would fetch this data from an API
-        setTimeout(() => {
-          setOrders(initialOrders);
-          setIsLoading(false);
-        }, 1000);
-    }, []);
-
+    const fetchOrders = React.useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedOrders = await getAllOrders();
+            setOrders(fetchedOrders);
+        } catch (error: any) {
+            toast({ title: "加载订单失败", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
 
     const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
-        // SIMULATED API CALL
-        setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
+        // SIMULATED API CALL to update status. In a real app, this would be a server flow.
+        setOrders(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus, updatedAt: new Date().toISOString().split('T')[0] } : order));
         toast({ title: "订单状态已更新", description: `订单 ${orderId} 的状态已更新为 ${newStatus}。` });
     };
 
@@ -924,7 +917,7 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
     };
 
     return (
-        <Dialog>
+        <Dialog onOpenChange={(open) => { if (open) fetchOrders() }}>
             <DialogTrigger asChild>
                 <Button>{buttonText}</Button>
             </DialogTrigger>
@@ -958,7 +951,7 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
                                     {orders.map(order => (
                                         <TableRow key={order.id}>
                                             <TableCell className="font-medium">{order.id}</TableCell>
-                                            <TableCell>Tech Innovators Inc.</TableCell>
+                                            <TableCell>{order.tenantCompanyName || 'N/A'}</TableCell>
                                             <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
@@ -1173,3 +1166,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    
