@@ -157,6 +157,8 @@ export function AIWorkbench() {
             </LeftPanelWrapper>
         </ThreeColumnLayout.Left>
         
+        <ThreeColumnLayout.Handle withHandle />
+
         {workbenchMode === 'guide' ? (
             <>
                 <ThreeColumnLayout.Main>
@@ -176,6 +178,9 @@ export function AIWorkbench() {
                         )}
                     </div>
                 </ThreeColumnLayout.Main>
+
+                <ThreeColumnLayout.Handle withHandle />
+
                 <ThreeColumnLayout.Right>
                      <UserActionPanel scenario={selectedScenario} />
                 </ThreeColumnLayout.Right>

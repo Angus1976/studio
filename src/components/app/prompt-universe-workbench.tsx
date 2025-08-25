@@ -152,6 +152,8 @@ export function PromptUniverseWorkbench() {
                 />
             </ThreeColumnLayout.Left>
             
+            <ThreeColumnLayout.Handle withHandle />
+
             <ThreeColumnLayout.Main>
                  <PromptEditor 
                     prompt={activePrompt}
@@ -160,6 +162,8 @@ export function PromptUniverseWorkbench() {
                     isSaving={isSaving}
                  />
             </ThreeColumnLayout.Main>
+
+            <ThreeColumnLayout.Handle withHandle />
 
             <ThreeColumnLayout.Right>
                 <div className="flex flex-col gap-6 h-full">
