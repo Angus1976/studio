@@ -171,7 +171,7 @@ export function PromptUniverseWorkbench() {
                    <PromptTestbed prompt={activePrompt} />
                    <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
                 </div>
-            </TheeColumnLayout.Right>
+            </ThreeColumnLayout.Right>
         </ThreeColumnLayout>
     );
 }
