@@ -568,49 +568,55 @@ const softwareAssetSchema = z.object({
 });
 type SoftwareAsset = z.infer<typeof softwareAssetSchema> & { id: string };
 
-// SIMULATED DATA
-const initialLlmModels: LlmModel[] = [
-  { id: 'llm-1', modelName: 'Gemini 1.5 Pro', provider: 'Google', apiKey: 'sk-...' },
-  { id: 'llm-2', modelName: 'GPT-4o', provider: 'OpenAI', apiKey: 'sk-...' },
-];
+// SIMULATED DATA HOOK
+const useMockData = () => {
+    const [llmModels, setLlmModels] = useState<LlmModel[]>([
+        { id: 'llm-1', modelName: 'Gemini 1.5 Pro', provider: 'Google', apiKey: 'sk-...' },
+        { id: 'llm-2', modelName: 'GPT-4o', provider: 'OpenAI', apiKey: 'sk-...' },
+    ]);
+    const [tokens, setTokens] = useState<Token[]>([
+        { id: 'token-1', key: 'key-abc-123', assignedTo: 'Tech Innovators Inc.', usageLimit: 1000000, used: 250000 },
+        { id: 'token-2', key: 'key-def-456', assignedTo: 'Future Dynamics', usageLimit: 500000, used: 480000 },
+    ]);
+    const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([
+        { id: 'asset-1', name: 'RPA Pro License', type: 'RPA许可', licenseKey: 'RPA-XYZ-123' },
+        { id: 'asset-2', name: 'Data Analytics Suite', type: '数据服务', licenseKey: 'DATA-ABC-789' },
+    ]);
+    
+    // In a real app, these would be API calls. We simulate them here.
+    const addLlmModel = (data: Omit<LlmModel, 'id'>) => setLlmModels(prev => [{...data, id: `llm-${Date.now()}`}, ...prev]);
+    const deleteLlmModel = (id: string) => setLlmModels(prev => prev.filter(item => item.id !== id));
+    
+    const addToken = (data: Omit<Token, 'id'|'used'>) => setTokens(prev => [{...data, id: `token-${Date.now()}`, used: 0}, ...prev]);
+    const deleteToken = (id: string) => setTokens(prev => prev.filter(item => item.id !== id));
+    
+    const addSoftwareAsset = (data: Omit<SoftwareAsset, 'id'>) => setSoftwareAssets(prev => [{...data, id: `asset-${Date.now()}`}, ...prev]);
+    const deleteSoftwareAsset = (id: string) => setSoftwareAssets(prev => prev.filter(item => item.id !== id));
 
-const initialTokens: Token[] = [
-  { id: 'token-1', key: 'key-abc-123', assignedTo: 'Tech Innovators Inc.', usageLimit: 1000000, used: 250000 },
-  { id: 'token-2', key: 'key-def-456', assignedTo: 'Future Dynamics', usageLimit: 500000, used: 480000 },
-];
+    return {
+        llmModels, addLlmModel, deleteLlmModel,
+        tokens, addToken, deleteToken,
+        softwareAssets, addSoftwareAsset, deleteSoftwareAsset,
+    };
+};
 
-const initialSoftwareAssets: SoftwareAsset[] = [
-  { id: 'asset-1', name: 'RPA Pro License', type: 'RPA许可', licenseKey: 'RPA-XYZ-123' },
-  { id: 'asset-2', name: 'Data Analytics Suite', type: '数据服务', licenseKey: 'DATA-ABC-789' },
-];
 
 function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
     const { toast } = useToast();
-    const [llmModels, setLlmModels] = useState<LlmModel[]>(initialLlmModels);
-    const [tokens, setTokens] = useState<Token[]>(initialTokens);
-    const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>(initialSoftwareAssets);
+    const data = useMockData();
 
-    const handleDelete = (type: 'llm' | 'token' | 'asset', id: string) => {
-        // SIMULATED API CALLS
-        if (type === 'llm') setLlmModels(prev => prev.filter(item => item.id !== id));
-        if (type === 'token') setTokens(prev => prev.filter(item => item.id !== id));
-        if (type === 'asset') setSoftwareAssets(prev => prev.filter(item => item.id !== id));
-        toast({ title: '资产已删除', variant: 'destructive' });
-    };
-    
-    // Placeholder forms and handlers for adding new items
     const LlmForm = () => {
         const form = useForm({ resolver: zodResolver(llmModelSchema), defaultValues: {modelName: "", provider: "", apiKey: ""}});
-        const onSubmit = (data: any) => {
-            setLlmModels(prev => [{...data, id: `llm-${Date.now()}`}, ...prev]);
+        const onSubmit = (values: z.infer<typeof llmModelSchema>) => {
+            data.addLlmModel(values);
             toast({title: "LLM 模型已添加"});
             form.reset();
         };
         return (
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称 (例如: GPT-4o)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商 (例如: OpenAI)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField control={form.control} name="apiKey" render={({field}) => (<FormItem><FormControl><Input placeholder="API Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <Button type="submit" size="sm" className="w-full">添加模型</Button>
                 </form>
@@ -620,16 +626,16 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     
      const TokenForm = () => {
         const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {key: "", assignedTo: "", usageLimit: 0}});
-        const onSubmit = (data: any) => {
-            setTokens(prev => [{...data, id: `token-${Date.now()}`, used: 0}, ...prev]);
+        const onSubmit = (values: z.infer<typeof tokenSchema>) => {
+            data.addToken(values);
             toast({title: "Token 已分配"});
             form.reset();
         };
         return (
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-                    <FormField control={form.control} name="key" render={({field}) => (<FormItem><FormControl><Input placeholder="Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="assignedTo" render={({field}) => (<FormItem><FormControl><Input placeholder="分配给" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="key" render={({field}) => (<FormItem><FormControl><Input placeholder="Key (自动生成或手动输入)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="assignedTo" render={({field}) => (<FormItem><FormControl><Input placeholder="分配给 (租户ID或用户ID)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField control={form.control} name="usageLimit" render={({field}) => (<FormItem><FormControl><Input type="number" placeholder="用量限制" {...field} onChange={e => field.onChange(Number(e.target.value))}/></FormControl><FormMessage/></FormItem>)}/>
                     <Button type="submit" size="sm" className="w-full">分配 Token</Button>
                 </form>
@@ -639,16 +645,16 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     
     const SoftwareAssetForm = () => {
         const form = useForm({ resolver: zodResolver(softwareAssetSchema), defaultValues: {name: "", type: "", licenseKey: ""}});
-        const onSubmit = (data: any) => {
-            setSoftwareAssets(prev => [{...data, id: `asset-${Date.now()}`}, ...prev]);
+        const onSubmit = (values: z.infer<typeof softwareAssetSchema>) => {
+            data.addSoftwareAsset(values);
             toast({title: "软件资产已添加"});
             form.reset();
         };
         return (
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-                    <FormField control={form.control} name="name" render={({field}) => (<FormItem><FormControl><Input placeholder="资产名称" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="type" render={({field}) => (<FormItem><FormControl><Input placeholder="类型" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="name" render={({field}) => (<FormItem><FormControl><Input placeholder="资产名称 (例如: RPA Pro License)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="type" render={({field}) => (<FormItem><FormControl><Input placeholder="类型 (例如: RPA许可)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField control={form.control} name="licenseKey" render={({field}) => (<FormItem><FormControl><Input placeholder="许可证密钥 (可选)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <Button type="submit" size="sm" className="w-full">添加资产</Button>
                 </form>
@@ -682,11 +688,15 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                         <Table>
                                             <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
                                             <TableBody>
-                                                {llmModels.map(model => (
+                                                {data.llmModels.map(model => (
                                                     <TableRow key={model.id}>
                                                         <TableCell className="font-medium">{model.modelName}</TableCell>
                                                         <TableCell>{model.provider}</TableCell>
-                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('llm', model.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteLlmModel(model.id)}>
+                                                                <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                                            </Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -711,14 +721,18 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                          <Table>
                                             <TableHeader><TableRow><TableHead>分配对象</TableHead><TableHead>用量 (已用/总量)</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
                                             <TableBody>
-                                                {tokens.map(token => (
+                                                {data.tokens.map(token => (
                                                     <TableRow key={token.id}>
                                                         <TableCell>
                                                             <div className="font-medium">{token.assignedTo}</div>
                                                             <div className="text-xs text-muted-foreground">{token.key}</div>
                                                         </TableCell>
                                                         <TableCell>{token.used.toLocaleString()} / {token.usageLimit.toLocaleString()}</TableCell>
-                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('token', token.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteToken(token.id)}>
+                                                                <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                                            </Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -743,14 +757,18 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                          <Table>
                                             <TableHeader><TableRow><TableHead>资产名称</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
                                             <TableBody>
-                                                {softwareAssets.map(asset => (
+                                                {data.softwareAssets.map(asset => (
                                                     <TableRow key={asset.id}>
                                                         <TableCell>
                                                              <div className="font-medium">{asset.name}</div>
                                                             <div className="text-xs text-muted-foreground">{asset.licenseKey}</div>
                                                         </TableCell>
                                                         <TableCell>{asset.type}</TableCell>
-                                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete('asset', asset.id)}><Trash2 className="h-4 w-4"/></Button></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteSoftwareAsset(asset.id)}>
+                                                                <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                                            </Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -1097,5 +1115,7 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    
 
     
