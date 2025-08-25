@@ -46,9 +46,11 @@ const analyzePromptMetadataFlow = ai.defineFlow(
     if(input.context) promptParts.push({ text: `\n[Context/Examples]:\n${input.context}`});
     if(input.negativePrompt) promptParts.push({ text: `\n[Negative Prompt]:\n${input.negativePrompt}`});
 
+    const model = 'googleai/gemini-1.5-flash';
+
     const llmResponse = await ai.generate({
       prompt: promptParts,
-      model: 'googleai/gemini-1.5-flash',
+      model: model,
       output: {
         format: 'json',
         schema: AnalyzePromptMetadataOutputSchema,

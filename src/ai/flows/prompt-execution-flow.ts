@@ -62,9 +62,11 @@ const promptExecutionFlow = ai.defineFlow(
         });
     }
 
+    const model = 'googleai/gemini-1.5-flash';
+
     const llmResponse = await ai.generate({
       prompt: prompt,
-      model: 'googleai/gemini-1.5-flash',
+      model: model,
       config: {
         temperature: temperature,
         safetySettings,

@@ -52,9 +52,11 @@ const taskDispatchFlow = ai.defineFlow(
   { id: 'task-3', agent: '邮件发送Agent', description: '将祝贺邮件发送给销售团队的前三名成员。', status: 'pending', dependencies: ['task-2'] }
 ]
 `;
+    
+    const model = 'googleai/gemini-1.5-flash';
 
     const llmResponse = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
+      model: model,
       prompt: {
         system: systemPrompt,
         messages: [{ role: 'user', content: userCommand }],
