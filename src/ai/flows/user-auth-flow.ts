@@ -19,7 +19,7 @@ export async function createUserRecord(input: { uid: string, email: string, role
       email: input.email,
       role: input.role,
       name: input.name,
-      status: '活跃', // Set default status
+      status: '待审核', // Set default status to Pending Approval
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
