@@ -58,7 +58,7 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
 
 
 // --- Get Data for a specific Tenant ---
-export async function getTenantData(input: { tenantId: string }): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[] }> {
+export async function getTenantData(input: { tenantId: string }): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[], tokenUsage: { month: string, tokens: number }[] }> {
     const db = admin.firestore();
     const { tenantId } = input;
 
@@ -105,7 +105,6 @@ export async function getTenantData(input: { tenantId: string }): Promise<{ user
             }
         });
         
-        // If no roles exist for the tenant, create a default 'Member' role
         if (roles.length === 0) {
             const defaultRole = {
                 name: "成员",
@@ -116,9 +115,32 @@ export async function getTenantData(input: { tenantId: string }): Promise<{ user
             const roleRef = await db.collection('roles').add(defaultRole);
             roles.push({ id: roleRef.id, ...defaultRole });
         }
+        
+        // Aggregate token usage from completed orders
+        const tokenUsage: { [key: string]: number } = {};
+        const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
+        
+        orders.forEach(order => {
+            if (order.status === '已完成') {
+                const orderMonth = new Date(order.createdAt).getMonth();
+                const monthName = monthNames[orderMonth];
+                
+                order.items.forEach((item: any) => {
+                    if (item.category === 'AI能力' && item.unit.includes('Token')) {
+                        if (!tokenUsage[monthName]) {
+                            tokenUsage[monthName] = 0;
+                        }
+                        const tokenAmount = item.price * item.quantity * 10000; // Assuming 100 RMB = 1M tokens, 1 RMB = 10k tokens
+                        tokenUsage[monthName] += tokenAmount;
+                    }
+                });
+            }
+        });
+        
+        const tokenUsageChartData = Object.entries(tokenUsage).map(([month, tokens]) => ({ month, tokens }));
 
 
-        return { users, orders, roles };
+        return { users, orders, roles, tokenUsage: tokenUsageChartData };
 
     } catch (error) {
         console.error(`Error fetching data for tenant ${tenantId}:`, error);

@@ -203,6 +203,7 @@ export const ProcurementItemSchema = z.object({
     tag: z.string(),
     price: z.number(),
     unit: z.string(),
+    category: z.string().optional(), // e.g., 'AI能力'
 });
 export type ProcurementItem = z.infer<typeof ProcurementItemSchema>;
 
