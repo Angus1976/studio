@@ -23,12 +23,12 @@ const roleMap: { [key: string]: string } = {
     'user': 'Individual User'
 };
 
-const signupSchema = z.object({
+const signupFormSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
-  role: z.string({ required_error: "请选择一个角色。" }),
 });
+
 
 type RegistrationRole = 'tenant' | 'engineer' | 'user';
 
@@ -39,20 +39,19 @@ export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleSignup = async (values: z.infer<typeof signupSchema>) => {
+  const handleSignup = async (values: z.infer<typeof signupFormSchema>) => {
     setIsLoading(true);
     
-    const fullRoleName = roleMap[values.role];
-
-    if (!fullRoleName) {
+    if (!selectedRole) {
         toast({
             variant: "destructive",
             title: "注册失败",
-            description: "选择了无效的角色。",
+            description: "未选择角色，请返回重试。",
         });
         setIsLoading(false);
         return;
     }
+    const fullRoleName = roleMap[selectedRole];
 
     try {
         // Step 1: Create user on the client using Firebase Auth SDK
@@ -120,7 +119,7 @@ export default function SignupPage() {
                      </Button>
                     <AuthForm
                         mode="signup"
-                        onSubmit={(values) => handleSignup({...values, role: selectedRole})}
+                        onSubmit={handleSignup}
                         isLoading={isLoading}
                     />
                 </div>
