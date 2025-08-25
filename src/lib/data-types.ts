@@ -178,7 +178,9 @@ export const TaskDispatchInputSchema = z.object({
   userCommand: z.string().describe("用户的原始自然语言指令。"),
   conversationHistory: z.array(z.object({
     role: z.enum(['user', 'model']),
-    content: z.string(),
+    parts: z.array(z.object({
+        text: z.string(),
+    })),
   })).optional().describe("如果需要，可以提供之前的对话历史。"),
 });
 export type TaskDispatchInput = z.infer<typeof TaskDispatchInputSchema>;
