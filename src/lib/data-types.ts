@@ -55,7 +55,7 @@ export const PromptSchema = z.object({
     name: z.string(),
     description: z.string().optional(),
     userPrompt: z.string(),
-    expertId: z.string().optional(),
+    expertId: z.string(),
     tenantId: z.string().optional(),
     systemPrompt: z.string().optional(),
     context: z.string().optional(),

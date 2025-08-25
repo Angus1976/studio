@@ -109,5 +109,3 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
         </Card>
     );
 }
-
-    

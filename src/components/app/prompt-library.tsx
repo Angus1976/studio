@@ -91,7 +91,7 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>确认删除?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            此操作无法撤销。这将把提示词存档，您将无法再使用它。
+                                                            此操作无法撤销。这将把提示词归档，您将无法再使用它。
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
