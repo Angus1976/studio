@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -34,14 +35,21 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
-import {
+import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset } from '@/lib/data-types';
+import { 
     getTenantsAndUsers,
     saveTenant,
     deleteTenant,
     saveUser,
     deleteUser,
+    getPlatformAssets,
+    saveLlmConnection,
+    deleteLlmConnection,
+    saveTokenAllocation,
+    deleteTokenAllocation,
+    saveSoftwareAsset,
+    deleteSoftwareAsset
 } from '@/ai/flows/admin-management-flows';
-import type { Tenant, IndividualUser } from '@/lib/data-types';
 
 
 // --- Tenant Management ---
@@ -547,6 +555,7 @@ function UserManagementDialog({ users, onRefresh, buttonText, title, description
 
 // --- Asset Management ---
 const llmConnectionSchema = z.object({
+  id: z.string().optional(),
   modelName: z.string().min(1, "模型名称不能为空"),
   apiKey: z.string().min(1, "API Key不能为空"),
   provider: z.string().min(1, "提供商不能为空"),
@@ -557,58 +566,78 @@ const llmConnectionSchema = z.object({
     path: ["tenantId"],
 });
 
-type LlmConnection = z.infer<typeof llmConnectionSchema> & { id: string };
 
 const tokenSchema = z.object({
+  id: z.string().optional(),
   key: z.string().min(1, "Key不能为空"),
   assignedTo: z.string().min(1, "必须分配给一个租户或用户"),
   usageLimit: z.coerce.number().min(0, "用量限制不能为负"),
 });
-type Token = z.infer<typeof tokenSchema> & { id: string, used: number };
+
 
 const softwareAssetSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1, "资产名称不能为空"),
   licenseKey: z.string().optional(),
   type: z.string().min(1, "类型不能为空"),
 });
-type SoftwareAsset = z.infer<typeof softwareAssetSchema> & { id: string };
-
-// SIMULATED DATA HOOK
-const useMockData = (tenants: Tenant[]) => {
-    const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([
-        { id: 'llm-1', modelName: 'Gemini 1.5 Pro (通用)', provider: 'Google', apiKey: 'sk-...', type: '通用' },
-        { id: 'llm-2', modelName: 'GPT-4o (租户A专属)', provider: 'OpenAI', apiKey: 'sk-...', type: '专属', tenantId: 'tenant-id-1' },
-    ]);
-    const [tokens, setTokens] = useState<Token[]>([
-        { id: 'token-1', key: 'key-abc-123', assignedTo: 'Tech Innovators Inc.', usageLimit: 1000000, used: 250000 },
-        { id: 'token-2', key: 'key-def-456', assignedTo: 'Future Dynamics', usageLimit: 500000, used: 480000 },
-    ]);
-    const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([
-        { id: 'asset-1', name: 'RPA Pro License', type: 'RPA许可', licenseKey: 'RPA-XYZ-123' },
-        { id: 'asset-2', name: 'Data Analytics Suite', type: '数据服务', licenseKey: 'DATA-ABC-789' },
-    ]);
-    
-    // In a real app, these would be API calls. We simulate them here.
-    const addLlmConnection = (data: Omit<LlmConnection, 'id'>) => setLlmConnections(prev => [{...data, id: `llm-${Date.now()}`}, ...prev]);
-    const deleteLlmConnection = (id: string) => setLlmConnections(prev => prev.filter(item => item.id !== id));
-    
-    const addToken = (data: Omit<Token, 'id'|'used'>) => setTokens(prev => [{...data, id: `token-${Date.now()}`, used: 0}, ...prev]);
-    const deleteToken = (id: string) => setTokens(prev => prev.filter(item => item.id !== id));
-    
-    const addSoftwareAsset = (data: Omit<SoftwareAsset, 'id'>) => setSoftwareAssets(prev => [{...data, id: `asset-${Date.now()}`}, ...prev]);
-    const deleteSoftwareAsset = (id: string) => setSoftwareAssets(prev => prev.filter(item => item.id !== id));
-
-    return {
-        llmConnections, addLlmConnection, deleteLlmConnection,
-        tokens, addToken, deleteToken,
-        softwareAssets, addSoftwareAsset, deleteSoftwareAsset,
-    };
-};
 
 
 function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants: Tenant[], triggerButtonText: string, title: string }) {
     const { toast } = useToast();
-    const data = useMockData(tenants);
+    const [isLoading, setIsLoading] = useState(true);
+    const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
+    const [tokens, setTokens] = useState<TokenAllocation[]>([]);
+    const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
+
+    const fetchAssets = React.useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { llmConnections, tokenAllocations, softwareAssets } = await getPlatformAssets();
+            setLlmConnections(llmConnections);
+            setTokens(tokenAllocations);
+            setSoftwareAssets(softwareAssets);
+        } catch (error: any) {
+            toast({ title: "加载资产失败", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+    
+    // --- Handlers for assets ---
+    const handleSaveLlm = async (values: z.infer<typeof llmConnectionSchema>) => {
+        const result = await saveLlmConnection(values);
+        if (result.success) toast({ title: "LLM连接已保存" }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
+        fetchAssets();
+    };
+    const handleDeleteLlm = async (id: string) => {
+        const result = await deleteLlmConnection({id});
+        if (result.success) toast({ title: "LLM连接已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        fetchAssets();
+    };
+    
+    const handleSaveToken = async (values: z.infer<typeof tokenSchema>) => {
+        const result = await saveTokenAllocation(values);
+        if (result.success) toast({ title: "Token已分配" }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
+        fetchAssets();
+    };
+    const handleDeleteToken = async (id: string) => {
+        const result = await deleteTokenAllocation({id});
+        if (result.success) toast({ title: "Token已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        fetchAssets();
+    };
+    
+    const handleSaveAsset = async (values: z.infer<typeof softwareAssetSchema>) => {
+        const result = await saveSoftwareAsset(values);
+        if (result.success) toast({ title: "软件资产已保存" }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
+        fetchAssets();
+    };
+    const handleDeleteAsset = async (id: string) => {
+        const result = await deleteSoftwareAsset({id});
+        if (result.success) toast({ title: "软件资产已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        fetchAssets();
+    };
+
 
     const LlmForm = () => {
         const form = useForm({ resolver: zodResolver(llmConnectionSchema), defaultValues: {modelName: "", provider: "", apiKey: "", type: "通用", tenantId: ""}});
@@ -616,8 +645,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
 
         const onSubmit = (values: z.infer<typeof llmConnectionSchema>) => {
             const finalValues = values.type === '通用' ? { ...values, tenantId: undefined } : values;
-            data.addLlmConnection(finalValues);
-            toast({title: "LLM 连接已添加"});
+            handleSaveLlm(finalValues);
             form.reset();
         };
         return (
@@ -667,8 +695,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
      const TokenForm = () => {
         const form = useForm({ resolver: zodResolver(tokenSchema), defaultValues: {key: "", assignedTo: "", usageLimit: 0}});
         const onSubmit = (values: z.infer<typeof tokenSchema>) => {
-            data.addToken(values);
-            toast({title: "Token 已分配"});
+            handleSaveToken(values);
             form.reset();
         };
         return (
@@ -686,8 +713,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const SoftwareAssetForm = () => {
         const form = useForm({ resolver: zodResolver(softwareAssetSchema), defaultValues: {name: "", type: "", licenseKey: ""}});
         const onSubmit = (values: z.infer<typeof softwareAssetSchema>) => {
-            data.addSoftwareAsset(values);
-            toast({title: "软件资产已添加"});
+            handleSaveAsset(values);
             form.reset();
         };
         return (
@@ -704,7 +730,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
 
 
     return (
-        <Dialog>
+        <Dialog onOpenChange={(open) => { if (open) fetchAssets() }}>
             <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
             <DialogContent className="max-w-5xl">
                 <DialogHeader>
@@ -725,23 +751,27 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                  <Card>
                                     <CardHeader><CardTitle>已对接模型</CardTitle></CardHeader>
                                     <CardContent>
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {data.llmConnections.map(model => (
-                                                    <TableRow key={model.id}>
-                                                        <TableCell className="font-medium">{model.modelName}</TableCell>
-                                                        <TableCell>{model.provider}</TableCell>
-                                                        <TableCell><Badge variant={model.type === '通用' ? 'secondary' : 'outline'}>{model.type}</Badge></TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteLlmConnection(model.id)}>
-                                                                <Trash2 className="h-4 w-4 text-destructive/80"/>
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <ScrollArea className="h-[400px]">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {isLoading ? (
+                                                        <TableRow><TableCell colSpan={4} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                                    ) : llmConnections.map(model => (
+                                                        <TableRow key={model.id}>
+                                                            <TableCell className="font-medium">{model.modelName}</TableCell>
+                                                            <TableCell>{model.provider}</TableCell>
+                                                            <TableCell><Badge variant={model.type === '通用' ? 'secondary' : 'outline'}>{model.type}</Badge></TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteLlm(model.id)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -759,25 +789,29 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                 <Card>
                                     <CardHeader><CardTitle>已分配 Token</CardTitle></CardHeader>
                                     <CardContent>
-                                         <Table>
-                                            <TableHeader><TableRow><TableHead>分配对象</TableHead><TableHead>用量 (已用/总量)</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {data.tokens.map(token => (
-                                                    <TableRow key={token.id}>
-                                                        <TableCell>
-                                                            <div className="font-medium">{token.assignedTo}</div>
-                                                            <div className="text-xs text-muted-foreground">{token.key}</div>
-                                                        </TableCell>
-                                                        <TableCell>{token.used.toLocaleString()} / {token.usageLimit.toLocaleString()}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteToken(token.id)}>
-                                                                <Trash2 className="h-4 w-4 text-destructive/80"/>
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <ScrollArea className="h-[400px]">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>分配对象</TableHead><TableHead>用量 (已用/总量)</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {isLoading ? (
+                                                        <TableRow><TableCell colSpan={3} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                                    ) : tokens.map(token => (
+                                                        <TableRow key={token.id}>
+                                                            <TableCell>
+                                                                <div className="font-medium">{token.assignedTo}</div>
+                                                                <div className="text-xs text-muted-foreground">{token.key}</div>
+                                                            </TableCell>
+                                                            <TableCell>{token.used.toLocaleString()} / {token.usageLimit.toLocaleString()}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteToken(token.id)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -795,25 +829,29 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                 <Card>
                                     <CardHeader><CardTitle>软件资产列表</CardTitle></CardHeader>
                                     <CardContent>
-                                         <Table>
-                                            <TableHeader><TableRow><TableHead>资产名称</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {data.softwareAssets.map(asset => (
-                                                    <TableRow key={asset.id}>
-                                                        <TableCell>
-                                                             <div className="font-medium">{asset.name}</div>
-                                                            <div className="text-xs text-muted-foreground">{asset.licenseKey}</div>
-                                                        </TableCell>
-                                                        <TableCell>{asset.type}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteSoftwareAsset(asset.id)}>
-                                                                <Trash2 className="h-4 w-4 text-destructive/80"/>
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <ScrollArea className="h-[400px]">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>资产名称</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                     {isLoading ? (
+                                                        <TableRow><TableCell colSpan={3} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                                    ) : softwareAssets.map(asset => (
+                                                        <TableRow key={asset.id}>
+                                                            <TableCell>
+                                                                <div className="font-medium">{asset.name}</div>
+                                                                <div className="text-xs text-muted-foreground">{asset.licenseKey}</div>
+                                                            </TableCell>
+                                                            <TableCell>{asset.type}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteAsset(asset.id)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive/80"/>
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
                                     </CardContent>
                                 </Card>
                             </div>
@@ -839,41 +877,19 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
 
 // --- Transaction Management ---
 type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
-type Order = {
-    id: string;
-    tenantName: string;
-    items: { title: string; quantity: number }[];
-    totalAmount: number;
-    status: OrderStatus;
-    createdAt: string;
-};
+
 
 // SIMULATED DATA
 const initialOrders: Order[] = [
     {
         id: "PO-12345",
-        tenantName: "Tech Innovators Inc.",
-        items: [{ title: "企业邮箱服务", quantity: 10 }],
+        tenantId: "mock-id",
+        items: [{ id: "item-1", title: "企业邮箱服务", quantity: 10, description: "", icon: "", tag: "", price: 50, unit: "用户/年" }],
         totalAmount: 500,
         status: "待平台确认",
         createdAt: "2024-07-25",
+        updatedAt: "2024-07-25",
     },
-    {
-        id: "PO-12346",
-        tenantName: "Future Dynamics",
-        items: [{ title: "LLM Token 包", quantity: 5 }],
-        totalAmount: 500,
-        status: "待支付",
-        createdAt: "2024-07-24",
-    },
-     {
-        id: "PO-12347",
-        tenantName: "Tech Innovators Inc.",
-        items: [{ title: "RPA 流程设计", quantity: 1 }],
-        totalAmount: 10000,
-        status: "已完成",
-        createdAt: "2024-07-20",
-    }
 ];
 
 function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
@@ -942,7 +958,7 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
                                     {orders.map(order => (
                                         <TableRow key={order.id}>
                                             <TableCell className="font-medium">{order.id}</TableCell>
-                                            <TableCell>{order.tenantName}</TableCell>
+                                            <TableCell>Tech Innovators Inc.</TableCell>
                                             <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>

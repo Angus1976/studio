@@ -236,3 +236,35 @@ export const ApiKeySchema = z.object({
     status: z.enum(["活跃", "已撤销"]),
 });
 export type ApiKey = z.infer<typeof ApiKeySchema>;
+
+// --- Platform Asset Management ---
+
+export const LlmConnectionSchema = z.object({
+  id: z.string(),
+  modelName: z.string(),
+  provider: z.string(),
+  apiKey: z.string(),
+  type: z.enum(["通用", "专属"]),
+  tenantId: z.string().optional(),
+  createdAt: z.string(),
+});
+export type LlmConnection = z.infer<typeof LlmConnectionSchema>;
+
+export const TokenAllocationSchema = z.object({
+    id: z.string(),
+    key: z.string(),
+    assignedTo: z.string(), // tenantId or userId
+    usageLimit: z.number(),
+    used: z.number(),
+    createdAt: z.string(),
+});
+export type TokenAllocation = z.infer<typeof TokenAllocationSchema>;
+
+export const SoftwareAssetSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  licenseKey: z.string().optional(),
+  type: z.string(),
+  createdAt: z.string(),
+});
+export type SoftwareAsset = z.infer<typeof SoftwareAssetSchema>;

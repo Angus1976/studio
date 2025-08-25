@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A set of flows for administrators to manage tenants and users.
@@ -5,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset } from '@/lib/data-types';
 
 // --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -354,4 +355,97 @@ export async function getApiKeys(input: { tenantId: string }): Promise<ApiKey[]>
     const db = admin.firestore();
     const snapshot = await db.collection('api_keys').where('tenantId', '==', input.tenantId).get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ApiKey));
+}
+
+// --- Platform Asset Management ---
+const toISODate = (timestamp: any) => timestamp?.toDate ? timestamp.toDate().toISOString() : new Date().toISOString();
+
+export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], tokenAllocations: TokenAllocation[], softwareAssets: SoftwareAsset[] }> {
+    const db = admin.firestore();
+    try {
+        const llmSnapshot = await db.collection('llm_connections').get();
+        const tokenSnapshot = await db.collection('token_allocations').get();
+        const assetSnapshot = await db.collection('software_assets').get();
+
+        const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as LlmConnection));
+        const tokenAllocations: TokenAllocation[] = tokenSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as TokenAllocation));
+        const softwareAssets: SoftwareAsset[] = assetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as SoftwareAsset));
+
+        return { llmConnections, tokenAllocations, softwareAssets };
+    } catch (error) {
+        console.error("Error fetching platform assets:", error);
+        throw new Error('无法从数据库加载平台资产。');
+    }
+}
+
+const SaveLlmConnectionSchema = z.object({
+    id: z.string().optional(),
+    modelName: z.string(), provider: z.string(), apiKey: z.string(), type: z.enum(["通用", "专属"]), tenantId: z.string().optional()
+});
+export async function saveLlmConnection(input: z.infer<typeof SaveLlmConnectionSchema>): Promise<{ success: boolean; message: string; }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('llm_connections').doc(id).set(data, { merge: true });
+        } else {
+            await db.collection('llm_connections').add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+        return { success: true, message: "LLM连接已保存" };
+    } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+export async function deleteLlmConnection(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    try {
+        await admin.firestore().collection('llm_connections').doc(input.id).delete();
+        return { success: true, message: "LLM连接已删除" };
+    } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+const SaveTokenAllocationSchema = z.object({
+    id: z.string().optional(),
+    key: z.string(), assignedTo: z.string(), usageLimit: z.number()
+});
+export async function saveTokenAllocation(input: z.infer<typeof SaveTokenAllocationSchema>): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('token_allocations').doc(id).set(data, { merge: true });
+        } else {
+            await db.collection('token_allocations').add({ ...data, used: 0, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+        return { success: true, message: "Token已分配" };
+    } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+export async function deleteTokenAllocation(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    try {
+        await admin.firestore().collection('token_allocations').doc(input.id).delete();
+        return { success: true, message: "Token分配已删除" };
+    } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+const SaveSoftwareAssetSchema = z.object({
+    id: z.string().optional(),
+    name: z.string(), type: z.string(), licenseKey: z.string().optional()
+});
+export async function saveSoftwareAsset(input: z.infer<typeof SaveSoftwareAssetSchema>): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('software_assets').doc(id).set(data, { merge: true });
+        } else {
+            await db.collection('software_assets').add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+        return { success: true, message: "软件资产已保存" };
+    } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+export async function deleteSoftwareAsset(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    try {
+        await admin.firestore().collection('software_assets').doc(input.id).delete();
+        return { success: true, message: "软件资产已删除" };
+    } catch (e: any) { return { success: false, message: e.message }; }
 }
