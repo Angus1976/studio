@@ -117,16 +117,18 @@ export function TaskDispatchCenter({}: TaskDispatchCenterProps) {
                         </AlertDescription>
                     </Alert>
                   ) : (
-                    <div className="text-center text-muted-foreground p-4">
+                    <div className="text-center text-muted-foreground p-4 h-full flex flex-col justify-center">
                         <Lightbulb className="mx-auto h-12 w-12 text-accent/50 mb-4"/>
-                        <p className="mb-4">不知道从哪里开始？试试这些例子：</p>
-                        <div className="flex flex-col items-center gap-2">
-                            {examplePrompts.map(prompt => (
-                                <Button key={prompt} variant="secondary" size="sm" className="w-full max-w-md" onClick={() => handleUseExample(prompt)}>
-                                    {prompt}
-                                </Button>
-                            ))}
-                        </div>
+                        <p className="mb-2 font-semibold text-foreground">欢迎使用专家模式</p>
+                        <p className="text-sm mb-4">
+                            在这里，您可以通过自然语言直接下达复杂指令。
+                            <br />
+                            AI 将为您分解任务、规划流程并调度智能 Agent 自动执行。
+                        </p>
+                        <p className="text-sm">试试说：</p>
+                        <blockquote className="mt-2 text-sm italic text-foreground/80 border-l-2 border-border pl-3 text-left max-w-md mx-auto">
+                            “帮我分析Q3销售数据并给销售团队前三名发一封祝贺邮件”
+                        </blockquote>
                     </div>
                   )}
 

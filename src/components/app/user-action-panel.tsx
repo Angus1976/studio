@@ -10,6 +10,17 @@ import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Link, FileText } fr
 import { Input } from '@/components/ui/input';
 import { digitalEmployee } from '@/ai/flows/digital-employee';
 import type { Scenario } from './ai-workbench';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Variable = {
     id: string;
@@ -97,14 +108,14 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
         }
     };
     
-    const handleCreateOrder = () => {
+    const handleConfirmCreateOrder = () => {
         if (!scenario) {
             toast({ variant: 'destructive', title: "无法创建订单", description: "请先选择一个有效的场景。" });
             return;
         }
         toast({
-            title: "正在生成任务订单...",
-            description: `已为场景“${scenario.title}”创建订单。 (模拟功能)`
+            title: "任务订单已生成 (模拟)",
+            description: `已为场景“${scenario.title}”创建订单。在实际应用中，这将触发支付和交付流程。`
         });
     }
 
@@ -172,10 +183,30 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
                         {isGenerating ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
                         测试该场景
                     </Button>
-                     <Button className="w-full" variant="outline" onClick={handleCreateOrder}>
-                        <FileText className="mr-2 h-4 w-4"/>
-                        确认并生成任务订单
-                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button className="w-full" variant="outline">
+                                <FileText className="mr-2 h-4 w-4"/>
+                                确认并生成任务订单
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>确认生成任务订单？</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                您即将根据以下场景生成一个任务订单，此操作在真实环境中可能会产生费用。
+                                <div className="mt-4 rounded-md border bg-muted p-3 text-sm">
+                                    <p><strong>场景名称:</strong> {scenario.title}</p>
+                                    <p className="mt-1"><strong>场景ID:</strong> <span className="font-mono text-xs">{scenario.id || 'N/A (自定义)'}</span></p>
+                                </div>
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleConfirmCreateOrder}>确认生成</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </CardFooter>
             </Card>
             
@@ -203,3 +234,4 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
         </div>
     );
 }
+
