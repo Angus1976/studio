@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -5,7 +6,7 @@
  *
  * - executePrompt - A function that takes prompt components and variables to generate a response.
  */
-
+/*
 import { ai } from '@/ai/genkit';
 import Handlebars from 'handlebars';
 import { Part } from 'genkit/ai';
@@ -76,3 +77,4 @@ const promptExecutionFlow = ai.defineFlow(
     return { response: llmResponse.text };
   }
 );
+*/

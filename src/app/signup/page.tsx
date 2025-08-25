@@ -13,7 +13,6 @@ import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const roleMap: { [key: string]: string } = {
-    'admin': 'Platform Admin',
     'tenant': 'Tenant Admin',
     'engineer': 'Prompt Engineer/Developer',
     'user': 'Individual User'

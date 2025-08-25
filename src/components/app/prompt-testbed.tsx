@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
-import { executePrompt } from '@/ai/flows/prompt-execution-flow';
+// import { executePrompt } from '@/ai/flows/prompt-execution-flow';
 import type { PromptData } from './prompt-editor';
 
 type Variable = {
@@ -21,6 +21,14 @@ type Variable = {
 type PromptTestbedProps = {
     prompt: PromptData;
 };
+
+// Mock executePrompt function
+const executePrompt = async (options: any): Promise<{ response: string }> => {
+    console.log("Executing prompt (mocked):", options);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { response: "This is a mocked response from the AI model based on your inputs." };
+};
+
 
 export function PromptTestbed({ prompt }: PromptTestbedProps) {
     const { toast } = useToast();

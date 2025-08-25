@@ -1,10 +1,11 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to analyze a given prompt and generate relevant metadata.
  *
  * - analyzePromptMetadata - A function that takes prompt components and returns structured metadata.
  */
-
+/*
 import { ai } from '@/ai/genkit';
 import { 
     AnalyzePromptMetadataInputSchema,
@@ -69,3 +70,4 @@ const analyzePromptMetadataFlow = ai.defineFlow(
     return metadata;
   }
 );
+*/

@@ -6,14 +6,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle, Sparkles, BrainCircuit, Zap as Apply } from 'lucide-react';
-import { analyzePromptMetadata } from '@/ai/flows/analyze-prompt-metadata';
+// import { analyzePromptMetadata } from '@/ai/flows/analyze-prompt-metadata';
 import type { PromptData } from './prompt-editor';
-import type { AnalyzePromptMetadataOutput } from '@/lib/data-types';
+// import type { AnalyzePromptMetadataOutput } from '@/lib/data-types';
+
+// Mocked AnalyzePromptMetadataOutput type
+type AnalyzePromptMetadataOutput = {
+    scope: string;
+    recommendedModel: string;
+    constraints: string;
+    scenario: string;
+};
+
 
 type MetadataAnalyzerProps = {
     prompt: PromptData;
     onApply: (metadata: AnalyzePromptMetadataOutput) => void;
 };
+
+// Mocked analyzePromptMetadata function
+const analyzePromptMetadata = async (prompt: any): Promise<AnalyzePromptMetadataOutput> => {
+    console.log("Analyzing prompt (mocked):", prompt);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+        scope: "通用文案",
+        recommendedModel: "gemini-1.5-flash",
+        constraints: "输入语言必须为英文。",
+        scenario: "将技术文档翻译为市场推广文案。"
+    };
+};
+
 
 export function MetadataAnalyzer({ prompt, onApply }: MetadataAnalyzerProps) {
     const { toast } = useToast();

@@ -11,8 +11,28 @@ import { PromptTestbed } from './prompt-testbed';
 import { MetadataAnalyzer } from './metadata-analyzer';
 import { savePrompt } from '@/ai/flows/save-prompt-flow';
 import { deletePrompt } from '@/ai/flows/delete-prompt-flow';
-import { analyzePromptMetadata, type AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
+// import { analyzePromptMetadata, type AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 import type { Prompt } from '@/lib/data-types';
+
+// Mocked AnalyzePromptMetadataOutput type
+type AnalyzePromptMetadataOutput = {
+    scope: string;
+    recommendedModel: string;
+    constraints: string;
+    scenario: string;
+};
+
+// Mocked analyzePromptMetadata function
+const analyzePromptMetadata = async (prompt: any): Promise<AnalyzePromptMetadataOutput> => {
+    console.log("Analyzing prompt (mocked):", prompt);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+        scope: "代码分析",
+        recommendedModel: "gemini-1.5-pro",
+        constraints: "需要提供完整的代码片段。",
+        scenario: "解释一段复杂的遗留代码的功能。"
+    };
+};
 
 export function PromptUniverseWorkbench() {
     const { toast } = useToast();

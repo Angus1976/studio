@@ -7,13 +7,45 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { LoaderCircle, Send, User, Bot } from 'lucide-react';
-import { aiRequirementsNavigator } from '@/ai/flows/ai-requirements-navigator';
+// import { aiRequirementsNavigator } from '@/ai/flows/ai-requirements-navigator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import type { RequirementsNavigatorInput } from '@/lib/data-types';
+// import type { RequirementsNavigatorInput } from '@/lib/data-types';
 
-type Message = RequirementsNavigatorInput['conversationHistory'][number];
+// Mocked types and functions
+type Message = {
+    role: 'user' | 'model';
+    parts: { text: string }[];
+};
+
+type RequirementsNavigatorInput = {
+    conversationHistory: Message[];
+};
+
+type RequirementsNavigatorOutput = {
+    response: string;
+    isFinished: boolean;
+    suggestedPromptId?: string;
+};
+
+const aiRequirementsNavigator = async (input: RequirementsNavigatorInput): Promise<RequirementsNavigatorOutput> => {
+    console.log("Navigating requirements (mocked):", input);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (input.conversationHistory.length === 0) {
+        return {
+            response: "您好！我是您的AI需求导航器。为了给您推荐最合适的AI能力，我需要先了解一些您的基本信息。请问，您所在的企业主要从事哪个行业呢？",
+            isFinished: false
+        };
+    }
+    // Simulate finishing after one user response
+    return {
+        response: "感谢您的信息！根据您的描述，我将为您推荐一些营销相关的能力场景。",
+        isFinished: true,
+        suggestedPromptId: 'marketing-expert'
+    };
+};
+
 
 // This component is kept for potential future use, but is currently not active in the main user flow.
 export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: string) => void }) {

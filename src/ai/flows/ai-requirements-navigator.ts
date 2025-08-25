@@ -1,10 +1,11 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to guide a user through a requirements gathering conversation.
  *
  * - aiRequirementsNavigator - A function that handles the conversation for requirements gathering.
  */
-
+/*
 import { ai } from '@/ai/genkit';
 import { 
     RequirementsNavigatorInputSchema, 
@@ -80,3 +81,4 @@ const requirementsNavigatorFlow = ai.defineFlow(
     return output;
   }
 );
+*/
