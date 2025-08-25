@@ -9,7 +9,7 @@ import { LoaderCircle, LogIn, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { PromptEngineerWorkbench } from "@/components/app/prompt-engineer-workbench";
+import { PromptUniverseWorkbench } from "@/components/app/prompt-universe-workbench";
 import { AppLogo } from "@/components/app/icons";
 import { AIWorkbench } from "@/components/app/ai-workbench";
 
@@ -102,9 +102,9 @@ export default function Home() {
         case 'Platform Admin':
             return <AdminDashboard />;
         case 'Tenant Admin':
-             return <AIWorkbench />;
+             return <TenantDashboard />;
         case 'Prompt Engineer/Developer':
-            return <PromptEngineerWorkbench />;
+            return <PromptUniverseWorkbench />;
         case 'Individual User':
              return <AIWorkbench />;
         default:

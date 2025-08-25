@@ -53,35 +53,27 @@ export type RequirementsNavigatorOutput = z.infer<typeof RequirementsNavigatorOu
 export const PromptSchema = z.object({
     id: z.string(),
     name: z.string(),
-    expertId: z.string(),
+    description: z.string().optional(),
+    userPrompt: z.string(),
+    expertId: z.string().optional(),
     tenantId: z.string().optional(),
     systemPrompt: z.string().optional(),
-    userPrompt: z.string(),
     context: z.string().optional(),
     negativePrompt: z.string().optional(),
+    industry: z.string().optional(),
+    task: z.string().optional(),
     createdAt: z.any().optional(),
     updatedAt: z.any().optional(),
     archived: z.boolean().optional(),
+    metadata: z.any().optional(),
 });
 export type Prompt = z.infer<typeof PromptSchema>;
 export const GetPromptsOutputSchema = z.array(PromptSchema);
 export type GetPromptsOutput = z.infer<typeof GetPromptsOutputSchema>;
 
 
-export const SavePromptInputSchema = z.object({
+export const SavePromptInputSchema = PromptSchema.omit({ id: true }).extend({
   id: z.string().optional(),
-  name: z.string(),
-  expertId: z.string(),
-  systemPrompt: z.string().optional(),
-  userPrompt: z.string(),
-  context: z.string().optional(),
-  negativePrompt: z.string().optional(),
-  metadata: z.object({
-    scope: z.string(),
-    recommendedModel: z.string(),
-    constraints: z.string(),
-    scenario: z.string(),
-  }).optional(),
 });
 export type SavePromptInput = z.infer<typeof SavePromptInputSchema>;
 
@@ -171,7 +163,6 @@ export const TaskSchema = z.object({
   description: z.string().describe('对此具体任务步骤的清晰描述。'),
   status: z.enum(['pending', 'in_progress', 'completed', 'failed']).describe('任务的当前状态。'),
   dependencies: z.array(z.string()).optional().describe('执行此任务前需要先完成的其他任务的ID列表。'),
-  output_type: z.string().optional().describe('此任务预期的输出类型, 例如 "报告" 或 "邮件"。'),
 });
 export type Task = z.infer<typeof TaskSchema>;
 

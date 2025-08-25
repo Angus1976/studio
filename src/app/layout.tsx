@@ -1,10 +1,18 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import { Inter, Space_Grotesk } from 'next/font/google'
+import { PT_Sans, Poppins } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' })
+const ptSans = PT_Sans({ 
+  subsets: ['latin'], 
+  weight: ['400', '700'],
+  variable: '--font-pt-sans' 
+})
+const poppins = Poppins({ 
+  subsets: ['latin'], 
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins' 
+})
 
 export const metadata: Metadata = {
   title: '提示词宇宙',
@@ -17,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={`${inter.variable} ${spaceGrotesk.variable} h-full`}>
+    <html lang="zh-CN" className={`${ptSans.variable} ${poppins.variable} h-full`}>
       <body className="font-body antialiased h-full">
         {children}
         <Toaster />

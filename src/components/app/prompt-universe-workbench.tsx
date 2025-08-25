@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ import { deletePrompt } from '@/ai/flows/delete-prompt-flow';
 import { analyzePromptMetadata, type AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 import type { Prompt } from '@/lib/data-types';
 
-export function PromptEngineerWorkbench() {
+export function PromptUniverseWorkbench() {
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -60,7 +61,7 @@ export function PromptEngineerWorkbench() {
         setActivePrompt({
             id: prompt.id,
             name: prompt.name,
-            expertId: prompt.expertId,
+            expertId: prompt.expertId || 'general-expert',
             systemPrompt: prompt.systemPrompt || '',
             userPrompt: prompt.userPrompt,
             context: prompt.context || '',

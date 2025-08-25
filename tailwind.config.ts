@@ -19,10 +19,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', ...fontFamily.sans],
-        mono: ['var(--font-space-grotesk)', ...fontFamily.mono],
-        body: ['var(--font-inter)', 'sans-serif'],
-        headline: ['var(--font-space-grotesk)', 'sans-serif'],
+        sans: ['var(--font-pt-sans)', ...fontFamily.sans],
+        headline: ['var(--font-poppins)', 'sans-serif'],
+        body: ['var(--font-pt-sans)', 'sans-serif'],
       },
       colors: {
         border: 'hsl(var(--border))',

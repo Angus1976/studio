@@ -16,7 +16,6 @@ import { User, Shield, BriefcaseBusiness, Building } from "lucide-react";
 
 
 const oneClickLogins = [
-    { role: 'Platform Admin', label: '平台管理员', icon: Shield },
     { role: 'Prompt Engineer/Developer', label: '技术工程师', icon: BriefcaseBusiness },
     { role: 'Tenant Admin', label: '企业租户', icon: Building },
     { role: 'Individual User', label: '个人用户', icon: User },
@@ -55,6 +54,9 @@ export default function LoginPage() {
             case "auth/user-not-found":
             case "auth/wrong-password":
                 description = "用户不存在或密码错误。";
+                break;
+            case "auth/invalid-credential":
+                 description = "用户不存在或密码错误。";
                 break;
             default:
                 description = error.message || description;
@@ -96,7 +98,7 @@ export default function LoginPage() {
                 <CardTitle className="text-base">一键登录演示账户</CardTitle>
                  <CardDescription className="text-xs">以不同角色体验平台（首次点击将自动创建账户）</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
                  {oneClickLogins.map(({ role, label, icon: Icon }) => (
                     <Button key={role} variant="outline" onClick={() => handleOneClickLogin(role)}>
                        <Icon className="mr-2 h-4 w-4" /> {label}
