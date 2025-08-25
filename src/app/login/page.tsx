@@ -72,11 +72,13 @@ export default function LoginPage() {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-        <AuthForm
-          mode="login"
-          onSubmit={handleLogin}
-          isLoading={isLoading}
-        />
+        <div className="bg-card px-6 py-12 shadow-lg rounded-lg sm:px-12">
+            <AuthForm
+              mode="login"
+              onSubmit={handleLogin}
+              isLoading={isLoading}
+            />
+        </div>
 
         <p className="mt-10 text-center text-sm text-muted-foreground">
           还没有账户？{" "}
