@@ -54,8 +54,8 @@ export function TaskCard({ task, onExecute, isExecuting }: TaskCardProps) {
 
 export function TaskDependencyArrow() {
     return (
-        <div className="h-8 flex justify-center">
-            <ArrowRight className="h-6 w-6 text-muted-foreground/50 -rotate-90" />
+        <div className="h-8 flex justify-center ml-5 w-0">
+            <ArrowRight className="h-6 w-6 text-muted-foreground/50 rotate-90" />
         </div>
     )
 }
