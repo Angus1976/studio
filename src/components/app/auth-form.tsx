@@ -14,7 +14,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { LoaderCircle } from "lucide-react";
 
 // Schema for the login form
@@ -28,7 +27,7 @@ const signupSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
-  role: z.string({ required_error: "请选择一个角色。" }),
+  // Role is no longer needed here as it's selected before showing the form
 });
 
 
@@ -38,26 +37,19 @@ type AuthFormProps = {
   isLoading: boolean;
 };
 
-const roles = [
-    { value: 'tenant', label: '企业租户' },
-    { value: 'engineer', label: '技术工程师' },
-    { value: 'user', label: '个人用户' },
-];
-
 export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
   const form = useForm({
     resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
     defaultValues: mode === 'login' 
         ? { email: "", password: "" } 
-        : { name: "", email: "", password: "", role: undefined },
+        : { name: "", email: "", password: "" },
   });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {mode === 'signup' && (
-           <>
-            <FormField
+           <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
@@ -70,7 +62,6 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
                 </FormItem>
               )}
             />
-           </>
         )}
         <FormField
           control={form.control}
@@ -98,39 +89,11 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
             </FormItem>
           )}
         />
-        {mode === 'signup' && (
-            <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>注册为</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                    <SelectTrigger>
-                        <SelectValue placeholder="选择您的角色" />
-                    </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {roles.map(role => (
-                            <SelectItem key={role.value} value={role.value}>
-                                {role.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-        )}
         <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90" disabled={isLoading}>
           {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-          {mode === "login" ? "登录" : "注册"}
+          {mode === "login" ? "登录" : "完成注册"}
         </Button>
       </form>
     </Form>
   );
 }
-
-    

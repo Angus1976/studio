@@ -11,8 +11,9 @@ import { loginUser } from "@/ai/flows/user-auth-flow";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { Building, Code, User, Shield } from "lucide-react";
+import { Building, Code, User, Shield, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -64,6 +65,12 @@ export default function LoginPage() {
         setIsLoading(false);
     }
   };
+  
+  const loginOptions = [
+    { role: 'tenant', icon: Building, title: '企业租户登录' },
+    { role: 'engineer', icon: Code, title: '技术工程师登录' },
+    { role: 'user', icon: User, title: '个人用户登录' },
+  ];
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 bg-background">
@@ -73,48 +80,36 @@ export default function LoginPage() {
           登录您的账户
         </h2>
         <p className="mt-2 text-center text-sm text-muted-foreground">
-            请选择您的登录角色
+            请使用您的电子邮件和密码登录
         </p>
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-        <div className="bg-card px-6 py-8 shadow-lg rounded-lg sm:px-12 space-y-6">
-            <div>
-                 <h3 className="text-sm font-medium text-muted-foreground text-center mb-4">平台方</h3>
-                 <div className="grid grid-cols-1 gap-4">
-                     <Button variant="outline" size="lg" className="justify-start text-base py-6">
-                         <Shield className="mr-4 text-accent" /> 平台管理员
+        <Card className="shadow-lg">
+            <CardContent className="p-6 space-y-6">
+                <div>
+                     <h3 className="text-sm font-medium text-muted-foreground text-center mb-4">平台方</h3>
+                     <Button variant="outline" size="lg" className="w-full justify-between text-base py-6">
+                        <div className="flex items-center">
+                            <Shield className="mr-4 text-accent" /> 平台管理员
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
                      </Button>
-                 </div>
-            </div>
-            
-            <div className="flex items-center">
-                <Separator className="flex-1" />
-                <span className="mx-4 text-xs text-muted-foreground">或</span>
-                <Separator className="flex-1" />
-            </div>
-
-            <div>
-                <h3 className="text-sm font-medium text-muted-foreground text-center mb-4">用户方</h3>
-                 <div className="grid grid-cols-1 gap-4">
-                     <Button variant="outline" size="lg" className="justify-start text-base py-6">
-                         <Building className="mr-4 text-accent" /> 企业租户
-                     </Button>
-                     <Button variant="outline" size="lg" className="justify-start text-base py-6">
-                         <Code className="mr-4 text-accent" /> 技术工程师
-                     </Button>
-                      <Button variant="outline" size="lg" className="justify-start text-base py-6">
-                         <User className="mr-4 text-accent" /> 个人用户
-                     </Button>
-                 </div>
-            </div>
-             <Separator />
-            <AuthForm
-              mode="login"
-              onSubmit={handleLogin}
-              isLoading={isLoading}
-            />
-        </div>
+                </div>
+                
+                <div className="flex items-center">
+                    <Separator className="flex-1" />
+                    <span className="mx-4 text-xs text-muted-foreground">或</span>
+                    <Separator className="flex-1" />
+                </div>
+                
+                <AuthForm
+                  mode="login"
+                  onSubmit={handleLogin}
+                  isLoading={isLoading}
+                />
+            </CardContent>
+        </Card>
 
         <p className="mt-10 text-center text-sm text-muted-foreground">
           还没有账户？{" "}
