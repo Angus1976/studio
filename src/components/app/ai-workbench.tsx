@@ -105,8 +105,7 @@ export function AIWorkbench() {
         if (workbenchMode === 'expert') {
             return <TaskDispatchCenter />;
         }
-        // return <RequirementsNavigator onFinish={handleNavigationFinish} />;
-        return <div className="p-4 text-center text-muted-foreground">AI 功能暂时禁用，请等待后续版本更新。</div>
+        return <RequirementsNavigator onFinish={handleNavigationFinish} />;
     };
 
     const LeftPanelWrapper = ({children}: {children: React.ReactNode}) => {

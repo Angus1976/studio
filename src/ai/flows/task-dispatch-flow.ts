@@ -6,7 +6,7 @@
  *
  * - taskDispatchFlow - The main flow function.
  */
-/*
+
 import { ai } from '@/ai/genkit';
 import { 
     TaskDispatchInputSchema,
@@ -69,7 +69,7 @@ const taskDispatchFlow = ai.defineFlow(
       },
     });
 
-    const output = llmResponse.output();
+    const output = llmResponse.output;
     if (!output) {
       throw new Error("AI未能生成有效的任务计划。");
     }
@@ -77,4 +77,3 @@ const taskDispatchFlow = ai.defineFlow(
     return output;
   }
 );
-*/

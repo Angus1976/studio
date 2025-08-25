@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { LoaderCircle, Send, Check, X, Bot, Wand2, Lightbulb } from 'lucide-react';
-// import { taskDispatch, type TaskDispatchOutput } from '@/ai/flows/task-dispatch-flow';
+import { taskDispatch, type TaskDispatchOutput } from '@/ai/flows/task-dispatch-flow';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,35 +15,6 @@ import { TaskCard } from './task-card';
 import type { Task } from "@/lib/data-types";
 import { TaskDependencyArrow } from './task-card';
 
-// Mocked types and functions
-type TaskDispatchOutput = {
-    planSummary: string;
-    tasks: Task[];
-    isClarificationNeeded: boolean;
-};
-
-const taskDispatch = async (input: { userCommand: string }): Promise<TaskDispatchOutput> => {
-    console.log("Dispatching task (mocked):", input);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    if (input.userCommand.includes("?")) {
-        return {
-            planSummary: "我需要更多信息，您能告诉我具体要分析哪个季度的销售数据吗？",
-            tasks: [],
-            isClarificationNeeded: true,
-        };
-    }
-    
-    return {
-        planSummary: "好的，收到指令。我将首先分析第三季度的销售数据，找出前三名销售冠军；然后为他们起草一封祝贺邮件；最后将邮件发送给他们。您确认后即可开始执行。",
-        tasks: [
-          { id: 'task-1', agent: '数据分析Agent', description: '连接CRM，分析Q3销售数据，识别销售额前三名的员工。', status: 'pending', dependencies: [] },
-          { id: 'task-2', agent: '文案撰写Agent', description: '根据销售冠军名单，撰写一封热情洋溢的祝贺邮件。', status: 'pending', dependencies: ['task-1'] },
-          { id: 'task-3', agent: '邮件发送Agent', description: '将祝贺邮件发送给销售团队的前三名成员。', status: 'pending', dependencies: ['task-2'] }
-        ],
-        isClarificationNeeded: false,
-    };
-};
 
 type TaskDispatchCenterProps = {
     // We can add props to load/save tasks later

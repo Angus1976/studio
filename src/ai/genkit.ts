@@ -1,5 +1,4 @@
 
-/*
 import {config} from 'dotenv';
 config({ path: `.env` });
 import {genkit} from 'genkit';
@@ -18,4 +17,3 @@ export const ai = genkit({
   // logLevel: 'debug', // Note: logLevel is not a valid option in Genkit 1.x root config
   enableTracingAndMetrics: true,
 });
-*/

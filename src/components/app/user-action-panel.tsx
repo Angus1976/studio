@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Link, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-// import { digitalEmployee } from '@/ai/flows/digital-employee';
+import { digitalEmployee } from '@/ai/flows/digital-employee';
 import type { Scenario } from './ai-workbench';
 import {
   AlertDialog,
@@ -30,13 +30,6 @@ type Variable = {
 
 type UserActionPanelProps = {
     scenario: Scenario | null;
-};
-
-// Mocked digitalEmployee function
-const digitalEmployee = async (options: any): Promise<{ response: string }> => {
-    console.log("Digital employee called (mocked):", options);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { response: "This is a mocked response from the AI digital employee." };
 };
 
 

@@ -3,9 +3,9 @@
 /**
  * @fileOverview An AI flow to analyze a given prompt and generate relevant metadata.
  *
- * - analyzePromptMetadata - A function that takes prompt components and returns structured metadata.
+ * - analyzePromptMetadata - a function that takes prompt components and returns structured metadata.
  */
-/*
+
 import { ai } from '@/ai/genkit';
 import { 
     AnalyzePromptMetadataInputSchema,
@@ -61,7 +61,7 @@ const analyzePromptMetadataFlow = ai.defineFlow(
       },
     });
 
-    const metadata = llmResponse.output();
+    const metadata = llmResponse.output;
     
     if (!metadata) {
         throw new Error('AI未能生成有效的元数据。');
@@ -70,4 +70,3 @@ const analyzePromptMetadataFlow = ai.defineFlow(
     return metadata;
   }
 );
-*/

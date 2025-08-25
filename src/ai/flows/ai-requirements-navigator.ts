@@ -5,7 +5,7 @@
  *
  * - aiRequirementsNavigator - A function that handles the conversation for requirements gathering.
  */
-/*
+
 import { ai } from '@/ai/genkit';
 import { 
     RequirementsNavigatorInputSchema, 
@@ -73,7 +73,7 @@ const requirementsNavigatorFlow = ai.defineFlow(
         }
     });
 
-    const output = llmResponse.output();
+    const output = llmResponse.output;
     if(!output) {
         throw new Error("AI failed to generate a valid response.");
     }
@@ -81,4 +81,3 @@ const requirementsNavigatorFlow = ai.defineFlow(
     return output;
   }
 );
-*/
