@@ -150,8 +150,8 @@ export function AIWorkbench() {
 
 
   return (
-    <ThreeColumnLayout>
-        <ThreeColumnLayout.Left>
+    <ThreeColumnLayout autoSaveId="ai-workbench">
+        <ThreeColumnLayout.Left defaultSize={25} minSize={20} maxSize={40}>
             <LeftPanelWrapper>
                 <LeftPanel />
             </LeftPanelWrapper>
@@ -161,7 +161,7 @@ export function AIWorkbench() {
 
         {workbenchMode === 'guide' ? (
             <>
-                <ThreeColumnLayout.Main>
+                <ThreeColumnLayout.Main defaultSize={45} minSize={30}>
                     <div className="h-full flex flex-col gap-6">
                         <ScenarioLibraryViewer
                             scenarios={recommendedScenarios}
@@ -181,7 +181,7 @@ export function AIWorkbench() {
 
                 <ThreeColumnLayout.Handle withHandle />
 
-                <ThreeColumnLayout.Right>
+                <ThreeColumnLayout.Right defaultSize={30} minSize={25} maxSize={40}>
                      <UserActionPanel scenario={selectedScenario} />
                 </ThreeColumnLayout.Right>
             </>

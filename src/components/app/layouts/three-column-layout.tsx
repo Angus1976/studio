@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -10,14 +11,17 @@ import { cn } from "@/lib/utils";
 const ThreeColumnLayout = ({
   children,
   className,
+  autoSaveId,
 }: {
   children: React.ReactNode;
   className?: string;
+  autoSaveId: string;
 }) => {
   return (
     <ResizablePanelGroup
       direction="horizontal"
       className={cn("h-full max-h-full items-stretch", className)}
+      autoSaveId={autoSaveId}
     >
       {children}
     </ResizablePanelGroup>
@@ -31,9 +35,6 @@ const Left = ({
 }: React.ComponentProps<typeof ResizablePanel>) => {
   return (
     <ResizablePanel
-      defaultSize={25}
-      minSize={20}
-      maxSize={30}
       className={cn(
         "h-full flex flex-col gap-6 p-4 md:p-6 lg:p-8 !overflow-y-auto",
         className
@@ -52,8 +53,6 @@ const Main = ({
 }: React.ComponentProps<typeof ResizablePanel>) => {
   return (
     <ResizablePanel
-      defaultSize={45}
-      minSize={30}
       className={cn(
         "h-full flex flex-col gap-6 p-4 md:p-6 lg:p-8 !overflow-y-auto",
         className
@@ -72,9 +71,6 @@ const Right = ({
 }: React.ComponentProps<typeof ResizablePanel>) => {
   return (
     <ResizablePanel
-      defaultSize={30}
-      minSize={20}
-      maxSize={40}
       className={cn(
         "h-full flex flex-col gap-6 p-4 md:p-6 lg:p-8 !overflow-y-auto",
         className

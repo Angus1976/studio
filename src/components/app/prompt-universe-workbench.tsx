@@ -143,8 +143,8 @@ export function PromptUniverseWorkbench() {
     };
 
     return (
-        <ThreeColumnLayout>
-            <ThreeColumnLayout.Left>
+        <ThreeColumnLayout autoSaveId="prompt-universe-workbench">
+            <ThreeColumnLayout.Left defaultSize={25} minSize={20} maxSize={30}>
                  <PromptLibrary 
                     prompts={prompts} 
                     onSelectPrompt={handleSelectPrompt}
@@ -155,7 +155,7 @@ export function PromptUniverseWorkbench() {
             
             <ThreeColumnLayout.Handle withHandle />
 
-            <ThreeColumnLayout.Main>
+            <ThreeColumnLayout.Main defaultSize={45} minSize={30}>
                  <PromptEditor 
                     prompt={activePrompt}
                     onPromptChange={setActivePrompt}
@@ -166,7 +166,7 @@ export function PromptUniverseWorkbench() {
 
             <ThreeColumnLayout.Handle withHandle />
 
-            <ThreeColumnLayout.Right>
+            <ThreeColumnLayout.Right defaultSize={30} minSize={20} maxSize={40}>
                 <div className="flex flex-col gap-6 h-full">
                    <PromptTestbed prompt={activePrompt} />
                    <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />

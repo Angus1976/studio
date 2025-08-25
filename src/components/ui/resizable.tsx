@@ -1,12 +1,46 @@
+
 "use client"
 
 import { PanelGroup as PanelGroupPrimitive, Panel as ResizablePanelPrimitive, PanelResizeHandle as ResizableHandlePrimitive } from "react-resizable-panels"
+import { ImperativePanelGroupHandle, PanelGroupOnLayout, PanelOnCollapse, PanelOnExpand, PanelOnResize } from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"
+import * as React from "react"
 
-const ResizablePanelGroup = PanelGroupPrimitive
 
-const ResizablePanel = ResizablePanelPrimitive
+const ResizablePanelGroup = React.forwardRef<ImperativePanelGroupHandle, React.ComponentProps<typeof PanelGroupPrimitive> & {autoSaveId: string}>(({className, autoSaveId, ...props}, ref) => {
+    const [isMounted, setIsMounted] = React.useState(false);
+    const onLayout = (sizes: number[]) => {
+        if(isMounted) {
+            document.cookie = `resizable-panels:${autoSaveId}=${JSON.stringify(sizes)}; max-age=31536000; path=/`;
+        }
+        (props.onLayout as PanelGroupOnLayout)?.(sizes)
+    }
+
+    React.useEffect(() => {
+        setIsMounted(true);
+    }, [])
+
+    return (
+        <PanelGroupPrimitive
+            ref={ref}
+            className={cn(
+                "flex h-full w-full data-[panel-group-direction=vertical]:flex-col",
+                className
+            )}
+            onLayout={onLayout}
+            {...props}
+        />
+    )
+});
+ResizablePanelGroup.displayName = "ResizablePanelGroup"
+
+const ResizablePanel = React.forwardRef<HTMLDivElement, React.ComponentProps<typeof ResizablePanelPrimitive>>(({...props}, ref) => {
+    return (
+        <ResizablePanelPrimitive ref={ref} {...props} />
+    )
+})
+ResizablePanel.displayName = "ResizablePanel"
 
 const ResizableHandle = ({
   withHandle,
