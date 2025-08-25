@@ -38,16 +38,11 @@ type AuthFormProps = {
   isLoading: boolean;
 };
 
-const roles = {
-    'platform': [
-        { value: 'admin', label: '平台管理员' },
-    ],
-    'user': [
-        { value: 'tenant', label: '企业租户' },
-        { value: 'engineer', label: '技术工程师' },
-        { value: 'user', label: '个人用户' },
-    ]
-};
+const roles = [
+    { value: 'tenant', label: '企业租户' },
+    { value: 'engineer', label: '技术工程师' },
+    { value: 'user', label: '个人用户' },
+];
 
 export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
   const form = useForm({
@@ -109,7 +104,7 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
             name="role"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>角色</FormLabel>
+                <FormLabel>注册为</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                     <SelectTrigger>
@@ -117,15 +112,10 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
                     </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                        {Object.entries(roles).map(([groupName, groupRoles]) => (
-                            <SelectGroup key={groupName}>
-                                <SelectLabel>{groupName === 'platform' ? '平台方' : '用户方'}</SelectLabel>
-                                {groupRoles.map(role => (
-                                    <SelectItem key={role.value} value={role.value}>
-                                        {role.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectGroup>
+                        {roles.map(role => (
+                            <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                            </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -142,3 +132,5 @@ export function AuthForm({ mode, onSubmit, isLoading }: AuthFormProps) {
     </Form>
   );
 }
+
+    

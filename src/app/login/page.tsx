@@ -96,7 +96,7 @@ export default function LoginPage() {
         <Card>
             <CardHeader>
                 <CardTitle className="text-base">一键登录演示账户</CardTitle>
-                 <CardDescription className="text-xs">以不同角色体验平台（首次点击将自动创建账户）</CardDescription>
+                 <CardDescription className="text-xs">以不同角色体验平台</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
                  {oneClickLogins.map(({ role, label, icon: Icon }) => (
@@ -126,3 +126,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
