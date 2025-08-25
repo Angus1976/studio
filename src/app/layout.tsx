@@ -8,6 +8,7 @@ const ptSans = PT_Sans({
   weight: ['400', '700'],
   variable: '--font-pt-sans' 
 })
+
 const poppins = Poppins({ 
   subsets: ['latin'], 
   weight: ['400', '500', '600', '700'],
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className={`${ptSans.variable} ${poppins.variable} h-full`}>
+    <html lang="zh-CN" className={`${poppins.variable} ${ptSans.variable} h-full`}>
       <body className="font-body antialiased h-full">
         {children}
         <Toaster />
