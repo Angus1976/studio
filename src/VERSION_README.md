@@ -29,8 +29,7 @@
 
 ## 3. 项目结构概览
 
-```
-src/
+`src/
 ├── app/                  # Next.js App Router (页面)
 │   ├── (pages)/          # 各个页面组件
 │   ├── globals.css       # 全局样式与CSS变量
@@ -47,7 +46,7 @@ src/
 │   ├── firebase.ts       # Firebase 客户端初始化
 │   └── firebase-admin.ts # Firebase Admin SDK 初始化
 └── ...
-```
+`
 
 ---
 
