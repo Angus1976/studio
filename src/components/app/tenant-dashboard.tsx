@@ -1404,7 +1404,7 @@ export function TenantDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><KeyRound/> API 密钥管理</CardTitle>
-                            <CardDescription>管理用于调用平台服务的 API 密钥。</CardDescription>
+                            <CardDescription>管理用于调用平台服务的 API 密钥。平台已完成全球主流大模型（含中国厂商）的对接，您只需在此添加您的有效密钥即可使用。</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、吊销和管理您的 API 密钥。</p>

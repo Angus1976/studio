@@ -547,12 +547,18 @@ function UserManagementDialog({ users, onRefresh, buttonText, title, description
 
 
 // --- Asset Management ---
-const llmModelSchema = z.object({
+const llmConnectionSchema = z.object({
   modelName: z.string().min(1, "模型名称不能为空"),
   apiKey: z.string().min(1, "API Key不能为空"),
   provider: z.string().min(1, "提供商不能为空"),
+  type: z.enum(["通用", "专属"]),
+  tenantId: z.string().optional(),
+}).refine(data => data.type === '通用' || (data.type === '专属' && data.tenantId), {
+    message: "专属连接必须指定租户ID",
+    path: ["tenantId"],
 });
-type LlmModel = z.infer<typeof llmModelSchema> & { id: string };
+
+type LlmConnection = z.infer<typeof llmConnectionSchema> & { id: string };
 
 const tokenSchema = z.object({
   key: z.string().min(1, "Key不能为空"),
@@ -569,10 +575,10 @@ const softwareAssetSchema = z.object({
 type SoftwareAsset = z.infer<typeof softwareAssetSchema> & { id: string };
 
 // SIMULATED DATA HOOK
-const useMockData = () => {
-    const [llmModels, setLlmModels] = useState<LlmModel[]>([
-        { id: 'llm-1', modelName: 'Gemini 1.5 Pro', provider: 'Google', apiKey: 'sk-...' },
-        { id: 'llm-2', modelName: 'GPT-4o', provider: 'OpenAI', apiKey: 'sk-...' },
+const useMockData = (tenants: Tenant[]) => {
+    const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([
+        { id: 'llm-1', modelName: 'Gemini 1.5 Pro (通用)', provider: 'Google', apiKey: 'sk-...', type: '通用' },
+        { id: 'llm-2', modelName: 'GPT-4o (租户A专属)', provider: 'OpenAI', apiKey: 'sk-...', type: '专属', tenantId: 'tenant-id-1' },
     ]);
     const [tokens, setTokens] = useState<Token[]>([
         { id: 'token-1', key: 'key-abc-123', assignedTo: 'Tech Innovators Inc.', usageLimit: 1000000, used: 250000 },
@@ -584,8 +590,8 @@ const useMockData = () => {
     ]);
     
     // In a real app, these would be API calls. We simulate them here.
-    const addLlmModel = (data: Omit<LlmModel, 'id'>) => setLlmModels(prev => [{...data, id: `llm-${Date.now()}`}, ...prev]);
-    const deleteLlmModel = (id: string) => setLlmModels(prev => prev.filter(item => item.id !== id));
+    const addLlmConnection = (data: Omit<LlmConnection, 'id'>) => setLlmConnections(prev => [{...data, id: `llm-${Date.now()}`}, ...prev]);
+    const deleteLlmConnection = (id: string) => setLlmConnections(prev => prev.filter(item => item.id !== id));
     
     const addToken = (data: Omit<Token, 'id'|'used'>) => setTokens(prev => [{...data, id: `token-${Date.now()}`, used: 0}, ...prev]);
     const deleteToken = (id: string) => setTokens(prev => prev.filter(item => item.id !== id));
@@ -594,22 +600,25 @@ const useMockData = () => {
     const deleteSoftwareAsset = (id: string) => setSoftwareAssets(prev => prev.filter(item => item.id !== id));
 
     return {
-        llmModels, addLlmModel, deleteLlmModel,
+        llmConnections, addLlmConnection, deleteLlmConnection,
         tokens, addToken, deleteToken,
         softwareAssets, addSoftwareAsset, deleteSoftwareAsset,
     };
 };
 
 
-function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
+function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants: Tenant[], triggerButtonText: string, title: string }) {
     const { toast } = useToast();
-    const data = useMockData();
+    const data = useMockData(tenants);
 
     const LlmForm = () => {
-        const form = useForm({ resolver: zodResolver(llmModelSchema), defaultValues: {modelName: "", provider: "", apiKey: ""}});
-        const onSubmit = (values: z.infer<typeof llmModelSchema>) => {
-            data.addLlmModel(values);
-            toast({title: "LLM 模型已添加"});
+        const form = useForm({ resolver: zodResolver(llmConnectionSchema), defaultValues: {modelName: "", provider: "", apiKey: "", type: "通用", tenantId: ""}});
+        const type = form.watch('type');
+
+        const onSubmit = (values: z.infer<typeof llmConnectionSchema>) => {
+            const finalValues = values.type === '通用' ? { ...values, tenantId: undefined } : values;
+            data.addLlmConnection(finalValues);
+            toast({title: "LLM 连接已添加"});
             form.reset();
         };
         return (
@@ -618,7 +627,39 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                     <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称 (例如: GPT-4o)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商 (例如: OpenAI)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField control={form.control} name="apiKey" render={({field}) => (<FormItem><FormControl><Input placeholder="API Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <Button type="submit" size="sm" className="w-full">添加模型</Button>
+                    <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                            <FormItem>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="通用">通用 (所有租户)</SelectItem>
+                                        <SelectItem value="专属">专属 (指定租户)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
+                        )}
+                    />
+                    {type === '专属' && (
+                         <FormField
+                            control={form.control}
+                            name="tenantId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue placeholder="选择一个租户..."/></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.companyName}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+                    <Button type="submit" size="sm" className="w-full !mt-4">添加连接</Button>
                 </form>
             </Form>
         )
@@ -675,7 +716,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                 </DialogHeader>
                 <Tabs defaultValue="llm" className="mt-4">
                     <TabsList>
-                        <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 模型管理</TabsTrigger>
+                        <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 连接管理</TabsTrigger>
                         <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量分配</TabsTrigger>
                         <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
                     </TabsList>
@@ -686,14 +727,15 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                                     <CardHeader><CardTitle>已对接模型</CardTitle></CardHeader>
                                     <CardContent>
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
                                             <TableBody>
-                                                {data.llmModels.map(model => (
+                                                {data.llmConnections.map(model => (
                                                     <TableRow key={model.id}>
                                                         <TableCell className="font-medium">{model.modelName}</TableCell>
                                                         <TableCell>{model.provider}</TableCell>
+                                                        <TableCell><Badge variant={model.type === '通用' ? 'secondary' : 'outline'}>{model.type}</Badge></TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteLlmModel(model.id)}>
+                                                            <Button variant="ghost" size="icon" onClick={() => data.deleteLlmConnection(model.id)}>
                                                                 <Trash2 className="h-4 w-4 text-destructive/80"/>
                                                             </Button>
                                                         </TableCell>
@@ -706,7 +748,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                             </div>
                             <div>
                                 <Card>
-                                    <CardHeader><CardTitle>添加新模型</CardTitle></CardHeader>
+                                    <CardHeader><CardTitle>添加新连接</CardTitle></CardHeader>
                                     <CardContent><LlmForm /></CardContent>
                                 </Card>
                             </div>
@@ -1059,6 +1101,7 @@ export function AdminDashboard() {
                                 />
                             ) : (
                                 <AssetManagementDialog
+                                    tenants={tenants}
                                     triggerButtonText={panel.buttonText}
                                     title={panel.title}
                                 />
