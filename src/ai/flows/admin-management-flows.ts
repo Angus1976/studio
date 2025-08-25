@@ -355,5 +355,3 @@ export async function getApiKeys(input: { tenantId: string }): Promise<ApiKey[]>
     const snapshot = await db.collection('api_keys').where('tenantId', '==', input.tenantId).get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ApiKey));
 }
-
-    

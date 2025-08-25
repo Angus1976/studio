@@ -510,7 +510,7 @@ function ViewOrderDialog({ order }: { order: Order }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {order.items.map(item => (
+                            {order.items.map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.title}</TableCell>
                                     <TableCell>¥{item.price.toFixed(2)} / {item.unit}</TableCell>
@@ -644,7 +644,7 @@ function ApiKeyManagementDialog() {
                 </div>
                  <DialogFooter>
                     <Button onClick={() => setNewlyCreatedKey(null)}>我已保存密钥</Button>
-                </DialogFooter>
+                 </DialogFooter>
               </DialogContent>
            </Dialog>
       )
@@ -1302,7 +1302,7 @@ export function TenantDashboard() {
                                     <TableRow key={order.id}>
                                         <TableCell className="font-medium">{order.id}</TableCell>
                                         <TableCell>
-                                            {order.items.map(item => 
+                                            {order.items.map((item: any) => 
                                                 <div key={item.id}>{item.title} (x{item.quantity})</div>
                                             )}
                                         </TableCell>
