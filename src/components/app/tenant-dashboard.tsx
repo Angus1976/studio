@@ -26,6 +26,21 @@ import { cn } from "@/lib/utils";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
 import { Skeleton } from "../ui/skeleton";
+import type { IndividualUser, Role, Order, ProcurementItem, ApiKey } from "@/lib/data-types";
+import { 
+    getTenantData, 
+    inviteUsers, 
+    updateTenantUser,
+    saveTenantRole,
+    deleteTenantRole,
+    createPreOrder,
+    getApiKeys,
+    createApiKey,
+    revokeApiKey,
+} from "@/ai/flows/admin-management-flows";
+
+
+const MOCK_TENANT_ID = 'mock-tenant-id-123'; // In a real app, this would come from the user's session
 
 const usageData = [
   { month: "一月", tokens: 120000 },
@@ -43,14 +58,6 @@ const chartConfig = {
   },
 };
 
-type User = {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    status: string;
-};
-
 
 const procurementItems = [
     { id: 'prod-001', title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础", price: 50, unit: "用户/年" },
@@ -64,17 +71,8 @@ const procurementItems = [
     { id: 'prod-009', title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: "Bot", tag: "AI能力", price: 8000, unit: "个/月" },
 ]
 
-type ProcurementItem = typeof procurementItems[0];
 type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
 
-type Order = {
-    id: string;
-    items: (ProcurementItem & { quantity: number })[];
-    totalAmount: number;
-    status: OrderStatus;
-    createdAt: string;
-    updatedAt: string;
-}
 
 const preOrderSchema = z.object({
   quantity: z.coerce.number().min(1, { message: "数量必须大于0。" }),
@@ -223,7 +221,6 @@ const roleSchema = z.object({
   }),
 });
 
-type Role = z.infer<typeof roleSchema> & { id: string };
 
 const IconComponent = ({ name, ...props }: { name: string, [key: string]: any }) => {
     const Icon = (LucideReact as any)[name] as React.ElementType;
@@ -379,7 +376,7 @@ function InviteUserDialog({ roles, onInvite }: { roles: Role[]; onInvite: (value
   );
 }
 
-function EditUserDialog({ user, roles, onUpdate, children }: { user: User, roles: Role[], onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
+function EditUserDialog({ user, roles, onUpdate, children }: { user: IndividualUser, roles: Role[], onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
     defaultValues: user,
@@ -537,20 +534,6 @@ const apiKeySchema = z.object({
   name: z.string().min(2, { message: "名称至少需要2个字符。" }),
 });
 
-type ApiKey = {
-  id: string;
-  name: string;
-  key: string;
-  createdAt: string;
-  status: "活跃" | "已撤销";
-};
-
-const generateApiKey = () => `sk_live_${[...Array(32)].map(() => Math.random().toString(36)[2]).join('')}`;
-
-const initialApiKeys: ApiKey[] = [
-  { id: 'key-1', name: '默认密钥', key: generateApiKey(), createdAt: '2024-06-15', status: '活跃' },
-  { id: 'key-2', name: '营销活动专用', key: generateApiKey(), createdAt: '2024-05-20', status: '已撤销' },
-];
 
 function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeof apiKeySchema>) => void; onCancel: () => void }) {
   const form = useForm<z.infer<typeof apiKeySchema>>({
@@ -593,35 +576,44 @@ function ApiKeyManagementDialog() {
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchKeys = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const keys = await getApiKeys({ tenantId: MOCK_TENANT_ID });
+        setApiKeys(keys);
+    } catch (e: any) {
+        toast({ title: "加载密钥失败", description: e.message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [toast]);
+  
   useEffect(() => {
-    // SIMULATE API CALL
-    setTimeout(() => {
-      setApiKeys(initialApiKeys);
-      setIsLoading(false);
-    }, 1000);
-  }, []);
+    fetchKeys();
+  }, [fetchKeys]);
 
-  const handleCreateKey = (values: z.infer<typeof apiKeySchema>) => {
-      // SIMULATED API CALL
-      const newKey: ApiKey = {
-          id: `key-${Date.now()}`,
-          name: values.name,
-          key: generateApiKey(),
-          createdAt: new Date().toISOString().split('T')[0],
-          status: '活跃'
-      };
-      setApiKeys(prev => [newKey, ...prev]);
-      setNewlyCreatedKey(newKey);
-      setIsCreating(false);
+  const handleCreateKey = async (values: z.infer<typeof apiKeySchema>) => {
+      try {
+        const result = await createApiKey({ tenantId: MOCK_TENANT_ID, name: values.name });
+        if (result.success) {
+            setNewlyCreatedKey(result.key);
+            setApiKeys(prev => [result.key, ...prev]);
+        }
+      } catch (e: any) {
+          toast({ title: "创建密钥失败", description: e.message, variant: "destructive" });
+      } finally {
+          setIsCreating(false);
+      }
   };
   
-  const handleRevokeKey = (keyId: string) => {
-    // SIMULATED API CALL
-    setApiKeys(prev => prev.map(key => key.id === keyId ? {...key, status: "已撤销"} : key));
-    toast({
-        title: "API 密钥已撤销",
-        variant: "destructive"
-    });
+  const handleRevokeKey = async (keyId: string) => {
+    try {
+        await revokeApiKey({ tenantId: MOCK_TENANT_ID, keyId });
+        setApiKeys(prev => prev.map(key => key.id === keyId ? {...key, status: "已撤销"} : key));
+        toast({ title: "API 密钥已撤销", variant: "destructive" });
+    } catch (e: any) {
+         toast({ title: "撤销密钥失败", description: e.message, variant: "destructive" });
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -659,7 +651,7 @@ function ApiKeyManagementDialog() {
   }
 
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => { if(!open) setIsCreating(false)}}>
       <DialogTrigger asChild>
         <Button>管理 API 密钥</Button>
       </DialogTrigger>
@@ -844,34 +836,18 @@ function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: 
 }
 
 
-function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { roles: Role[]; setRoles: React.Dispatch<React.SetStateAction<Role[]>>; children: React.ReactNode; triggerAsChild?: boolean }) {
-  const { toast } = useToast();
+function RoleManagementDialog({ roles, onSave, onDelete, children, triggerAsChild }: { roles: Role[]; onSave: (role: Role) => void; onDelete: (roleId: string) => void; children: React.ReactNode; triggerAsChild?: boolean }) {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const handleSaveRole = (values: Role) => {
-    // SIMULATED API CALL
-    if (editingRole) {
-      // Update
-      setRoles(roles.map(r => r.id === values.id ? values : r));
-      toast({ title: "角色已更新" });
-    } else {
-      // Add
-      setRoles([...roles, values]);
-      toast({ title: "角色已创建" });
-    }
+    onSave(values);
     setEditingRole(null);
     setIsFormOpen(false);
   };
 
   const handleDeleteRole = (roleId: string) => {
-     // SIMULATED API CALL
-    if(roles.length <= 1){
-        toast({ title: "删除失败", description: "至少需要保留一个角色。", variant: "destructive" });
-        return;
-    }
-    setRoles(roles.filter(r => r.id !== roleId));
-    toast({ title: "角色已删除", variant: "destructive" });
+    onDelete(roleId);
   };
   
   const handleEdit = (role: Role) => {
@@ -968,7 +944,7 @@ function RoleManagementDialog({ roles, setRoles, children, triggerAsChild }: { r
   );
 }
 
-function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (users: User[]) => void }) {
+function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (users: any[]) => void }) {
   const { toast } = useToast();
   const [textValue, setTextValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -984,7 +960,7 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
     }
 
     const lines = textValue.trim().split('\n');
-    const newUsers: User[] = [];
+    const newUsers: any[] = [];
     const existingRoleNames = roles.map(r => r.name);
 
     for (let i = 0; i < lines.length; i++) {
@@ -1006,7 +982,7 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
             return;
         }
 
-        newUsers.push({ id: `user-${Date.now() + i}`, name, email, role, status: '邀请中' });
+        newUsers.push({ name, email, role, status: '邀请中' });
     }
 
     onImport(newUsers);
@@ -1049,7 +1025,7 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
 
 export function TenantDashboard() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<IndividualUser[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState({
@@ -1059,95 +1035,87 @@ export function TenantDashboard() {
   });
   const [activeTab, setActiveTab] = useState<string>("overview");
   
-  useEffect(() => {
-    // Simulate fetching data for all tabs when component mounts or tab changes
-    const fetchData = async (dataType: keyof typeof isLoading) => {
-      setIsLoading(prev => ({...prev, [dataType]: true}));
-      // In a real app, you would call your backend flows here.
-      // e.g. `const data = await getTenantDataFlow({ type: dataType });`
-      // For now, we simulate with a timeout.
-      setTimeout(() => {
-        // This is where you would set the state with data from the database
-        // setUsers(initialUsers); 
-        // setOrders(initialOrders);
-        // setRoles(initialRoles);
-        setIsLoading(prev => ({...prev, [dataType]: false}));
-      }, 1500);
+  const fetchData = React.useCallback(async () => {
+    setIsLoading({ users: true, orders: true, roles: true });
+    try {
+        const data = await getTenantData({ tenantId: MOCK_TENANT_ID });
+        setUsers(data.users);
+        setOrders(data.orders);
+        setRoles(data.roles);
+    } catch (error: any) {
+        toast({ title: "数据加载失败", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading({ users: false, orders: false, roles: false });
     }
-    
-    fetchData('users');
-    fetchData('orders');
-    fetchData('roles');
+  }, [toast]);
 
-  }, []);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
 
-  const handleCreatePreOrder = (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
-      // SIMULATED API CALL
-      const newOrder: Order = {
-          id: `PO-${Date.now()}`,
-          items: [{ ...item, quantity: values.quantity }],
-          totalAmount: item.price * values.quantity,
-          status: "待平台确认",
-          createdAt: new Date().toISOString().split('T')[0],
-          updatedAt: new Date().toISOString().split('T')[0],
-      };
-      setOrders(prev => [newOrder, ...prev]);
-      toast({
-          title: "预购单已提交",
-          description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
-      });
-      setActiveTab("orders");
+  const handleCreatePreOrder = async (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
+      try {
+        await createPreOrder({ tenantId: MOCK_TENANT_ID, item, quantity: values.quantity, notes: values.notes });
+        toast({
+            title: "预购单已提交",
+            description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
+        });
+        setActiveTab("orders");
+        await fetchData(); // Refresh data
+      } catch (e: any) {
+          toast({ title: "提交失败", description: e.message, variant: "destructive" });
+      }
   };
 
   const handlePayOrder = (orderId: string) => {
     // In a real app, this would redirect to a payment gateway
-    // SIMULATED API CALL
-    setOrders(prev => prev.map(order => 
-        order.id === orderId ? { ...order, status: "配置中", updatedAt: new Date().toISOString().split('T')[0] } : order
-    ));
+    // For now, we simulate the status change
     toast({
-        title: "支付成功！",
+        title: "支付成功！ (模拟)",
         description: "订单支付成功，平台将尽快为您完成资源配置。"
     });
   };
 
-  const handleInviteUser = (values: z.infer<typeof inviteUserSchema>) => {
-    // SIMULATED API CALL
-    const newUser = { ...values, id: `user-${Date.now()}`, name: "新成员", status: "邀请中" };
-    setUsers(prev => [...prev, newUser]);
-    toast({
-      title: "邀请已发送",
-      description: `已成功向 ${values.email} 发送邀请。`,
-    });
+  const handleInviteUser = async (values: z.infer<typeof inviteUserSchema>) => {
+    try {
+      await inviteUsers({ tenantId: MOCK_TENANT_ID, users: [{ ...values, name: "新成员", status: "邀请中" }] });
+      toast({ title: "邀请已发送", description: `已成功向 ${values.email} 发送邀请。` });
+      await fetchData();
+    } catch (e: any) {
+      toast({ title: "邀请失败", description: e.message, variant: "destructive" });
+    }
   };
 
-  const handleUpdateUser = (values: z.infer<typeof editUserSchema>) => {
-    // SIMULATED API CALL
-    setUsers(prev => prev.map(u => u.id === values.id ? { ...u, ...values } : u));
-    toast({
-      title: "成员已更新",
-      description: `成员 ${values.name} 的信息已更新。`,
-    });
+  const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
+    try {
+      await updateTenantUser({ tenantId: MOCK_TENANT_ID, userId: values.id, role: values.role });
+      toast({ title: "成员已更新", description: `成员 ${values.name} 的信息已更新。` });
+      await fetchData();
+    } catch (e: any) {
+      toast({ title: "更新失败", description: e.message, variant: "destructive" });
+    }
   };
   
-  const handleBatchImport = (newUsers: User[]) => {
-    // SIMULATED API CALL
-    setUsers(prev => [...prev, ...newUsers]);
+  const handleBatchImport = async (newUsers: any[]) => {
+    try {
+        await inviteUsers({ tenantId: MOCK_TENANT_ID, users: newUsers });
+        toast({ title: "导入成功", description: `成功导入 ${newUsers.length} 名新成员。` });
+        await fetchData();
+    } catch (e: any) {
+        toast({ title: "导入失败", description: e.message, variant: "destructive" });
+    }
   };
   
   const handleExport = () => {
-    toast({
-      title: "正在导出成员列表...",
-    });
-
+    toast({ title: "正在导出成员列表..." });
     const headers = ["姓名", "邮箱", "角色", "状态"];
     const csvContent = [
       headers.join(","),
       ...users.map(user => [user.name, user.email, user.role, user.status].join(",")),
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     if (link.download !== undefined) {
         const url = URL.createObjectURL(blob);
@@ -1159,6 +1127,30 @@ export function TenantDashboard() {
         document.body.removeChild(link);
     }
   };
+
+  const handleSaveRole = async (role: Role) => {
+    try {
+        await saveTenantRole({ tenantId: MOCK_TENANT_ID, role });
+        toast({ title: "角色已保存" });
+        await fetchData();
+    } catch(e: any) {
+         toast({ title: "保存角色失败", description: e.message, variant: "destructive" });
+    }
+  }
+  
+  const handleDeleteRole = async (roleId: string) => {
+      try {
+        if (roles.length <= 1) {
+            toast({ title: "删除失败", description: "至少需要保留一个角色。", variant: "destructive" });
+            return;
+        }
+        await deleteTenantRole({ tenantId: MOCK_TENANT_ID, roleId });
+        toast({ title: "角色已删除" });
+        await fetchData();
+      } catch(e: any) {
+          toast({ title: "删除角色失败", description: e.message, variant: "destructive" });
+      }
+  }
   
   const getStatusBadgeVariant = (status: OrderStatus) => {
     switch (status) {
@@ -1426,7 +1418,7 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
-                            <RoleManagementDialog roles={roles} setRoles={setRoles}>
+                            <RoleManagementDialog roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole}>
                                 <Button>配置角色</Button>
                             </RoleManagementDialog>
                         </CardContent>
@@ -1437,5 +1429,3 @@ export function TenantDashboard() {
     </div>
   );
 }
-
-  

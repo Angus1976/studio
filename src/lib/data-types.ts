@@ -21,11 +21,19 @@ export const IndividualUserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   role: z.string(),
-  status: z.enum(["活跃", "待审核", "已禁用"]),
+  status: z.enum(["活跃", "待审核", "已禁用", "邀请中"]),
   tenantId: z.string().optional(),
   registeredDate: z.string(),
 });
 export type IndividualUser = z.infer<typeof IndividualUserSchema>;
+
+export const RoleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  permissions: z.array(z.string()),
+});
+export type Role = z.infer<typeof RoleSchema>;
 
 
 // --- AI Requirements Navigator ---
@@ -182,3 +190,47 @@ export const TaskDispatchOutputSchema = z.object({
   isClarificationNeeded: z.boolean().describe('如果用户信息不足以制定计划，则设置为 true，并在 planSummary 中提出澄清问题。'),
 });
 export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
+
+// --- Procurement & Orders ---
+
+export const ProcurementItemSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+    icon: z.string(),
+    tag: z.string(),
+    price: z.number(),
+    unit: z.string(),
+});
+export type ProcurementItem = z.infer<typeof ProcurementItemSchema>;
+
+
+export const OrderSchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  items: z.array(ProcurementItemSchema.extend({ quantity: z.number() })),
+  totalAmount: z.number(),
+  status: z.enum(["待平台确认", "待支付", "配置中", "已完成", "已取消"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type Order = z.infer<typeof OrderSchema>;
+
+export const PreOrderSchema = OrderSchema.omit({id: true, createdAt: true, updatedAt: true}).extend({
+    notes: z.string().optional(),
+    createdAt: z.any(),
+    updatedAt: z.any(),
+});
+export type PreOrder = z.infer<typeof PreOrderSchema>;
+
+
+// --- API Keys ---
+export const ApiKeySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    key: z.string(),
+    tenantId: z.string(),
+    createdAt: z.string(),
+    status: z.enum(["活跃", "已撤销"]),
+});
+export type ApiKey = z.infer<typeof ApiKeySchema>;

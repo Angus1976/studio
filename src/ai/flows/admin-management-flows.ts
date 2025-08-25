@@ -5,10 +5,9 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder } from '@/lib/data-types';
 
-
-// --- Get all Tenants and Users ---
+// --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
     const db = admin.firestore();
     try {
@@ -42,7 +41,7 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
                 name: data.name || '',
                 email: data.email || '',
                 role: roleMap[data.role] || data.role || '个人用户',
-                status: data.status || '活跃', // Default status if not set
+                status: data.status || '活跃',
                 tenantId: data.tenantId,
                 registeredDate: registeredDate,
             };
@@ -53,6 +52,76 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
     } catch (error) {
         console.error("Error fetching tenants and users:", error);
         throw new Error('无法从数据库加载数据。');
+    }
+}
+
+
+// --- Get Data for a specific Tenant ---
+export async function getTenantData(input: { tenantId: string }): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[] }> {
+    const db = admin.firestore();
+    const { tenantId } = input;
+
+    try {
+        // In a real, large-scale app, you'd paginate these queries.
+        const usersSnapshot = await db.collection('users').where('tenantId', '==', tenantId).get();
+        const ordersSnapshot = await db.collection('orders').where('tenantId', '==', tenantId).get();
+        const rolesSnapshot = await db.collection('roles').where('tenantId', '==', tenantId).get();
+
+        const users: IndividualUser[] = usersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const registeredDate = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
+            return {
+                id: doc.id,
+                name: data.name || '',
+                email: data.email || '',
+                role: data.role || '成员',
+                status: data.status || '活跃',
+                tenantId: data.tenantId,
+                registeredDate: registeredDate,
+            };
+        });
+
+        const orders: Order[] = ordersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                items: data.items || [],
+                totalAmount: data.totalAmount || 0,
+                status: data.status || '已取消',
+                tenantId: data.tenantId,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : '',
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString().split('T')[0] : '',
+            };
+        });
+
+        const roles: Role[] = rolesSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.name || '',
+                description: data.description || '',
+                permissions: data.permissions || [],
+            }
+        });
+        
+        // If no roles exist for the tenant, create a default 'Member' role
+        if (roles.length === 0) {
+            const defaultRole = {
+                name: "成员",
+                description: "默认角色，拥有基础权限。",
+                permissions: ["view_dashboard", "view_orders"],
+                tenantId: tenantId
+            };
+            const roleRef = await db.collection('roles').add(defaultRole);
+            roles.push({ id: roleRef.id, ...defaultRole });
+        }
+
+
+        return { users, orders, roles };
+
+    } catch (error) {
+        console.error(`Error fetching data for tenant ${tenantId}:`, error);
+        throw new Error('无法从数据库加载租户数据。');
     }
 }
 
@@ -100,7 +169,7 @@ export async function deleteTenant(input: { id: string }): Promise<{ success: bo
   }
 }
 
-// --- User Management Flows ---
+// --- User Management Flows (for Admins) ---
 const SaveUserInputSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2),
@@ -119,15 +188,14 @@ export async function saveUser(input: z.infer<typeof SaveUserInputSchema>): Prom
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
     
-    // Map role back to English for storage if needed
+    // Map role back to English for storage if needed for cross-system compatibility
     const roleReverseMap: { [key: string]: string } = {
         '平台管理员': 'Platform Admin',
         '租户管理员': 'Tenant Admin',
         '技术工程师': 'Prompt Engineer/Developer',
         '个人用户': 'Individual User',
     };
-    const storedRole = roleReverseMap[data.role] || data.role;
-
+    const storedRole = roleReverseMap[data.role as keyof typeof roleReverseMap] || data.role;
 
     if (id) {
       await db.collection('users').doc(id).set({ ...dataWithTimestamp, role: storedRole }, { merge: true });
@@ -155,4 +223,135 @@ export async function deleteUser(input: { id: string }): Promise<{ success: bool
     console.error("Error deleting user:", error);
     return { success: false, message: error.message };
   }
+}
+
+// --- Tenant-specific Flows ---
+
+// This is a simplified version. A real app would have more robust logic.
+export async function inviteUsers(input: { tenantId: string, users: { email: string, role: string, name: string, status: string }[] }): Promise<{ success: boolean; message: string }> {
+    const db = admin.firestore();
+    const batch = db.batch();
+    
+    input.users.forEach(user => {
+        const userRef = db.collection('users').doc(); // Create a new doc with a random ID
+        batch.set(userRef, {
+            ...user,
+            tenantId: input.tenantId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+
+    try {
+        await batch.commit();
+        return { success: true, message: `${input.users.length} 位成员已成功邀请。` };
+    } catch (error) {
+        console.error("Error inviting users:", error);
+        throw new Error("批量邀请成员时发生错误。");
+    }
+}
+
+export async function updateTenantUser(input: { tenantId: string, userId: string, role: string }): Promise<{ success: boolean; message: string }> {
+    const db = admin.firestore();
+    try {
+        const userRef = db.collection('users').doc(input.userId);
+        // Ensure user belongs to the tenant before updating
+        const doc = await userRef.get();
+        if (!doc.exists || doc.data()?.tenantId !== input.tenantId) {
+            throw new Error("User not found or does not belong to this tenant.");
+        }
+        await userRef.update({
+            role: input.role,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { success: true, message: "成员角色已更新。" };
+    } catch (error) {
+        console.error("Error updating tenant user:", error);
+        throw new Error("更新成员信息时发生错误。");
+    }
+}
+
+export async function saveTenantRole(input: { tenantId: string, role: Role }): Promise<{ success: boolean; message: string, id: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input.role;
+        const dataToSave = { ...data, tenantId: input.tenantId };
+        if (id) {
+            await db.collection('roles').doc(id).set(dataToSave, { merge: true });
+            return { success: true, message: '角色已更新。', id };
+        } else {
+            const ref = await db.collection('roles').add(dataToSave);
+            return { success: true, message: '角色已创建。', id: ref.id };
+        }
+    } catch (error) {
+        console.error("Error saving tenant role:", error);
+        throw new Error("保存角色时出错。");
+    }
+}
+
+export async function deleteTenantRole(input: { tenantId: string, roleId: string }): Promise<{ success: boolean; message: string }> {
+    const db = admin.firestore();
+    try {
+        const roleRef = db.collection('roles').doc(input.roleId);
+        const doc = await roleRef.get();
+        if (!doc.exists || doc.data()?.tenantId !== input.tenantId) {
+            throw new Error("Role not found or does not belong to this tenant.");
+        }
+        await roleRef.delete();
+        return { success: true, message: '角色已删除。' };
+    } catch (error) {
+        console.error("Error deleting tenant role:", error);
+        throw new Error("删除角色时出错。");
+    }
+}
+
+export async function createPreOrder(input: { tenantId: string, item: ProcurementItem, quantity: number, notes?: string }): Promise<{ success: boolean; message: string }> {
+    const db = admin.firestore();
+    try {
+        const orderData: PreOrder = {
+            tenantId: input.tenantId,
+            items: [{ ...input.item, quantity: input.quantity }],
+            notes: input.notes,
+            totalAmount: input.item.price * input.quantity,
+            status: "待平台确认",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+        await db.collection('orders').add(orderData);
+        return { success: true, message: "预购单已成功提交。" };
+    } catch (error) {
+        console.error("Error creating pre-order:", error);
+        throw new Error("创建预购单时出错。");
+    }
+}
+
+export async function createApiKey(input: { tenantId: string, name: string }): Promise<{ success: true, key: ApiKey }> {
+    const db = admin.firestore();
+    const apiKey = `sk_live_${[...Array(32)].map(() => Math.random().toString(36)[2]).join('')}`;
+    const keyData: Omit<ApiKey, 'id'> = {
+        name: input.name,
+        key: apiKey,
+        tenantId: input.tenantId,
+        createdAt: new Date().toISOString().split('T')[0],
+        status: '活跃'
+    };
+    const ref = await db.collection('api_keys').add(keyData);
+    return { success: true, key: { id: ref.id, ...keyData }};
+}
+
+export async function revokeApiKey(input: { tenantId: string, keyId: string }): Promise<{ success: true }> {
+    const db = admin.firestore();
+    const keyRef = db.collection('api_keys').doc(input.keyId);
+    const doc = await keyRef.get();
+    if (!doc.exists || doc.data()?.tenantId !== input.tenantId) {
+        throw new Error("API Key not found or does not belong to this tenant.");
+    }
+    await keyRef.update({ status: '已撤销' });
+    return { success: true };
+}
+
+export async function getApiKeys(input: { tenantId: string }): Promise<ApiKey[]> {
+    const db = admin.firestore();
+    const snapshot = await db.collection('api_keys').where('tenantId', '==', input.tenantId).get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ApiKey));
 }
