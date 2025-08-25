@@ -27,7 +27,6 @@ const signupSchema = z.object({
   name: z.string().min(2, { message: "姓名至少需要2个字符。" }),
   email: z.string().email({ message: "请输入有效的电子邮件地址。" }),
   password: z.string().min(6, { message: "密码必须至少为6个字符。" }),
-  // Role is no longer needed here as it's selected before showing the form
 });
 
 
