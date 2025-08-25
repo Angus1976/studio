@@ -7,9 +7,9 @@
  * - executePrompt - A function that takes prompt components and variables to generate a response.
  */
 
-import { ai } from '@/ai/genkit';
+// import { ai } from '@/ai/genkit';
 import Handlebars from 'handlebars';
-import { Part } from 'genkit/ai';
+// import { Part } from 'genkit/ai';
 import { 
     PromptExecutionInputSchema,
     PromptExecutionOutputSchema,
@@ -20,60 +20,67 @@ import {
 export async function executePrompt(
   input: PromptExecutionInput
 ): Promise<PromptExecutionOutput> {
-  return promptExecutionFlow(input);
+  // return promptExecutionFlow(input);
+  console.log("executePrompt is currently disabled due to dependency conflicts.");
+  // Return a mock response
+  const template = Handlebars.compile(input.userPrompt);
+  const finalUserPrompt = template(input.variables || {});
+  return {
+    response: `(模拟回复) 收到指令: "${finalUserPrompt}". AI 正在生成结果...`
+  };
 }
 
-const promptExecutionFlow = ai.defineFlow(
-  {
-    name: 'promptExecutionFlow',
-    inputSchema: PromptExecutionInputSchema,
-    outputSchema: PromptExecutionOutputSchema,
-  },
-  async ({ systemPrompt, userPrompt, context, negativePrompt, variables, temperature }) => {
+// const promptExecutionFlow = ai.defineFlow(
+//   {
+//     name: 'promptExecutionFlow',
+//     inputSchema: PromptExecutionInputSchema,
+//     outputSchema: PromptExecutionOutputSchema,
+//   },
+//   async ({ systemPrompt, userPrompt, context, negativePrompt, variables, temperature }) => {
 
-    const template = Handlebars.compile(userPrompt);
-    const finalUserPrompt = template(variables || {});
+//     const template = Handlebars.compile(userPrompt);
+//     const finalUserPrompt = template(variables || {});
     
-    let systemInstruction = systemPrompt || '';
-    if (negativePrompt) {
-       systemInstruction += `\n\nIMPORTANT: Do not include any of the following in your response: "${negativePrompt}"`.trim();
-    }
+//     let systemInstruction = systemPrompt || '';
+//     if (negativePrompt) {
+//        systemInstruction += `\n\nIMPORTANT: Do not include any of the following in your response: "${negativePrompt}"`.trim();
+//     }
     
-    // Construct the prompt with structured roles for better model performance
-    const prompt: Part[] = [];
+//     // Construct the prompt with structured roles for better model performance
+//     const prompt: Part[] = [];
 
-    if (systemInstruction) {
-        prompt.push({ role: 'system', content: [{text: systemInstruction}] });
-    }
+//     if (systemInstruction) {
+//         prompt.push({ role: 'system', content: [{text: systemInstruction}] });
+//     }
 
-    const userContent: Part[] = [];
-    if(context) {
-        userContent.push({ text: `Context/Examples:\n${context}\n\n---\n\n` });
-    }
-    userContent.push({ text: `User Instruction:\n${finalUserPrompt}`});
+//     const userContent: Part[] = [];
+//     if(context) {
+//         userContent.push({ text: `Context/Examples:\n${context}\n\n---\n\n` });
+//     }
+//     userContent.push({ text: `User Instruction:\n${finalUserPrompt}`});
     
-    prompt.push({ role: 'user', content: userContent });
+//     prompt.push({ role: 'user', content: userContent });
     
-    // Configure safety settings - this is illustrative; actual negative prompt handling is now in system prompt
-    const safetySettings = [];
-    if (negativePrompt) {
-        safetySettings.push({
-            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-            threshold: 'BLOCK_ONLY_HIGH',
-        });
-    }
+//     // Configure safety settings - this is illustrative; actual negative prompt handling is now in system prompt
+//     const safetySettings = [];
+//     if (negativePrompt) {
+//         safetySettings.push({
+//             category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+//             threshold: 'BLOCK_ONLY_HIGH',
+//         });
+//     }
 
-    const model = 'googleai/gemini-1.5-flash';
+//     const model = 'googleai/gemini-1.5-flash';
 
-    const llmResponse = await ai.generate({
-      prompt: prompt,
-      model: model,
-      config: {
-        temperature: temperature,
-        safetySettings,
-      },
-    });
+//     const llmResponse = await ai.generate({
+//       prompt: prompt,
+//       model: model,
+//       config: {
+//         temperature: temperature,
+//         safetySettings,
+//       },
+//     });
 
-    return { response: llmResponse.text };
-  }
-);
+//     return { response: llmResponse.text };
+//   }
+// );

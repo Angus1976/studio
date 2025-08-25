@@ -108,9 +108,9 @@ export function PromptUniverseWorkbench() {
             } else {
                  toast({ variant: "destructive", title: "保存失败", description: result.message });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving prompt:", error);
-            toast({ variant: "destructive", title: "保存时发生错误", description: "无法连接到后端服务。" });
+            toast({ variant: "destructive", title: "保存时发生错误", description: error.message || "无法连接到后端服务。" });
         } finally {
             setIsSaving(false);
         }
@@ -171,7 +171,7 @@ export function PromptUniverseWorkbench() {
                    <PromptTestbed prompt={activePrompt} />
                    <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
                 </div>
-            </ThreeColumnLayout.Right>
+            </TheeColumnLayout.Right>
         </ThreeColumnLayout>
     );
 }

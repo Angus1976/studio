@@ -6,7 +6,7 @@
  * - digitalEmployee - A function that handles the execution of a prompt by ID.
  */
 
-import { ai } from "@/ai/genkit";
+// import { ai } from "@/ai/genkit";
 import { z } from "zod";
 import { executePrompt, type PromptExecutionOutput } from "./prompt-execution-flow";
 import { getPrompts } from "./get-prompts-flow";
@@ -19,52 +19,57 @@ import {
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<PromptExecutionOutput> {
-  return digitalEmployeeFlow(input);
+  // return digitalEmployeeFlow(input);
+  console.log("digitalEmployee is currently disabled due to dependency conflicts.");
+  // Return a mock response
+  return {
+      response: `(模拟回复) 已收到请求。场景ID: ${input.promptId || 'N/A'}, 变量: ${JSON.stringify(input.variables)}。AI 数字员工正在处理...`
+  };
 }
 
 
-const digitalEmployeeFlow = ai.defineFlow(
-  {
-    name: "digitalEmployeeFlow",
-    inputSchema: DigitalEmployeeInputSchema,
-    outputSchema: z.object({ response: z.string() }),
-  },
-  async ({ promptId, variables, temperature, systemPrompt, userPrompt, context, negativePrompt }) => {
+// const digitalEmployeeFlow = ai.defineFlow(
+//   {
+//     name: "digitalEmployeeFlow",
+//     inputSchema: DigitalEmployeeInputSchema,
+//     outputSchema: z.object({ response: z.string() }),
+//   },
+//   async ({ promptId, variables, temperature, systemPrompt, userPrompt, context, negativePrompt }) => {
 
-    let finalSystemPrompt: string | undefined = systemPrompt;
-    let finalUserPrompt: string | undefined = userPrompt;
-    let finalContext: string | undefined = context;
-    let finalNegativePrompt: string | undefined = negativePrompt;
+//     let finalSystemPrompt: string | undefined = systemPrompt;
+//     let finalUserPrompt: string | undefined = userPrompt;
+//     let finalContext: string | undefined = context;
+//     let finalNegativePrompt: string | undefined = negativePrompt;
 
-    if (promptId) {
-        // Fetch all prompts and find the one with the matching ID
-        const allPrompts = await getPrompts();
-        const scenario = allPrompts.find(s => s.id === promptId);
+//     if (promptId) {
+//         // Fetch all prompts and find the one with the matching ID
+//         const allPrompts = await getPrompts();
+//         const scenario = allPrompts.find(s => s.id === promptId);
         
-        if (!scenario) {
-            throw new Error(`Prompt with ID '${promptId}' not found in the library.`);
-        }
+//         if (!scenario) {
+//             throw new Error(`Prompt with ID '${promptId}' not found in the library.`);
+//         }
         
-        finalUserPrompt = scenario.userPrompt;
-        finalSystemPrompt = scenario.systemPrompt;
-        finalContext = scenario.context;
-        finalNegativePrompt = scenario.negativePrompt;
-    }
+//         finalUserPrompt = scenario.userPrompt;
+//         finalSystemPrompt = scenario.systemPrompt;
+//         finalContext = scenario.context;
+//         finalNegativePrompt = scenario.negativePrompt;
+//     }
     
-    if(!finalUserPrompt) {
-        throw new Error("A user prompt is required to execute the flow.");
-    }
+//     if(!finalUserPrompt) {
+//         throw new Error("A user prompt is required to execute the flow.");
+//     }
     
-    // We can reuse the main execution flow. 
-    const result = await executePrompt({
-        systemPrompt: finalSystemPrompt,
-        userPrompt: finalUserPrompt,
-        context: finalContext,
-        negativePrompt: finalNegativePrompt,
-        variables,
-        temperature
-    });
+//     // We can reuse the main execution flow. 
+//     const result = await executePrompt({
+//         systemPrompt: finalSystemPrompt,
+//         userPrompt: finalUserPrompt,
+//         context: finalContext,
+//         negativePrompt: finalNegativePrompt,
+//         variables,
+//         temperature
+//     });
 
-    return result;
-  }
-);
+//     return result;
+//   }
+// );
