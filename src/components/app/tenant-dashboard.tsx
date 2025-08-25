@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as LucideReact from "lucide-react";
@@ -58,7 +59,7 @@ const chartConfig = {
 };
 
 
-const procurementItems = [
+const procurementItems: ProcurementItem[] = [
     { id: 'prod-001', title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础", price: 50, unit: "用户/年" },
     { id: 'prod-002', title: "视频会议服务", description: "高清、流畅、支持多方协作的在线会议平台。", icon: "Video", tag: "办公基础", price: 100, unit: "许可/年" },
     { id: 'prod-003', title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: "Cloud", tag: "IT设施", price: 500, unit: "vCPU/月" },
@@ -509,7 +510,7 @@ function ViewOrderDialog({ order }: { order: Order }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {order.items.map((item: any) => (
+                            {(order.items || []).map((item: any) => (
                                 <TableRow key={item.id}>
                                     <TableCell>{item.title}</TableCell>
                                     <TableCell>¥{item.price.toFixed(2)} / {item.unit}</TableCell>
@@ -534,7 +535,7 @@ const apiKeySchema = z.object({
 });
 
 
-function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeof apiKeySchema>) => void; onCancel: () => void }) {
+function CreateApiKeyForm({ onSave, isLoading }: { onSave: (values: z.infer<typeof apiKeySchema>) => void; isLoading: boolean; }) {
   const form = useForm<z.infer<typeof apiKeySchema>>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: { name: "" },
@@ -560,8 +561,10 @@ function CreateApiKeyForm({ onSave, onCancel }: { onSave: (values: z.infer<typeo
                 )}
             />
             <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
-                <Button type="submit">创建密钥</Button>
+                <Button type="submit" disabled={isLoading}>
+                    {isLoading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+                    创建密钥
+                </Button>
             </div>
         </form>
     </Form>
@@ -574,6 +577,7 @@ function ApiKeyManagementDialog() {
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchKeys = React.useCallback(async () => {
     setIsLoading(true);
@@ -592,16 +596,18 @@ function ApiKeyManagementDialog() {
   }, [fetchKeys]);
 
   const handleCreateKey = async (values: z.infer<typeof apiKeySchema>) => {
+      setIsSubmitting(true);
       try {
         const result = await createApiKey({ tenantId: MOCK_TENANT_ID, name: values.name });
         if (result.success) {
             setNewlyCreatedKey(result.key);
             setApiKeys(prev => [result.key, ...prev]);
+            setIsCreating(false);
         }
       } catch (e: any) {
           toast({ title: "创建密钥失败", description: e.message, variant: "destructive" });
       } finally {
-          setIsCreating(false);
+          setIsSubmitting(false);
       }
   };
   
@@ -609,7 +615,7 @@ function ApiKeyManagementDialog() {
     try {
         await revokeApiKey({ tenantId: MOCK_TENANT_ID, keyId });
         setApiKeys(prev => prev.map(key => key.id === keyId ? {...key, status: "已撤销"} : key));
-        toast({ title: "API 密钥已撤销", variant: "destructive" });
+        toast({ title: "API 密钥已撤销" });
     } catch (e: any) {
          toast({ title: "撤销密钥失败", description: e.message, variant: "destructive" });
     }
@@ -632,7 +638,7 @@ function ApiKeyManagementDialog() {
                 </DialogHeader>
                 <div className="my-4">
                   <div className="flex items-center space-x-2 rounded-md bg-secondary p-3">
-                    <Input readOnly value={newlyCreatedKey.key} className="flex-1" />
+                    <Input readOnly value={newlyCreatedKey.key} className="flex-1 font-mono text-xs" />
                     <Button variant="ghost" size="icon" onClick={() => copyToClipboard(newlyCreatedKey.key)}>
                         <Copy className="h-4 w-4" />
                     </Button>
@@ -660,70 +666,73 @@ function ApiKeyManagementDialog() {
           <DialogDescription>管理用于调用平台服务的 API 密钥。</DialogDescription>
         </DialogHeader>
         
-        {isCreating ? (
-            <Card className="mt-4">
-                <CardHeader>
-                    <CardTitle>创建新密钥</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <CreateApiKeyForm onSave={handleCreateKey} onCancel={() => setIsCreating(false)} />
-                </CardContent>
-            </Card>
-        ) : (
-            <div className="mt-4">
-                <Card>
-                    <CardHeader className="flex-row items-center justify-between">
-                        <CardTitle>现有密钥</CardTitle>
-                        <Button onClick={() => setIsCreating(true)}><PlusCircle className="mr-2 h-4 w-4" />创建新密钥</Button>
-                    </CardHeader>
-                    <CardContent>
-                        <ScrollArea className="h-[40vh]">
-                          { isLoading ? (
-                             <div className="space-y-4">
-                                <Skeleton className="h-12 w-full" />
-                                <Skeleton className="h-12 w-full" />
-                            </div>
-                          ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>名称</TableHead>
-                                        <TableHead>密钥 (部分)</TableHead>
-                                        <TableHead>创建于</TableHead>
-                                        <TableHead>状态</TableHead>
-                                        <TableHead className="text-right">操作</TableHead>
+        <Card className="mt-4">
+            <CardHeader className="flex-row items-center justify-between">
+                <div>
+                    <CardTitle>{isCreating ? '创建新密钥' : '现有密钥'}</CardTitle>
+                    <CardDescription>{isCreating ? '为您的应用创建一个新的API密钥。' : '查看和管理您现有的密钥。'}</CardDescription>
+                </div>
+                {!isCreating && <Button onClick={() => setIsCreating(true)}><PlusCircle className="mr-2 h-4 w-4" />创建新密钥</Button>}
+            </CardHeader>
+            <CardContent>
+                {isCreating ? (
+                    <CreateApiKeyForm onSave={handleCreateKey} isLoading={isSubmitting} />
+                ) : (
+                    <ScrollArea className="h-[40vh]">
+                      { isLoading ? (
+                         <div className="space-y-4">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                      ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>名称</TableHead>
+                                    <TableHead>密钥 (部分)</TableHead>
+                                    <TableHead>创建于</TableHead>
+                                    <TableHead>状态</TableHead>
+                                    <TableHead className="text-right">操作</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {apiKeys.map(key => (
+                                    <TableRow key={key.id}>
+                                        <TableCell className="font-medium">{key.name}</TableCell>
+                                        <TableCell className="font-mono text-xs">{key.key.substring(0, 10)}...{key.key.slice(-4)}</TableCell>
+                                        <TableCell>{key.createdAt}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={key.status === '活跃' ? 'default' : 'destructive'}>
+                                                {key.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {key.status === '活跃' && (
+                                                 <Button variant="destructive" size="sm" onClick={() => handleRevokeKey(key.id)}>
+                                                    <Trash2 className="mr-2 h-3 w-3" />
+                                                    撤销
+                                                </Button>
+                                            )}
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {apiKeys.map(key => (
-                                        <TableRow key={key.id}>
-                                            <TableCell className="font-medium">{key.name}</TableCell>
-                                            <TableCell className="font-mono text-xs">{key.key.substring(0, 12)}...</TableCell>
-                                            <TableCell>{key.createdAt}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={key.status === '活跃' ? 'default' : 'destructive'}>
-                                                    {key.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {key.status === '活跃' && (
-                                                     <Button variant="destructive" size="sm" onClick={() => handleRevokeKey(key.id)}>
-                                                        <Trash2 className="mr-2 h-3 w-3" />
-                                                        撤销
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                          )}
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
-            </div>
-        )}
+                                ))}
+                                {apiKeys.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center h-24">
+                                            还没有创建任何API密钥。
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                      )}
+                    </ScrollArea>
+                )}
+            </CardContent>
+        </Card>
+        
          <DialogFooter className="mt-2">
+            {isCreating && <Button variant="ghost" onClick={() => setIsCreating(false)}>返回列表</Button>}
             <DialogClose asChild><Button variant="outline">关闭</Button></DialogClose>
         </DialogFooter>
       </DialogContent>
@@ -1035,7 +1044,7 @@ export function TenantDashboard() {
   const [activeTab, setActiveTab] = useState<string>("overview");
   
   const fetchData = React.useCallback(async () => {
-    setIsLoading({ users: true, orders: true, roles: true });
+    setIsLoading(prev => ({ ...prev, users: true, orders: true, roles: true }));
     try {
         const data = await getTenantData({ tenantId: MOCK_TENANT_ID });
         setUsers(data.users);
@@ -1301,7 +1310,7 @@ export function TenantDashboard() {
                                     <TableRow key={order.id}>
                                         <TableCell className="font-medium">{order.id}</TableCell>
                                         <TableCell>
-                                            {order.items.map((item: any) => 
+                                            {(order.items || []).map((item: any) => 
                                                 <div key={item.id}>{item.title} (x{item.quantity})</div>
                                             )}
                                         </TableCell>
@@ -1428,3 +1437,5 @@ export function TenantDashboard() {
     </div>
   );
 }
+
+    
