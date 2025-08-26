@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import React from "react";
 import type { ImperativePanelGroupHandle, PanelOnResize } from "react-resizable-panels";
+import { CollapsiblePanelHeader } from "./collapsible-panel";
 
 // --- Context for Panel Controls ---
 type PanelContextType = {
@@ -70,7 +71,7 @@ const ThreeColumnLayout = ({
 
   const getPanelState = (id: string) => {
     if (closedPanels.includes(id)) return "closed";
-    if (maximizedPanel === id) return "expanded"; // 'expanded' means it is not collapsed or closed
+    if (maximizedPanel === id) return "expanded";
     return "expanded";
   };
 
@@ -80,7 +81,6 @@ const ThreeColumnLayout = ({
 
     const currentLayout = group.getLayout();
     if (!maximizedPanel) {
-        // If no panel is maximized, save the current layout before maximizing
         lastLayoutRef.current = currentLayout;
     }
     
@@ -132,16 +132,22 @@ const ThreeColumnLayout = ({
     const panelIndex = panelIds.indexOf(id);
     if (panelIndex === -1) return;
 
-    lastLayoutRef.current = group.getLayout();
-    const newLayout = [...lastLayoutRef.current];
-    const sizeToDistribute = newLayout[panelIndex];
+    if (!maximizedPanel) {
+        lastLayoutRef.current = group.getLayout();
+    }
+    const currentLayout = group.getLayout();
+    
+    const sizeToDistribute = currentLayout[panelIndex];
+    if (sizeToDistribute === 0) return; // already closed
+
+    const newLayout = [...currentLayout];
     newLayout[panelIndex] = 0;
     
-    const openPanels = newLayout.filter(size => size > 0);
+    const openPanels = newLayout.filter((size, i) => i !== panelIndex && size > 0);
     if(openPanels.length > 0) {
         const spacePerPanel = sizeToDistribute / openPanels.length;
         for(let i=0; i<newLayout.length; i++) {
-            if(newLayout[i] > 0) {
+            if(i !== panelIndex && newLayout[i] > 0) {
                  newLayout[i] += spacePerPanel;
             }
         }
@@ -160,6 +166,8 @@ const ThreeColumnLayout = ({
       if(panelIndex === -1) return;
 
       const currentLayout = group.getLayout();
+      if(currentLayout[panelIndex] > 0) return; // already open
+
       const layoutToRestore = lastLayoutRef.current || Array(panelIds.length).fill(100/panelIds.length);
       
       const sizeToRestore = layoutToRestore[panelIndex] || 25; // Restore to previous size or a default
@@ -167,12 +175,13 @@ const ThreeColumnLayout = ({
 
       // Normalize the rest by taking space from other open panels
       const otherOpenPanelsTotalSize = currentLayout.reduce((acc, size, i) => (i !== panelIndex && size > 0 ? acc + size : acc), 0);
-      const factor = (100 - sizeToRestore) / otherOpenPanelsTotalSize;
-
-      for (let i=0; i < currentLayout.length; i++) {
-          if (i !== panelIndex && currentLayout[i] > 0) {
-              currentLayout[i] *= factor;
-          }
+      if(otherOpenPanelsTotalSize > 0) {
+        const factor = (100 - sizeToRestore) / otherOpenPanelsTotalSize;
+        for (let i=0; i < currentLayout.length; i++) {
+            if (i !== panelIndex && currentLayout[i] > 0) {
+                currentLayout[i] *= factor;
+            }
+        }
       }
 
       group.setLayout(currentLayout);
