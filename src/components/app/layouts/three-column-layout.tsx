@@ -7,8 +7,8 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
-import React, { createContext, useContext, useRef, useState, useEffect } from "react";
-import type { ImperativePanelGroupHandle } from "react-resizable-panels";
+import React, from "react";
+import type { ImperativePanelGroupHandle, PanelOnResize } from "react-resizable-panels";
 
 // --- Context for Panel Controls ---
 type PanelContextType = {
@@ -17,10 +17,10 @@ type PanelContextType = {
   isAnyPanelMaximized: boolean;
 };
 
-const PanelContext = createContext<PanelContextType | null>(null);
+const PanelContext = React.createContext<PanelContextType | null>(null);
 
 export function usePanel() {
-  const context = useContext(PanelContext);
+  const context = React.useContext(PanelContext);
   if (!context) {
     throw new Error("usePanel must be used within a ThreeColumnLayout");
   }
@@ -37,13 +37,13 @@ const ThreeColumnLayout = ({
   className?: string;
   autoSaveId: string;
 }) => {
-  const panelGroupRef = useRef<ImperativePanelGroupHandle>(null);
-  const [panelState, setPanelState] = useState<Record<string, "collapsed" | "expanded">>({});
-  const [isAnyPanelMaximized, setIsAnyPanelMaximized] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const lastLayoutRef = useRef<number[] | null>(null);
+  const panelGroupRef = React.useRef<ImperativePanelGroupHandle>(null);
+  const [panelState, setPanelState] = React.useState<Record<string, "collapsed" | "expanded">>({});
+  const [isAnyPanelMaximized, setIsAnyPanelMaximized] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+  const lastLayoutRef = React.useRef<number[] | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setIsMounted(true);
   }, []);
 
@@ -62,6 +62,7 @@ const ThreeColumnLayout = ({
 
     const currentState = getPanelState(id);
     if (currentState === "expanded") {
+        // Filter out handles and only get panel IDs
         const panelIds = React.Children.map(children, child => {
             if (React.isValidElement(child) && (child.type === Left || child.type === Main || child.type === Right)) {
                 return child.props.id;
@@ -74,20 +75,37 @@ const ThreeColumnLayout = ({
         }
 
         const newLayout = panelIds.map(panelId => (panelId === id ? 100 : 0));
-        group.setLayout(newLayout);
+        
+        // Ensure the layout has the correct number of panels
+        if (newLayout.length === group.getLayout().length) {
+            group.setLayout(newLayout);
+        } else {
+            console.error("Mismatch between calculated layout and actual panel count.");
+            // Fallback or error handling
+            return;
+        }
         
         setPanelState({ [id]: "collapsed" });
         setIsAnyPanelMaximized(true);
 
     } else { // "collapsed"
-        if(lastLayoutRef.current) {
-            group.setLayout(lastLayoutRef.current);
-        } else {
-             // Fallback if no last layout is stored
-            const panelCount = React.Children.count(children) / 2 + 0.5; // accounts for handles
-            const defaultLayout = Array(panelCount).fill(100/panelCount);
-            group.setLayout(defaultLayout);
+        let layoutToRestore = lastLayoutRef.current;
+        
+        // Fallback if last layout is not available or invalid
+        if (!layoutToRestore || layoutToRestore.length !== group.getLayout().length) {
+            const panelCount = React.Children.toArray(children).filter(child => 
+                React.isValidElement(child) && child.type !== ResizableHandle
+            ).length;
+            
+            if(panelCount > 0) {
+               const defaultSize = 100 / panelCount;
+               layoutToRestore = Array(panelCount).fill(defaultSize);
+            } else {
+                layoutToRestore = [33, 34, 33]; // Default fallback
+            }
         }
+
+        group.setLayout(layoutToRestore);
         setPanelState({});
         setIsAnyPanelMaximized(false);
     }
@@ -115,13 +133,25 @@ const ThreeColumnLayout = ({
   );
 };
 
-const PanelComponent = ({
+// Define a type for ResizablePanel props including `id`
+type PanelComponentProps = React.ComponentProps<typeof ResizablePanel> & { id: string };
+
+const PanelComponent: React.FC<PanelComponentProps> = ({
   children,
   className,
+  id,
   ...props
-}: React.ComponentProps<typeof ResizablePanel>) => {
+}) => {
+    const { getPanelState, isAnyPanelMaximized } = usePanel();
+    const isThisMaximized = getPanelState(id) === 'collapsed';
+
+    if(isAnyPanelMaximized && !isThisMaximized) {
+        return null;
+    }
+    
   return (
     <ResizablePanel
+      id={id}
       className={cn(
         "h-full flex flex-col !overflow-y-auto",
         className
