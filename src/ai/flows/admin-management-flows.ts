@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset, ExpertDomain } from '@/lib/data-types';
 
 // --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -417,18 +417,22 @@ export async function getApiKeys(input: { tenantId: string }): Promise<ApiKey[]>
 // --- Platform Asset Management ---
 const toISODate = (timestamp: any) => timestamp?.toDate ? timestamp.toDate().toISOString() : new Date().toISOString();
 
-export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], tokenAllocations: TokenAllocation[], softwareAssets: SoftwareAsset[] }> {
+export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], tokenAllocations: TokenAllocation[], softwareAssets: SoftwareAsset[], expertDomains: ExpertDomain[] }> {
     const db = admin.firestore();
     try {
-        const llmSnapshot = await db.collection('llm_connections').orderBy('createdAt', 'desc').get();
-        const tokenSnapshot = await db.collection('token_allocations').orderBy('createdAt', 'desc').get();
-        const assetSnapshot = await db.collection('software_assets').orderBy('createdAt', 'desc').get();
+        const [llmSnapshot, tokenSnapshot, assetSnapshot, domainSnapshot] = await Promise.all([
+            db.collection('llm_connections').orderBy('createdAt', 'desc').get(),
+            db.collection('token_allocations').orderBy('createdAt', 'desc').get(),
+            db.collection('software_assets').orderBy('createdAt', 'desc').get(),
+            db.collection('expert_domains').orderBy('name').get()
+        ]);
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as LlmConnection));
         const tokenAllocations: TokenAllocation[] = tokenSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as TokenAllocation));
         const softwareAssets: SoftwareAsset[] = assetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as SoftwareAsset));
+        const expertDomains: ExpertDomain[] = domainSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpertDomain));
 
-        return { llmConnections, tokenAllocations, softwareAssets };
+        return { llmConnections, tokenAllocations, softwareAssets, expertDomains };
     } catch (error) {
         console.error("Error fetching platform assets:", error);
         throw new Error('无法从数据库加载平台资产。');
@@ -556,4 +560,66 @@ export async function deleteProcurementItem(input: { id: string }): Promise<{ su
     }
 }
 
-    
+
+// --- Expert Domain Management ---
+export async function getExpertDomains(): Promise<ExpertDomain[]> {
+    const db = admin.firestore();
+    try {
+        const snapshot = await db.collection('expert_domains').orderBy('name').get();
+        if (snapshot.empty) {
+            // If empty, populate with default values
+            const defaultDomains: Omit<ExpertDomain, 'id'>[] = [
+                { domainId: 'general-expert', name: '通用专家' },
+                { domainId: 'recruitment-expert', name: '招聘专家' },
+                { domainId: 'marketing-expert', name: '营销专家' },
+                { domainId: 'code-expert', name: '代码专家' },
+                { domainId: 'sales-expert', name: '销售专家' },
+                { domainId: 'copywriting-expert', name: '文案专家' },
+            ];
+            const batch = db.batch();
+            const createdDocs: ExpertDomain[] = [];
+            defaultDomains.forEach(domain => {
+                const docRef = db.collection('expert_domains').doc();
+                batch.set(docRef, domain);
+                createdDocs.push({ id: docRef.id, ...domain });
+            });
+            await batch.commit();
+            return createdDocs;
+        }
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpertDomain));
+    } catch (error) {
+        console.error("Error fetching expert domains:", error);
+        throw new Error('无法从数据库加载专家领域。');
+    }
+}
+
+const SaveExpertDomainInputSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2, "名称至少需要2个字符。"),
+  domainId: z.string().min(3, "ID至少需要3个字符。").regex(/^[a-z0-9-]+$/, "ID只能包含小写字母、数字和连字符。"),
+});
+export async function saveExpertDomain(input: z.infer<typeof SaveExpertDomainInputSchema>): Promise<{ success: boolean, message: string, id: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('expert_domains').doc(id).set(data, { merge: true });
+            return { success: true, message: "专家领域已更新。", id };
+        } else {
+            const ref = await db.collection('expert_domains').add(data);
+            return { success: true, message: "专家领域已创建。", id: ref.id };
+        }
+    } catch (error: any) {
+        console.error("Error saving expert domain:", error);
+        return { success: false, message: error.message, id: "" };
+    }
+}
+
+export async function deleteExpertDomain(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    try {
+        await admin.firestore().collection('expert_domains').doc(input.id).delete();
+        return { success: true, message: "专家领域已删除。" };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}

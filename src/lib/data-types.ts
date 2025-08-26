@@ -61,6 +61,7 @@ export type RequirementsNavigatorOutput = z.infer<typeof RequirementsNavigatorOu
 
 export const ExpertDomainSchema = z.object({
     id: z.string(),
+    domainId: z.string(),
     name: z.string(),
 });
 export type ExpertDomain = z.infer<typeof ExpertDomainSchema>;
@@ -278,5 +279,3 @@ export const SoftwareAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type SoftwareAsset = z.infer<typeof SoftwareAssetSchema>;
-
-    
