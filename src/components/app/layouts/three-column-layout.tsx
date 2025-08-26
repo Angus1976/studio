@@ -7,14 +7,18 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
-import React, from "react";
+import React from "react";
 import type { ImperativePanelGroupHandle, PanelOnResize } from "react-resizable-panels";
 
 // --- Context for Panel Controls ---
 type PanelContextType = {
-  getPanelState: (id: string) => "collapsed" | "expanded";
-  togglePanel: (id: string) => void;
-  isAnyPanelMaximized: boolean;
+  getPanelState: (id: string) => "collapsed" | "expanded" | "closed";
+  maximizePanel: (id: string) => void;
+  minimizePanel: () => void;
+  closePanel: (id: string) => void;
+  openPanel: (id: string) => void;
+  maximizedPanel: string | null;
+  closedPanels: string[];
 };
 
 const PanelContext = React.createContext<PanelContextType | null>(null);
@@ -38,8 +42,8 @@ const ThreeColumnLayout = ({
   autoSaveId: string;
 }) => {
   const panelGroupRef = React.useRef<ImperativePanelGroupHandle>(null);
-  const [panelState, setPanelState] = React.useState<Record<string, "collapsed" | "expanded">>({});
-  const [isAnyPanelMaximized, setIsAnyPanelMaximized] = React.useState(false);
+  const [maximizedPanel, setMaximizedPanel] = React.useState<string | null>(null);
+  const [closedPanels, setClosedPanels] = React.useState<string[]>([]);
   const [isMounted, setIsMounted] = React.useState(false);
   const lastLayoutRef = React.useRef<number[] | null>(null);
 
@@ -47,74 +51,90 @@ const ThreeColumnLayout = ({
     setIsMounted(true);
   }, []);
 
-  const onLayout = (sizes: number[]) => {
-    if (isMounted && !isAnyPanelMaximized) {
+  const onLayout: PanelOnResize = (sizes) => {
+    if (isMounted && !maximizedPanel) {
         lastLayoutRef.current = sizes;
         document.cookie = `react-resizable-panels:${autoSaveId}=${JSON.stringify(sizes)}; max-age=31536000; path=/`;
     }
   };
 
-  const getPanelState = (id: string) => panelState[id] || "expanded";
+  const getPanelState = (id: string) => {
+    if (closedPanels.includes(id)) return "closed";
+    if (maximizedPanel === id) return "collapsed"; // 'collapsed' here means it's maximized for the toggle logic
+    return "expanded";
+  };
 
-  const togglePanel = (id: string) => {
+  const maximizePanel = (id: string) => {
     const group = panelGroupRef.current;
     if (!group) return;
 
-    const currentState = getPanelState(id);
-    if (currentState === "expanded") {
-        // Filter out handles and only get panel IDs
-        const panelIds = React.Children.map(children, child => {
-            if (React.isValidElement(child) && (child.type === Left || child.type === Main || child.type === Right)) {
-                return child.props.id;
-            }
-            return null;
-        }).filter(Boolean);
-
-        if (!lastLayoutRef.current) {
-            lastLayoutRef.current = group.getLayout();
-        }
-
-        const newLayout = panelIds.map(panelId => (panelId === id ? 100 : 0));
-        
-        // Ensure the layout has the correct number of panels
-        if (newLayout.length === group.getLayout().length) {
-            group.setLayout(newLayout);
-        } else {
-            console.error("Mismatch between calculated layout and actual panel count.");
-            // Fallback or error handling
-            return;
-        }
-        
-        setPanelState({ [id]: "collapsed" });
-        setIsAnyPanelMaximized(true);
-
-    } else { // "collapsed"
-        let layoutToRestore = lastLayoutRef.current;
-        
-        // Fallback if last layout is not available or invalid
-        if (!layoutToRestore || layoutToRestore.length !== group.getLayout().length) {
-            const panelCount = React.Children.toArray(children).filter(child => 
-                React.isValidElement(child) && child.type !== ResizableHandle
-            ).length;
-            
-            if(panelCount > 0) {
-               const defaultSize = 100 / panelCount;
-               layoutToRestore = Array(panelCount).fill(defaultSize);
-            } else {
-                layoutToRestore = [33, 34, 33]; // Default fallback
-            }
-        }
-
-        group.setLayout(layoutToRestore);
-        setPanelState({});
-        setIsAnyPanelMaximized(false);
+    if (!lastLayoutRef.current) {
+      lastLayoutRef.current = group.getLayout();
     }
+    
+    const panelIds = React.Children.map(children, child => {
+        if (React.isValidElement(child) && (child.type === Left || child.type === Main || child.type === Right)) {
+            return child.props.id;
+        }
+        return null;
+    }).filter(Boolean);
+
+    const newLayout = panelIds.map(panelId => (panelId === id ? 100 : 0));
+    
+    if (newLayout.length === group.getLayout().length) {
+        group.setLayout(newLayout);
+    } else {
+        console.error("Mismatch between calculated layout and actual panel count.");
+        return;
+    }
+    
+    setMaximizedPanel(id);
+  };
+  
+  const minimizePanel = () => {
+    const group = panelGroupRef.current;
+    if (!group) return;
+
+    let layoutToRestore = lastLayoutRef.current;
+     if (!layoutToRestore || layoutToRestore.length !== group.getLayout().length) {
+        const panelCount = React.Children.toArray(children).filter(child => 
+            React.isValidElement(child) && child.type !== ResizableHandle
+        ).length;
+        
+        if (panelCount > 0) {
+           const defaultSize = 100 / panelCount;
+           layoutToRestore = Array(panelCount).fill(defaultSize);
+        } else {
+            layoutToRestore = [25, 45, 30]; // Default fallback
+        }
+    }
+
+    group.setLayout(layoutToRestore);
+    setMaximizedPanel(null);
+  };
+
+  const closePanel = (id: string) => {
+    const group = panelGroupRef.current;
+    if (!group) return;
+    group.getPanel(id)?.collapse();
+    setClosedPanels(prev => [...prev, id]);
+  };
+
+  const openPanel = (id: string) => {
+      const group = panelGroupRef.current;
+      if (!group) return;
+      group.getPanel(id)?.expand();
+      setClosedPanels(prev => prev.filter(pId => pId !== id));
   };
   
   const contextValue: PanelContextType = {
     getPanelState,
-    togglePanel,
-    isAnyPanelMaximized,
+    maximizePanel,
+    minimizePanel,
+    closePanel,
+    openPanel,
+    maximizedPanel,
+    closedPanels,
   };
 
 
@@ -142,10 +162,10 @@ const PanelComponent: React.FC<PanelComponentProps> = ({
   id,
   ...props
 }) => {
-    const { getPanelState, isAnyPanelMaximized } = usePanel();
-    const isThisMaximized = getPanelState(id) === 'collapsed';
+    const { maximizedPanel, closedPanels } = usePanel();
+    const isThisMaximized = maximizedPanel === id;
 
-    if(isAnyPanelMaximized && !isThisMaximized) {
+    if ((maximizedPanel && !isThisMaximized) || closedPanels.includes(id)) {
         return null;
     }
     
@@ -153,12 +173,13 @@ const PanelComponent: React.FC<PanelComponentProps> = ({
     <ResizablePanel
       id={id}
       className={cn(
-        "h-full flex flex-col !overflow-y-auto",
+        "h-full flex flex-col !overflow-y-auto bg-card rounded-lg border",
         className
       )}
+      collapsible
       {...props}
     >
-      <div className="flex-1 flex flex-col gap-6 p-4 md:p-6 lg:p-8">
+      <div className="flex-1 flex flex-col h-full">
         {children}
       </div>
     </ResizablePanel>

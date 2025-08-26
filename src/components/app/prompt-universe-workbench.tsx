@@ -145,45 +145,62 @@ export function PromptUniverseWorkbench() {
     };
 
     return (
-        <ThreeColumnLayout autoSaveId="prompt-universe-workbench-layout">
-            <ThreeColumnLayout.Left id="prompt-library" defaultSize={25} minSize={20} maxSize={30}>
-                 <CollapsiblePanel id="prompt-library">
-                     <div className="p-4">
-                        <PromptLibrary 
-                            prompts={prompts} 
-                            onSelectPrompt={handleSelectPrompt}
-                            isLoading={isLoadingPrompts}
-                            onDeletePrompt={handleDeletePrompt}
-                        />
-                     </div>
-                </CollapsiblePanel>
-            </ThreeColumnLayout.Left>
-            
-            <ThreeColumnLayout.Handle withHandle />
+        <div className="p-4 md:p-6 lg:p-8 h-full">
+            <ThreeColumnLayout autoSaveId="prompt-universe-workbench-layout">
+                <ThreeColumnLayout.Left id="prompt-library" defaultSize={25} minSize={20} maxSize={30}>
+                    <CollapsiblePanel id="prompt-library">
+                        <CollapsiblePanelHeader>
+                            <span className="flex items-center gap-2">
+                                <BookCopy className="h-5 w-5" /> 提示词库
+                            </span>
+                        </CollapsiblePanelHeader>
+                        <div className="p-4 h-full flex flex-col">
+                            <PromptLibrary 
+                                prompts={prompts} 
+                                onSelectPrompt={handleSelectPrompt}
+                                isLoading={isLoadingPrompts}
+                                onDeletePrompt={handleDeletePrompt}
+                            />
+                        </div>
+                    </CollapsiblePanel>
+                </ThreeColumnLayout.Left>
+                
+                <ThreeColumnLayout.Handle withHandle />
 
-            <ThreeColumnLayout.Main id="prompt-editor" defaultSize={45} minSize={30}>
-                <CollapsiblePanel id="prompt-editor">
-                    <div className="p-4 h-full">
-                        <PromptEditor 
-                            prompt={activePrompt}
-                            onPromptChange={setActivePrompt}
-                            onSave={handleSavePrompt}
-                            isSaving={isSaving}
-                        />
-                    </div>
-                </CollapsiblePanel>
-            </ThreeColumnLayout.Main>
+                <ThreeColumnLayout.Main id="prompt-editor" defaultSize={45} minSize={30}>
+                    <CollapsiblePanel id="prompt-editor">
+                         <CollapsiblePanelHeader>
+                             <span className="flex items-center gap-2">
+                                <Sparkles className="h-5 w-5" /> 结构化提示词编辑器
+                            </span>
+                        </CollapsiblePanelHeader>
+                        <div className="p-4 h-full">
+                            <PromptEditor 
+                                prompt={activePrompt}
+                                onPromptChange={setActivePrompt}
+                                onSave={handleSavePrompt}
+                                isSaving={isSaving}
+                            />
+                        </div>
+                    </CollapsiblePanel>
+                </ThreeColumnLayout.Main>
 
-            <ThreeColumnLayout.Handle withHandle />
+                <ThreeColumnLayout.Handle withHandle />
 
-            <ThreeColumnLayout.Right id="prompt-tools" defaultSize={30} minSize={20} maxSize={40}>
-                 <CollapsiblePanel id="prompt-tools">
-                    <div className="p-4 h-full flex flex-col gap-4">
-                       <PromptTestbed prompt={activePrompt} />
-                       <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
-                    </div>
-                </CollapsiblePanel>
-            </ThreeColumnLayout.Right>
-        </ThreeColumnLayout>
+                <ThreeColumnLayout.Right id="prompt-tools" defaultSize={30} minSize={20} maxSize={40}>
+                    <CollapsiblePanel id="prompt-tools">
+                         <CollapsiblePanelHeader>
+                             <span className="flex items-center gap-2">
+                                <TestTube2 className="h-5 w-5" /> 测试与分析
+                            </span>
+                        </CollapsiblePanelHeader>
+                        <div className="p-4 h-full flex flex-col gap-4 overflow-y-auto">
+                        <PromptTestbed prompt={activePrompt} />
+                        <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
+                        </div>
+                    </CollapsiblePanel>
+                </ThreeColumnLayout.Right>
+            </ThreeColumnLayout>
+        </div>
     );
 }
