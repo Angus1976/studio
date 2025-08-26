@@ -507,4 +507,53 @@ export async function deleteSoftwareAsset(input: { id: string }): Promise<{ succ
     } catch (e: any) { return { success: false, message: e.message }; }
 }
 
+// --- Procurement Item Management ---
+export async function getProcurementItems(): Promise<ProcurementItem[]> {
+    const db = admin.firestore();
+    try {
+        const snapshot = await db.collection('procurement_items').orderBy('title').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProcurementItem));
+    } catch (error) {
+        console.error("Error fetching procurement items:", error);
+        throw new Error('无法从数据库加载集采商品。');
+    }
+}
+
+const SaveProcurementItemInputSchema = z.object({
+    id: z.string().optional(),
+    title: z.string(),
+    description: z.string(),
+    icon: z.string(),
+    tag: z.string(),
+    price: z.number(),
+    unit: z.string(),
+    category: z.string(),
+});
+
+export async function saveProcurementItem(input: z.infer<typeof SaveProcurementItemInputSchema>): Promise<{ success: boolean, message: string, id?: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('procurement_items').doc(id).set(data, { merge: true });
+            return { success: true, message: "商品已更新。", id };
+        } else {
+            const ref = await db.collection('procurement_items').add(data);
+            return { success: true, message: "商品已创建。", id: ref.id };
+        }
+    } catch (error: any) {
+        console.error("Error saving procurement item:", error);
+        return { success: false, message: error.message };
+    }
+}
+
+export async function deleteProcurementItem(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    try {
+        await admin.firestore().collection('procurement_items').doc(input.id).delete();
+        return { success: true, message: "商品已删除。" };
+    } catch (e: any) {
+        return { success: false, message: e.message };
+    }
+}
     
+

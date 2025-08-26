@@ -37,6 +37,7 @@ import {
     getApiKeys,
     createApiKey,
     revokeApiKey,
+    getProcurementItems,
 } from "@/ai/flows/admin-management-flows";
 
 
@@ -49,18 +50,6 @@ const chartConfig = {
   },
 };
 
-
-const procurementItems: ProcurementItem[] = [
-    { id: 'prod-001', title: "企业邮箱服务", description: "安全、稳定、高效的企业级邮件解决方案。", icon: "Mail", tag: "办公基础", price: 50, unit: "用户/年", category: '办公基础' },
-    { id: 'prod-002', title: "视频会议服务", description: "高清、流畅、支持多方协作的在线会议平台。", icon: "Video", tag: "办公基础", price: 100, unit: "许可/年", category: '办公基础' },
-    { id: 'prod-003', title: "云计算资源", description: "弹性、可扩展的云服务器和计算能力。", icon: "Cloud", tag: "IT设施", price: 500, unit: "vCPU/月", category: 'IT设施' },
-    { id: 'prod-004', title: "云存储", description: "大容量、高可靠性的对象存储和文件存储服务。", icon: "Cpu", tag: "IT设施", price: 200, unit: "TB/月", category: 'IT设施' },
-    { id: 'prod-005', title: "LLM Token 包", description: "批量采购大语言模型调用 Token，成本更优。", icon: "Bot", tag: "AI能力", price: 100, unit: "百万Token", category: 'AI能力' },
-    { id: 'prod-006', title: "IT 设备和服务", description: "提供办公电脑、服务器等硬件及运维服务。", icon: "Briefcase", tag: "硬件与服务", price: 5000, unit: "台", category: '硬件与服务' },
-    { id: 'prod-007', title: "网络租赁", description: "高速、稳定的企业专线和网络解决方案。", icon: "Router", tag: "IT设施", price: 2000, unit: "Mbps/月", category: 'IT设施' },
-    { id: 'prod-008', title: "RPA 流程设计", description: "定制化设计机器人流程自动化解决方案。", icon: "Palette", tag: "专业服务", price: 10000, unit: "流程", category: '专业服务' },
-    { id: 'prod-009', title: "AI 数字员工", description: "购买或租赁预设的 AI 数字员工以完成特定任务。", icon: "Bot", tag: "AI能力", price: 8000, unit: "个/月", category: 'AI能力' },
-]
 
 type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
 
@@ -1028,9 +1017,8 @@ export function TenantDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [tokenUsage, setTokenUsage] = useState<{ month: string, tokens: number }[]>([]);
-  const [isLoading, setIsLoading] = useState({
-    data: true,
-  });
+  const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
+  const [isLoading, setIsLoading] = useState({ data: true, procurement: true });
   const [activeTab, setActiveTab] = useState<string>("overview");
   
   const fetchData = React.useCallback(async () => {
@@ -1044,13 +1032,27 @@ export function TenantDashboard() {
     } catch (error: any) {
         toast({ title: "数据加载失败", description: error.message, variant: "destructive" });
     } finally {
-        setIsLoading({ data: false });
+        setIsLoading(prev => ({...prev, data: false }));
+    }
+  }, [toast]);
+  
+  const fetchProcurementItems = React.useCallback(async () => {
+    setIsLoading(prev => ({ ...prev, procurement: true }));
+    try {
+        const items = await getProcurementItems();
+        setProcurementItems(items);
+    } catch (error: any) {
+        toast({ title: "加载商品失败", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading(prev => ({...prev, procurement: false }));
     }
   }, [toast]);
 
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchProcurementItems();
+  }, [fetchData, fetchProcurementItems]);
 
 
   const handleCreatePreOrder = async (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
@@ -1251,29 +1253,33 @@ export function TenantDashboard() {
                         <CardDescription>为您的企业统一采购软件、服务和各类资源。</CardDescription>
                     </CardHeader>
                     <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {procurementItems.map((item) => (
-                             <Card key={item.id} className="flex flex-col hover:shadow-md transition-shadow">
-                                <CardHeader className="flex-row items-start gap-4 space-y-0">
-                                    <div className="p-3 bg-accent/10 rounded-full">
-                                        <IconComponent name={item.icon} className="h-6 w-6 text-accent" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <CardTitle className="text-base">{item.title}</CardTitle>
-                                        <Badge variant="outline" className="mt-1 font-normal">{item.tag}</Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="flex-1">
-                                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                                    <p className="text-sm font-semibold mt-2">¥{item.price} <span className="text-xs text-muted-foreground">/ {item.unit}</span></p>
-                                </CardContent>
-                                <CardFooter>
-                                     <CreatePreOrderDialog 
-                                        item={item} 
-                                        onConfirm={(values) => handleCreatePreOrder(item, values)}
-                                     />
-                                </CardFooter>
-                            </Card>
-                        ))}
+                        {isLoading.procurement ? (
+                            Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-64 w-full" />)
+                        ) : (
+                            procurementItems.map((item) => (
+                                <Card key={item.id} className="flex flex-col hover:shadow-md transition-shadow">
+                                    <CardHeader className="flex-row items-start gap-4 space-y-0">
+                                        <div className="p-3 bg-accent/10 rounded-full">
+                                            <IconComponent name={item.icon} className="h-6 w-6 text-accent" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <CardTitle className="text-base">{item.title}</CardTitle>
+                                            <Badge variant="outline" className="mt-1 font-normal">{item.tag}</Badge>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-1">
+                                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                                        <p className="text-sm font-semibold mt-2">¥{item.price} <span className="text-xs text-muted-foreground">/ {item.unit}</span></p>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <CreatePreOrderDialog 
+                                            item={item} 
+                                            onConfirm={(values) => handleCreatePreOrder(item, values)}
+                                        />
+                                    </CardFooter>
+                                </Card>
+                            ))
+                        )}
                     </CardContent>
                 </Card>
             </TabsContent>

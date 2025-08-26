@@ -29,13 +29,13 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
-import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset, ProcurementItem } from '@/lib/data-types';
 import { 
     getTenantsAndUsers,
     saveTenant,
@@ -50,7 +50,11 @@ import {
     saveSoftwareAsset,
     deleteSoftwareAsset,
     getAllOrders,
+    getProcurementItems,
+    saveProcurementItem,
+    deleteProcurementItem,
 } from '@/ai/flows/admin-management-flows';
+import { Textarea } from "../ui/textarea";
 
 
 // --- Tenant Management ---
@@ -583,6 +587,17 @@ const softwareAssetSchema = z.object({
   type: z.string().min(1, "类型不能为空"),
 });
 
+const procurementItemSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, "标题不能为空"),
+  description: z.string().min(1, "描述不能为空"),
+  icon: z.string().min(1, "必须选择一个图标"),
+  tag: z.string().min(1, "标签不能为空"),
+  price: z.coerce.number().min(0, "价格不能为负"),
+  unit: z.string().min(1, "单位不能为空"),
+  category: z.string().min(1, "分类不能为空"),
+});
+
 
 function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants: Tenant[], triggerButtonText: string, title: string }) {
     const { toast } = useToast();
@@ -590,14 +605,20 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
     const [tokens, setTokens] = useState<TokenAllocation[]>([]);
     const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
+    const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
+    const [editingItem, setEditingItem] = useState<ProcurementItem | null>(null);
 
     const fetchAssets = React.useCallback(async () => {
         setIsLoading(true);
         try {
-            const { llmConnections, tokenAllocations, softwareAssets } = await getPlatformAssets();
-            setLlmConnections(llmConnections);
-            setTokens(tokenAllocations);
-            setSoftwareAssets(softwareAssets);
+            const [assets, items] = await Promise.all([
+                getPlatformAssets(),
+                getProcurementItems()
+            ]);
+            setLlmConnections(assets.llmConnections);
+            setTokens(assets.tokenAllocations);
+            setSoftwareAssets(assets.softwareAssets);
+            setProcurementItems(items);
         } catch (error: any) {
             toast({ title: "加载资产失败", description: error.message, variant: "destructive" });
         } finally {
@@ -638,6 +659,27 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         if (result.success) toast({ title: "软件资产已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
         fetchAssets();
     };
+    
+    const handleSaveProcurementItem = async (values: z.infer<typeof procurementItemSchema>) => {
+        const result = await saveProcurementItem({id: editingItem?.id, ...values});
+        if (result.success) {
+            toast({ title: result.message });
+            setEditingItem(null);
+            fetchAssets();
+        } else {
+            toast({ title: "保存失败", description: result.message, variant: "destructive" });
+        }
+    };
+
+    const handleDeleteProcurementItem = async (id: string) => {
+        const result = await deleteProcurementItem({id});
+        if (result.success) {
+            toast({ title: result.message });
+            fetchAssets();
+        } else {
+            toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        }
+    }
 
 
     const LlmForm = () => {
@@ -652,8 +694,8 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         return (
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称 (例如: GPT-4o)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商 (例如: OpenAI)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称 (例如: gpt-4o)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商 (例如: openai)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField control={form.control} name="apiKey" render={({field}) => (<FormItem><FormControl><Input placeholder="API Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                     <FormField
                         control={form.control}
@@ -728,6 +770,34 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
             </Form>
         )
     };
+    
+    const ProcurementItemForm = ({ item, onSubmit, onCancel }: { item?: ProcurementItem | null, onSubmit: (v: any) => void, onCancel: () => void}) => {
+        const form = useForm({ 
+            resolver: zodResolver(procurementItemSchema), 
+            defaultValues: item || { title: "", description: "", icon: "", tag: "", price: 0, unit: "", category: "" }
+        });
+        React.useEffect(() => {
+            form.reset(item || { title: "", description: "", icon: "", tag: "", price: 0, unit: "", category: "" });
+        }, [item, form]);
+
+        return (
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                    <FormField control={form.control} name="title" render={({field}) => (<FormItem><FormLabel>标题</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="description" render={({field}) => (<FormItem><FormLabel>描述</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="icon" render={({field}) => (<FormItem><FormLabel>图标 (Lucide)</FormLabel><FormControl><Input placeholder="e.g., Mail, Video" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="tag" render={({field}) => (<FormItem><FormLabel>标签</FormLabel><FormControl><Input placeholder="e.g., 办公基础" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="category" render={({field}) => (<FormItem><FormLabel>分类</FormLabel><FormControl><Input placeholder="e.g., 办公基础" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="price" render={({field}) => (<FormItem><FormLabel>价格</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="unit" render={({field}) => (<FormItem><FormLabel>单位</FormLabel><FormControl><Input placeholder="e.g., 用户/年" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
+                        <Button type="submit">保存商品</Button>
+                    </div>
+                </form>
+            </Form>
+        );
+    };
 
 
     return (
@@ -741,10 +811,11 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                     </DialogDescription>
                 </DialogHeader>
                 <Tabs defaultValue="llm" className="mt-4">
-                    <TabsList>
-                        <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 连接管理</TabsTrigger>
-                        <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量分配</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 连接</TabsTrigger>
+                        <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量</TabsTrigger>
                         <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
+                        <TabsTrigger value="procurement"><ShoppingBag className="mr-2 h-4 w-4" />集采商品</TabsTrigger>
                     </TabsList>
                     <TabsContent value="llm">
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
@@ -860,6 +931,45 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                 <Card>
                                     <CardHeader><CardTitle>添加新资产</CardTitle></CardHeader>
                                     <CardContent><SoftwareAssetForm /></CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="procurement">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                            <div className="md:col-span-2">
+                                <Card>
+                                    <CardHeader><CardTitle>集采商品列表</CardTitle></CardHeader>
+                                    <CardContent>
+                                        <ScrollArea className="h-[450px]">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>商品</TableHead><TableHead>价格</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {isLoading ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                                    : procurementItems.map(item => (
+                                                        <TableRow key={item.id}>
+                                                            <TableCell><div className="font-medium">{item.title}</div><div className="text-xs text-muted-foreground">{item.category} / {item.tag}</div></TableCell>
+                                                            <TableCell>¥{item.price} / {item.unit}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}><Pencil className="h-4 w-4"/></Button>
+                                                                <Button variant="ghost" size="icon" className="text-destructive/80" onClick={() => handleDeleteProcurementItem(item.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <div>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>{editingItem ? "编辑商品" : "添加新商品"}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ProcurementItemForm item={editingItem} onSubmit={handleSaveProcurementItem} onCancel={() => setEditingItem(null)} />
+                                    </CardContent>
                                 </Card>
                             </div>
                         </div>
