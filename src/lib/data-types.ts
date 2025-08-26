@@ -117,7 +117,7 @@ export type DeletePromptOutput = z.infer<typeof DeletePromptOutputSchema>;
 // --- Prompt Execution ---
 
 export const PromptExecutionInputSchema = z.object({
-  modelId: z.string().optional().describe('The ID of the LLM connection to use.'),
+  modelId: z.string().describe('The ID of the LLM connection to use.'),
   systemPrompt: z.string().optional().describe('The system prompt to guide the AI.'),
   userPrompt: z.string().describe('The main user prompt, which can contain Handlebars variables like {{variable}}.'),
   context: z.string().optional().describe('Additional context or examples for the AI.'),
@@ -289,5 +289,3 @@ export const SoftwareAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type SoftwareAsset = z.infer<typeof SoftwareAssetSchema>;
-
-    

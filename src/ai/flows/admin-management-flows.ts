@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, LlmProvider, TokenAllocation, SoftwareAsset, ExpertDomain } from '@/lib/data-types';
 
 // --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -657,4 +657,78 @@ export async function deleteExpertDomain(input: { id: string }): Promise<{ succe
     }
 }
 
+// --- LLM Provider Preset Management ---
+async function seedInitialLlmProviders() {
+    const db = admin.firestore();
+    const providersRef = db.collection('llm_providers');
+    const snapshot = await providersRef.limit(1).get();
+
+    if (!snapshot.empty) {
+        return; // Data already exists
+    }
+
+    const defaultProviders = [
+        { providerName: 'OpenAI', apiUrl: 'https://api.openai.com/v1', apiKeyInstructions: '从 OpenAI 官方平台注册获取。', models: ['gpt-4o', 'gpt-4-turbo'] },
+        { providerName: 'Google', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/', apiKeyInstructions: '从 Google AI Studio 获取。', models: ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'] },
+        { providerName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1', apiKeyInstructions: '从 DeepSeek 控制台获取。', models: ['deepseek-v2', 'deepseek-chat'] },
+        { providerName: '阿里云', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKeyInstructions: '从阿里百炼控制台获取。', models: ['qwen-max', 'qwen-long'] },
+        { providerName: 'Anthropic', apiUrl: 'https://api.anthropic.com/v1', apiKeyInstructions: '从官方平台注册获取。', models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229'] },
+        { providerName: '字节跳动', apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/', apiKeyInstructions: '从火山方舟控制台获取。', models: ['ep-20240520111308-4k2s2', 'ep-20240520111258-7yifg'] },
+        { providerName: '自定义', apiUrl: '', apiKeyInstructions: '输入您的自定义API地址和密钥。', models: [] },
+    ];
     
+    const batch = db.batch();
+    defaultProviders.forEach(provider => {
+        const docRef = providersRef.doc();
+        batch.set(docRef, provider);
+    });
+
+    await batch.commit();
+    console.log('Successfully seeded initial LLM providers.');
+}
+
+
+export async function getLlmProviders(): Promise<LlmProvider[]> {
+    const db = admin.firestore();
+    await seedInitialLlmProviders(); // Ensure data is seeded on first run
+    try {
+        const snapshot = await db.collection('llm_providers').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmProvider));
+    } catch (error) {
+        console.error("Error fetching LLM providers:", error);
+        throw new Error('无法从数据库加载LLM厂商列表。');
+    }
+}
+
+const SaveLlmProviderSchema = z.object({
+  id: z.string().optional(),
+  providerName: z.string().min(1, "厂商名称不能为空"),
+  apiUrl: z.string().url("请输入有效的URL").optional().or(z.literal('')),
+  apiKeyInstructions: z.string(),
+  models: z.array(z.string()),
+});
+export async function saveLlmProvider(input: z.infer<typeof SaveLlmProviderSchema>): Promise<{ success: boolean; message: string; id?: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('llm_providers').doc(id).set(data, { merge: true });
+            return { success: true, message: "厂商预设已更新。", id };
+        } else {
+            const ref = await db.collection('llm_providers').add(data);
+            return { success: true, message: "厂商预设已创建。", id: ref.id };
+        }
+    } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}
+
+export async function deleteLlmProvider(input: { id: string }): Promise<{ success: boolean; message: string; }> {
+    const db = admin.firestore();
+    try {
+        await db.collection('llm_providers').doc(input.id).delete();
+        return { success: true, message: "厂商预设已删除。" };
+    } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}
