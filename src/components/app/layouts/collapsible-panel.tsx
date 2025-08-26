@@ -65,33 +65,23 @@ export function CollapsiblePanelHeader({ children }: { children: React.ReactNode
 
 export function CollapsiblePanel({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
   const { getPanelState } = usePanel();
-  
   const state = getPanelState(id);
 
-  if (state === 'closed') {
-      // Return a placeholder with the header to allow re-opening
-      return (
-          <div className="flex flex-col h-full bg-card rounded-lg border">
-              <CollapsiblePanelContext.Provider value={{ id }}>
-                  {children}
-              </CollapsiblePanelContext.Provider>
-          </div>
-      );
-  }
-
+  const mainContent = React.Children.toArray(children).filter(child => 
+      !React.isValidElement(child) || child.type !== CollapsiblePanelHeader
+  );
 
   return (
     <CollapsiblePanelContext.Provider value={{ id }}>
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-            {React.Children.map(children, (child) => {
-                if (React.isValidElement(child) && child.type === CollapsiblePanelHeader) {
-                    return child;
-                }
-                if (React.isValidElement(child) && state !== 'closed') {
-                    return child;
-                }
-                return null;
-            })}
+            {React.Children.map(children, (child) => 
+                React.isValidElement(child) && child.type === CollapsiblePanelHeader ? child : null
+            )}
+            {state !== 'closed' && (
+                <div className="flex-1 overflow-y-auto">
+                    {mainContent}
+                </div>
+            )}
         </div>
     </CollapsiblePanelContext.Provider>
   );
