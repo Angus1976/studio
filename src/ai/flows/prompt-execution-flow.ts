@@ -18,7 +18,10 @@ import {
 } from '@/lib/data-types';
 
 async function callGoogleAI(apiKey: string, modelName: string, prompt: string, temperature: number) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    // Ensure the model name has the 'models/' prefix for the Google AI API.
+    const finalModelName = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/${finalModelName}:generateContent?key=${apiKey}`;
+    
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -87,7 +90,7 @@ export async function executePrompt(
     const { provider, modelName, apiKey } = modelData;
 
     // 2. Prepare the full prompt
-    const template = Handlebars.compile(input.userPrompt);
+    const template = Handlebars.compile(input.userPrompt || '');
     const finalUserPrompt = template(input.variables || {});
     
     let fullPrompt = '';
