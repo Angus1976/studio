@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, CheckCircle, XCircle, Wand2, Power, PowerOff, Settings } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, CheckCircle, XCircle, Wand2, Power, PowerOff } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -57,10 +57,7 @@ import {
     saveProcurementItem,
     deleteProcurementItem,
     saveExpertDomain,
-    deleteExpertDomain,
-    getLlmProviders,
-    saveLlmProvider,
-    deleteLlmProvider,
+    deleteExpertDomain
 } from '@/ai/flows/admin-management-flows';
 import { Textarea } from "../ui/textarea";
 import { Switch } from "../ui/switch";
@@ -573,8 +570,8 @@ function UserManagementDialog({ users, onRefresh, buttonText, title, description
 const llmConnectionSchema = z.object({
   id: z.string().optional(),
   modelName: z.string().min(1, "模型名称不能为空"),
-  apiKey: z.string().min(1, "API Key不能为空"),
   provider: z.string().min(1, "提供商不能为空"),
+  apiKey: z.string().min(1, "API Key不能为空"),
   type: z.enum(["通用", "专属"]),
   status: z.enum(["活跃", "已禁用"]),
   tenantId: z.string().optional(),
@@ -616,122 +613,6 @@ const expertDomainSchema = z.object({
     domainId: z.string().min(3, "领域ID至少需要3个字符。").regex(/^[a-z0-9-]+$/, "ID只能包含小写字母、数字和连字符。"),
 });
 
-const llmProviderSchema = z.object({
-  id: z.string().optional(),
-  providerName: z.string().min(1, "厂商名称不能为空"),
-  apiUrl: z.string().optional(),
-  apiKeyInstructions: z.string().min(1, "API Key 获取说明不能为空"),
-  models: z.array(z.string()).min(1, "至少需要一个模型名称"),
-});
-
-
-function ManageLlmProvidersDialog({ onUpdate }: { onUpdate: () => void }) {
-  const { toast } = useToast();
-  const [providers, setProviders] = useState<LlmProvider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const form = useForm<z.infer<typeof llmProviderSchema>>({
-    resolver: zodResolver(llmProviderSchema),
-    defaultValues: { providerName: "", apiUrl: "", apiKeyInstructions: "", models: [] },
-  });
-
-  const fetchProviders = React.useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const fetchedProviders = await getLlmProviders();
-      setProviders(fetchedProviders);
-    } catch(e: any) {
-      toast({ title: "加载厂商失败", description: e.message, variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  React.useEffect(() => {
-    fetchProviders();
-  }, [fetchProviders]);
-
-  const onSubmit = async (values: z.infer<typeof llmProviderSchema>) => {
-    setIsSubmitting(true);
-    try {
-      await saveLlmProvider(values);
-      toast({ title: "预设模型信息已保存" });
-      form.reset();
-      await fetchProviders();
-      onUpdate();
-    } catch (e: any) {
-      toast({ title: "保存失败", description: e.message, variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteLlmProvider({ id });
-      toast({ title: "预设模型信息已删除" });
-      await fetchProviders();
-      onUpdate();
-    } catch(e: any) {
-      toast({ title: "删除失败", description: e.message, variant: "destructive" });
-    }
-  };
-  
-  return (
-    <DialogContent className="max-w-4xl">
-      <DialogHeader>
-        <DialogTitle>管理LLM预设模型</DialogTitle>
-        <DialogDescription>
-          在此处添加、编辑或删除平台支持的LLM厂商预设信息。这些信息将用于简化新连接的添加流程。
-        </DialogDescription>
-      </DialogHeader>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-        <Card>
-          <CardHeader><CardTitle className="text-base">现有预设</CardTitle></CardHeader>
-          <CardContent>
-            <ScrollArea className="h-80">
-              {isLoading ? <LoaderCircle className="animate-spin" /> : (
-                <ul className="space-y-2">
-                  {providers.map(p => (
-                    <li key={p.id} className="flex items-center justify-between text-sm p-2 rounded-md hover:bg-muted">
-                      <span>{p.providerName} <span className="text-muted-foreground text-xs">({p.models.length}个模型)</span></span>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDelete(p.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">添加新预设</CardTitle></CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-                <FormField control={form.control} name="providerName" render={({field}) => (<FormItem><FormLabel>厂商名称</FormLabel><FormControl><Input placeholder="例如: OpenAI" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                <FormField control={form.control} name="apiUrl" render={({field}) => (<FormItem><FormLabel>API 地址 (可选)</FormLabel><FormControl><Input placeholder="https://api.openai.com/v1" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                <FormField control={form.control} name="apiKeyInstructions" render={({field}) => (<FormItem><FormLabel>Key 获取说明</FormLabel><FormControl><Textarea placeholder="从 OpenAI Platform 获取" {...field} rows={2} /></FormControl><FormMessage/></FormItem>)}/>
-                <FormField control={form.control} name="models" render={({field}) => (<FormItem><FormLabel>模型列表</FormLabel><FormControl><Input placeholder="用逗号分隔, e.g. gpt-4o,gpt-4-turbo" {...field} onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()))} /></FormControl><FormMessage/></FormItem>)}/>
-                <Button type="submit" disabled={isSubmitting} className="w-full !mt-4">
-                  {isSubmitting && <LoaderCircle className="animate-spin mr-2 h-4 w-4" />}
-                  添加预设
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button type="button" variant="outline">关闭</Button>
-        </DialogClose>
-      </DialogFooter>
-    </DialogContent>
-  );
-}
-
 
 function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants: Tenant[], triggerButtonText: string, title: string }) {
     const { toast } = useToast();
@@ -741,9 +622,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
     const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
     const [expertDomains, setExpertDomains] = useState<ExpertDomain[]>([]);
-    const [llmProviders, setLlmProviders] = useState<LlmProvider[]>([]);
 
-    const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [testResults, setTestResults] = useState<Record<string, { status: 'loading' | 'success' | 'error', message: string }>>({});
     
@@ -752,17 +631,15 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const fetchAssets = React.useCallback(async () => {
         setIsLoading(true);
         try {
-            const [assets, items, providers] = await Promise.all([
+            const [assets, items] = await Promise.all([
                 getPlatformAssets(),
-                getProcurementItems(),
-                getLlmProviders(),
+                getProcurementItems()
             ]);
             setLlmConnections(assets.llmConnections);
             setTokens(assets.tokenAllocations);
             setSoftwareAssets(assets.softwareAssets);
             setExpertDomains(assets.expertDomains);
             setProcurementItems(items);
-            setLlmProviders(providers);
         } catch (error: any) {
             toast({ title: "加载资产失败", description: error.message, variant: "destructive" });
         } finally {
@@ -853,109 +730,64 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const LlmForm = () => {
         const form = useForm({ 
             resolver: zodResolver(llmConnectionSchema), 
-            defaultValues: { modelName: "", provider: "", apiKey: "", type: "通用", tenantId: "", status: "活跃" }
+            defaultValues: { modelName: "", provider: "Google", apiKey: "", type: "通用", tenantId: "", status: "活跃" }
         });
         const type = form.watch('type');
-        const [selectedProvider, setSelectedProvider] = useState<LlmProvider | null>(null);
-
-        const onProviderChange = (providerName: string) => {
-            const provider = llmProviders.find(p => p.providerName === providerName);
-            setSelectedProvider(provider || null);
-            form.setValue('provider', providerName);
-            if (provider?.models.length) {
-                form.setValue('modelName', provider.models[0]);
-            }
-        };
 
         const onSubmit = (values: z.infer<typeof llmConnectionSchema>) => {
             const finalValues = values.type === '通用' ? { ...values, tenantId: undefined } : values;
             handleSaveLlm(finalValues);
             form.reset();
-            setSelectedProvider(null);
         };
 
         return (
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-                    <Select onValueChange={onProviderChange}>
-                        <SelectTrigger><SelectValue placeholder="选择一个预设模型厂商..."/></SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                <SelectLabel>主流厂商</SelectLabel>
-                                {llmProviders.map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                    
-                    {selectedProvider && (
-                        <>
-                            <FormField
-                                control={form.control} name="modelName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>模型名称</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {selectedProvider.models.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage/>
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField control={form.control} name="apiKey" render={({field}) => (
-                                <FormItem>
-                                    <FormLabel>API Key</FormLabel>
-                                    <FormControl><Input placeholder="在此粘贴您的 API Key" {...field}/></FormControl>
-                                    <FormDescription>{selectedProvider.apiKeyInstructions}</FormDescription>
-                                    <FormMessage/>
-                                </FormItem>
-                            )}/>
-                             <FormField control={form.control} name="type" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>类型</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="通用">通用 (所有租户)</SelectItem>
-                                            <SelectItem value="专属">专属 (指定租户)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormItem>
-                            )} />
-                            {type === '专属' && (
-                                <FormField control={form.control} name="tenantId" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>所属租户</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="选择一个租户..."/></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.companyName}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                            )}
-                             <FormField control={form.control} name="status" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>初始状态</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="活跃">活跃</SelectItem>
-                                            <SelectItem value="已禁用">已禁用</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormItem>
-                            )} />
-                             <Button type="submit" size="sm" className="w-full !mt-4" disabled={isSubmitting}>
-                                {isSubmitting && <LoaderCircle className="animate-spin mr-2 h-4 w-4"/>}
-                                添加连接
-                            </Button>
-                        </>
+                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormLabel>模型名称</FormLabel><FormControl><Input placeholder="例如: gemini-1.5-flash" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormLabel>提供商</FormLabel><FormControl><Input placeholder="例如: Google" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="apiKey" render={({field}) => (<FormItem><FormLabel>API Key</FormLabel><FormControl><Input placeholder="在此粘贴您的 API Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="type" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>类型</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="通用">通用 (所有租户)</SelectItem>
+                                    <SelectItem value="专属">专属 (指定租户)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormItem>
+                    )} />
+                     {type === '专属' && (
+                        <FormField control={form.control} name="tenantId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>所属租户</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="选择一个租户..."/></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.companyName}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
                     )}
+                     <FormField control={form.control} name="status" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>初始状态</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="活跃">活跃</SelectItem>
+                                    <SelectItem value="已禁用">已禁用</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormItem>
+                    )} />
+                    <Button type="submit" size="sm" className="w-full !mt-4" disabled={isSubmitting}>
+                        {isSubmitting && <LoaderCircle className="animate-spin mr-2 h-4 w-4"/>}
+                        添加连接
+                    </Button>
                 </form>
             </Form>
         )
@@ -1104,7 +936,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                         <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
                     </TabsList>
                     <TabsContent value="llm">
-                       <Dialog open={isManageProvidersOpen} onOpenChange={setIsManageProvidersOpen}>
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
                             <div className="md:col-span-2">
                                  <Card>
@@ -1157,20 +988,11 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                             </div>
                             <div>
                                 <Card>
-                                    <CardHeader>
-                                        <div className="flex justify-between items-center">
-                                             <CardTitle>添加新连接</CardTitle>
-                                             <DialogTrigger asChild>
-                                                <Button variant="outline" size="icon" className="h-7 w-7"><Settings className="h-4 w-4"/></Button>
-                                             </DialogTrigger>
-                                        </div>
-                                    </CardHeader>
+                                    <CardHeader><CardTitle>添加新连接</CardTitle></CardHeader>
                                     <CardContent><LlmForm /></CardContent>
                                 </Card>
                             </div>
                        </div>
-                       <ManageLlmProvidersDialog onUpdate={fetchAssets} />
-                       </Dialog>
                     </TabsContent>
                     <TabsContent value="domains">
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
@@ -1634,3 +1456,4 @@ export function AdminDashboard() {
 
     
 
+    

@@ -289,3 +289,5 @@ export const SoftwareAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type SoftwareAsset = z.infer<typeof SoftwareAssetSchema>;
+
+    
