@@ -1,16 +1,19 @@
 
 "use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle } from 'lucide-react';
+import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Bot } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
+import { getPlatformAssets } from '@/ai/flows/admin-management-flows';
 import type { PromptData } from './prompt-editor';
+import type { LlmConnection } from '@/lib/data-types';
 
 type Variable = {
     id: string;
@@ -32,6 +35,32 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
         { id: 'var2', key: 'text', value: 'Hello, world!' }
     ]);
     const [testResult, setTestResult] = useState('');
+    
+    const [models, setModels] = useState<LlmConnection[]>([]);
+    const [selectedModel, setSelectedModel] = useState<string>('');
+    const [isLoadingModels, setIsLoadingModels] = useState(true);
+
+    useEffect(() => {
+        async function fetchModels() {
+            try {
+                const { llmConnections } = await getPlatformAssets();
+                setModels(llmConnections);
+                if (llmConnections.length > 0) {
+                    setSelectedModel(llmConnections[0].id);
+                }
+            } catch (error) {
+                console.error("Failed to fetch models", error);
+                toast({
+                    variant: "destructive",
+                    title: "加载模型失败",
+                    description: "无法从数据库获取已配置的模型列表。"
+                });
+            } finally {
+                setIsLoadingModels(false);
+            }
+        }
+        fetchModels();
+    }, [toast]);
 
     const handleAddVariable = () => {
         setVariables([...variables, { id: `var${Date.now()}`, key: '', value: '' }]);
@@ -49,6 +78,16 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
         setIsGenerating(true);
         setTestResult('');
         
+        if (!selectedModel) {
+             toast({
+                variant: "destructive",
+                title: "未选择模型",
+                description: "请先从下拉框中选择一个模型进行测试。",
+            });
+            setIsGenerating(false);
+            return;
+        }
+
         try {
             const varsAsObject = variables.reduce((acc, v) => {
                 if (v.key) acc[v.key] = v.value;
@@ -56,6 +95,7 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
             }, {} as Record<string, string>);
 
             const result = await executePrompt({
+                modelId: selectedModel,
                 systemPrompt: prompt.systemPrompt,
                 userPrompt: prompt.userPrompt,
                 context: prompt.context,
@@ -69,12 +109,12 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                 title: "生成成功",
                 description: "模型已成功返回结果。",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error executing prompt flow:", error);
             toast({
                 variant: "destructive",
                 title: "生成失败",
-                description: "调用 AI 流程时发生错误。",
+                description: error.message || "调用 AI 流程时发生未知错误。",
             });
         } finally {
             setIsGenerating(false);
@@ -89,8 +129,32 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                         <TestTube2 className="h-6 w-6 text-accent"/>
                         配置与测试
                     </CardTitle>
+                    <CardDescription>
+                        选择一个已对接的模型，调整参数，并使用测试变量来验证您的提示词效果。
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                     <div>
+                        <Label htmlFor="model-select">模型选择</Label>
+                        <Select onValueChange={setSelectedModel} value={selectedModel} disabled={isLoadingModels}>
+                            <SelectTrigger id="model-select">
+                                <SelectValue placeholder={isLoadingModels ? "正在加载模型..." : "选择一个模型"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>已对接模型</SelectLabel>
+                                    {models.map(model => (
+                                        <SelectItem key={model.id} value={model.id}>
+                                            <span className="flex items-center gap-2">
+                                                <Bot className="h-4 w-4" />
+                                                {model.modelName} ({model.provider})
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div>
                         <Label htmlFor="temperature" className="flex justify-between"><span>Temperature</span><span>{temperature}</span></Label>
                         <Slider id="temperature" min={0} max={1} step={0.1} value={[temperature]} onValueChange={([val]) => setTemperature(val)} />
@@ -106,7 +170,7 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                         ))}
                         <Button variant="outline" size="sm" onClick={handleAddVariable}><PlusCircle className="mr-2 h-4 w-4"/>添加变量</Button>
                     </div>
-                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleTestPrompt} disabled={isGenerating}>
+                    <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleTestPrompt} disabled={isGenerating || isLoadingModels}>
                         {isGenerating ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
                         生成
                     </Button>
@@ -117,7 +181,7 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                     <CardTitle>输出结果</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
-                    <div className="prose prose-sm dark:prose-invert max-w-none h-full overflow-y-auto relative bg-secondary/30 rounded-lg p-2 min-h-[100px]">
+                    <div className="prose prose-sm dark:prose-invert max-w-none h-full overflow-y-auto relative bg-secondary/30 rounded-lg p-3 min-h-[100px]">
                         {isGenerating && (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/50">
                                 <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />

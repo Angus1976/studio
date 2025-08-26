@@ -420,9 +420,9 @@ const toISODate = (timestamp: any) => timestamp?.toDate ? timestamp.toDate().toI
 export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], tokenAllocations: TokenAllocation[], softwareAssets: SoftwareAsset[] }> {
     const db = admin.firestore();
     try {
-        const llmSnapshot = await db.collection('llm_connections').get();
-        const tokenSnapshot = await db.collection('token_allocations').get();
-        const assetSnapshot = await db.collection('software_assets').get();
+        const llmSnapshot = await db.collection('llm_connections').orderBy('createdAt', 'desc').get();
+        const tokenSnapshot = await db.collection('token_allocations').orderBy('createdAt', 'desc').get();
+        const assetSnapshot = await db.collection('software_assets').orderBy('createdAt', 'desc').get();
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as LlmConnection));
         const tokenAllocations: TokenAllocation[] = tokenSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as TokenAllocation));
