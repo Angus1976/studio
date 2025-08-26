@@ -14,13 +14,12 @@ export function CollapsiblePanelHeader({ children }: { children: React.ReactNode
   const { id } = React.useContext(CollapsiblePanelContext);
   const { getPanelState, togglePanel } = usePanel();
   
-  // Determine if the current panel is the one that's maximized.
-  // The state 'collapsed' in the layout context means this panel is maximized.
+  // The state 'collapsed' in our logic means this panel is maximized.
   const isMaximized = getPanelState(id) === 'collapsed';
 
   return (
-    <div className="flex items-center justify-between p-4 md:p-6 md:pb-2 lg:p-8 lg:pb-4 border-b mb-4">
-      <div className="flex-1">{children}</div>
+    <div className="flex items-center justify-between px-4 py-2 border-b">
+      <div className="flex-1 font-semibold">{children}</div>
       <Button
         variant="ghost"
         size="icon"
@@ -35,14 +34,6 @@ export function CollapsiblePanelHeader({ children }: { children: React.ReactNode
 }
 
 export function CollapsiblePanel({ id, children }: { id: string, children: React.ReactNode }) {
-  const { isAnyPanelMaximized, getPanelState } = usePanel();
-  const isThisPanelMaximized = getPanelState(id) === 'collapsed';
-  
-  // If any panel is maximized, but it's not this one, don't render this panel at all.
-  if (isAnyPanelMaximized && !isThisPanelMaximized) {
-    return null;
-  }
-
   return (
     <CollapsiblePanelContext.Provider value={{ id }}>
         <div className="flex-1 flex flex-col h-full">{children}</div>

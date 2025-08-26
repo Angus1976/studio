@@ -148,15 +148,14 @@ export function PromptUniverseWorkbench() {
         <ThreeColumnLayout autoSaveId="prompt-universe-workbench-layout">
             <ThreeColumnLayout.Left id="prompt-library" defaultSize={25} minSize={20} maxSize={30}>
                  <CollapsiblePanel id="prompt-library">
-                     <CollapsiblePanelHeader>
-                        <h2 className="font-semibold flex items-center gap-2"><BookCopy className="h-5 w-5"/> 提示词库</h2>
-                     </CollapsiblePanelHeader>
-                    <PromptLibrary 
-                        prompts={prompts} 
-                        onSelectPrompt={handleSelectPrompt}
-                        isLoading={isLoadingPrompts}
-                        onDeletePrompt={handleDeletePrompt}
-                    />
+                     <div className="p-4">
+                        <PromptLibrary 
+                            prompts={prompts} 
+                            onSelectPrompt={handleSelectPrompt}
+                            isLoading={isLoadingPrompts}
+                            onDeletePrompt={handleDeletePrompt}
+                        />
+                     </div>
                 </CollapsiblePanel>
             </ThreeColumnLayout.Left>
             
@@ -164,15 +163,14 @@ export function PromptUniverseWorkbench() {
 
             <ThreeColumnLayout.Main id="prompt-editor" defaultSize={45} minSize={30}>
                 <CollapsiblePanel id="prompt-editor">
-                    <CollapsiblePanelHeader>
-                        <h2 className="font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5"/> 编辑器</h2>
-                    </CollapsiblePanelHeader>
-                    <PromptEditor 
-                        prompt={activePrompt}
-                        onPromptChange={setActivePrompt}
-                        onSave={handleSavePrompt}
-                        isSaving={isSaving}
-                    />
+                    <div className="p-4 h-full">
+                        <PromptEditor 
+                            prompt={activePrompt}
+                            onPromptChange={setActivePrompt}
+                            onSave={handleSavePrompt}
+                            isSaving={isSaving}
+                        />
+                    </div>
                 </CollapsiblePanel>
             </ThreeColumnLayout.Main>
 
@@ -180,10 +178,7 @@ export function PromptUniverseWorkbench() {
 
             <ThreeColumnLayout.Right id="prompt-tools" defaultSize={30} minSize={20} maxSize={40}>
                  <CollapsiblePanel id="prompt-tools">
-                    <CollapsiblePanelHeader>
-                        <h2 className="font-semibold flex items-center gap-2"><TestTube2 className="h-5 w-5"/> 测试与分析</h2>
-                    </CollapsiblePanelHeader>
-                    <div className="flex flex-col gap-6 h-full">
+                    <div className="p-4 h-full flex flex-col gap-4">
                        <PromptTestbed prompt={activePrompt} />
                        <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
                     </div>

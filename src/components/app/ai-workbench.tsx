@@ -12,8 +12,8 @@ import { getPrompts } from '@/ai/flows/get-prompts-flow';
 import type { Prompt } from '@/lib/data-types';
 import { TaskDispatchCenter } from './task-dispatch-center';
 import { Button } from '../ui/button';
-import { Lightbulb, Wand2, Bot, BookCopy, Settings } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Lightbulb, Wand2 } from 'lucide-react';
+import { Card } from '../ui/card';
 import { CollapsiblePanel, CollapsiblePanelHeader } from './layouts/collapsible-panel';
 
 export interface Scenario {
@@ -106,32 +106,24 @@ export function AIWorkbench() {
         if (workbenchMode === 'expert') {
             return (
                 <CollapsiblePanel id="left-panel">
-                    <CollapsiblePanelHeader>
-                         <h2 className="font-semibold flex items-center gap-2">
-                            <Bot className="h-5 w-5" />
-                            AI 智能工作台
-                        </h2>
-                    </CollapsiblePanelHeader>
-                    <TaskDispatchCenter />
+                    <div className="p-4 h-full">
+                        <TaskDispatchCenter />
+                    </div>
                 </CollapsiblePanel>
             );
         }
         return (
             <CollapsiblePanel id="left-panel">
-                 <CollapsiblePanelHeader>
-                     <h2 className="font-semibold flex items-center gap-2">
-                        <Bot className="h-5 w-5" />
-                        AI 需求导航器
-                    </h2>
-                 </CollapsiblePanelHeader>
-                <RequirementsNavigator onFinish={handleNavigationFinish} />
+                <div className="p-4 h-full">
+                    <RequirementsNavigator onFinish={handleNavigationFinish} />
+                </div>
             </CollapsiblePanel>
         );
     };
     
     return (
         <div className="h-full flex flex-col">
-             <div className="p-4 md:p-6 md:pb-0 lg:p-8 lg:pb-0">
+             <div className="p-4 border-b">
                  <Button variant="outline" size="sm" onClick={() => setWorkbenchMode(workbenchMode === 'guide' ? 'expert' : 'guide')} className="flex items-center gap-2">
                     {workbenchMode === 'guide' ? <Wand2 className="h-4 w-4" /> : <Lightbulb className="h-4 w-4" />}
                     切换到{workbenchMode === 'guide' ? "专家模式" : "引导模式"}
@@ -148,10 +140,7 @@ export function AIWorkbench() {
                     <>
                         <ThreeColumnLayout.Main id="main-panel" defaultSize={45} minSize={30}>
                              <CollapsiblePanel id="main-panel">
-                                <CollapsiblePanelHeader>
-                                    <h2 className="font-semibold flex items-center gap-2"><BookCopy className="h-5 w-5"/> 能力场景库</h2>
-                                </CollapsiblePanelHeader>
-                                <div className="h-full flex flex-col gap-6">
+                                <div className="p-4 h-full flex flex-col gap-4">
                                     <ScenarioLibraryViewer
                                         scenarios={recommendedScenarios}
                                         isLoading={isLoading && !expertId}
@@ -173,22 +162,20 @@ export function AIWorkbench() {
 
                         <ThreeColumnLayout.Right id="right-panel" defaultSize={30} minSize={25} maxSize={40}>
                              <CollapsiblePanel id="right-panel">
-                                 <CollapsiblePanelHeader>
-                                    <h2 className="font-semibold flex items-center gap-2"><Settings className="h-5 w-5"/> 操作面板</h2>
-                                </CollapsiblePanelHeader>
-                                <UserActionPanel scenario={selectedScenario} />
+                                <div className="p-4 h-full">
+                                    <UserActionPanel scenario={selectedScenario} />
+                                </div>
                             </CollapsiblePanel>
                         </ThreeColumnLayout.Right>
                     </>
                 ) : (
                     <ThreeColumnLayout.Main id="expert-main" defaultSize={75} minSize={30}>
                         <CollapsiblePanel id="expert-main">
-                            <CollapsiblePanelHeader>
-                                 <h2 className="font-semibold">任务历史与结果</h2>
-                            </CollapsiblePanelHeader>
-                            <Card className="h-full flex items-center justify-center text-center">
-                               <p className="text-muted-foreground">专家模式的任务历史和结果区域将在此处显示。</p>
-                            </Card>
+                           <div className="p-4 h-full">
+                                <Card className="h-full flex items-center justify-center text-center">
+                                   <p className="text-muted-foreground">专家模式的任务历史和结果区域将在此处显示。</p>
+                                </Card>
+                            </div>
                         </CollapsiblePanel>
                     </ThreeColumnLayout.Main>
                 )}
