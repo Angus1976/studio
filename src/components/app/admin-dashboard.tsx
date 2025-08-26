@@ -28,14 +28,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, CheckCircle, XCircle, Wand2, Power, PowerOff, Settings } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
-import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset, ProcurementItem, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset, ProcurementItem, ExpertDomain, LlmProvider } from '@/lib/data-types';
 import { 
     getTenantsAndUsers,
     saveTenant,
@@ -45,6 +45,7 @@ import {
     getPlatformAssets,
     saveLlmConnection,
     deleteLlmConnection,
+    testLlmConnection,
     saveTokenAllocation,
     deleteTokenAllocation,
     saveSoftwareAsset,
@@ -55,8 +56,14 @@ import {
     deleteProcurementItem,
     saveExpertDomain,
     deleteExpertDomain,
+    getLlmProviders,
+    saveLlmProvider,
+    deleteLlmProvider,
 } from '@/ai/flows/admin-management-flows';
 import { Textarea } from "../ui/textarea";
+import { Switch } from "../ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { cn } from "@/lib/utils";
 
 
 // --- Tenant Management ---
@@ -567,6 +574,7 @@ const llmConnectionSchema = z.object({
   apiKey: z.string().min(1, "API Key不能为空"),
   provider: z.string().min(1, "提供商不能为空"),
   type: z.enum(["通用", "专属"]),
+  status: z.enum(["活跃", "已禁用"]),
   tenantId: z.string().optional(),
 }).refine(data => data.type === '通用' || (data.type === '专属' && data.tenantId), {
     message: "专属连接必须指定租户ID",
@@ -614,21 +622,29 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const [tokens, setTokens] = useState<TokenAllocation[]>([]);
     const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
     const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
-    const [editingItem, setEditingItem] = useState<ProcurementItem | null>(null);
     const [expertDomains, setExpertDomains] = useState<ExpertDomain[]>([]);
+    const [llmProviders, setLlmProviders] = useState<LlmProvider[]>([]);
+
+    const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [testResults, setTestResults] = useState<Record<string, { status: 'loading' | 'success' | 'error', message: string }>>({});
+    
+    const [editingItem, setEditingItem] = useState<ProcurementItem | null>(null);
 
     const fetchAssets = React.useCallback(async () => {
         setIsLoading(true);
         try {
-            const [assets, items] = await Promise.all([
+            const [assets, items, providers] = await Promise.all([
                 getPlatformAssets(),
-                getProcurementItems()
+                getProcurementItems(),
+                getLlmProviders(),
             ]);
             setLlmConnections(assets.llmConnections);
             setTokens(assets.tokenAllocations);
             setSoftwareAssets(assets.softwareAssets);
             setExpertDomains(assets.expertDomains);
             setProcurementItems(items);
+            setLlmProviders(providers);
         } catch (error: any) {
             toast({ title: "加载资产失败", description: error.message, variant: "destructive" });
         } finally {
@@ -638,36 +654,50 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     
     // --- Handlers for assets ---
     const handleSaveLlm = async (values: z.infer<typeof llmConnectionSchema>) => {
+        setIsSubmitting(true);
         const result = await saveLlmConnection(values);
         if (result.success) toast({ title: "LLM连接已保存" }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
+        setIsSubmitting(false);
     };
     const handleDeleteLlm = async (id: string) => {
         const result = await deleteLlmConnection({id});
         if (result.success) toast({ title: "LLM连接已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
+    };
+
+    const handleTestLlm = async (connection: LlmConnection) => {
+        setTestResults(prev => ({...prev, [connection.id]: { status: 'loading', message: ''}}));
+        const result = await testLlmConnection(connection);
+        if (result.success) {
+            setTestResults(prev => ({...prev, [connection.id]: { status: 'success', message: result.message }}));
+            // also refresh the list to show the new `lastChecked` date
+            await fetchAssets();
+        } else {
+            setTestResults(prev => ({...prev, [connection.id]: { status: 'error', message: result.message }}));
+        }
     };
     
     const handleSaveToken = async (values: z.infer<typeof tokenSchema>) => {
         const result = await saveTokenAllocation(values);
         if (result.success) toast({ title: "Token已分配" }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
     };
     const handleDeleteToken = async (id: string) => {
         const result = await deleteTokenAllocation({id});
         if (result.success) toast({ title: "Token已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
     };
     
     const handleSaveAsset = async (values: z.infer<typeof softwareAssetSchema>) => {
         const result = await saveSoftwareAsset(values);
         if (result.success) toast({ title: "软件资产已保存" }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
     };
     const handleDeleteAsset = async (id: string) => {
         const result = await deleteSoftwareAsset({id});
         if (result.success) toast({ title: "软件资产已删除" }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
     };
     
     const handleSaveProcurementItem = async (values: z.infer<typeof procurementItemSchema>) => {
@@ -675,7 +705,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         if (result.success) {
             toast({ title: result.message });
             setEditingItem(null);
-            fetchAssets();
+            await fetchAssets();
         } else {
             toast({ title: "保存失败", description: result.message, variant: "destructive" });
         }
@@ -685,7 +715,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         const result = await deleteProcurementItem({id});
         if (result.success) {
             toast({ title: result.message });
-            fetchAssets();
+            await fetchAssets();
         } else {
             toast({ title: "删除失败", description: result.message, variant: "destructive" });
         }
@@ -694,62 +724,120 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const handleSaveDomain = async (values: z.infer<typeof expertDomainSchema>) => {
         const result = await saveExpertDomain(values);
         if (result.success) toast({ title: result.message }); else toast({ title: "保存失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
     }
      const handleDeleteDomain = async (id: string) => {
         const result = await deleteExpertDomain({id});
         if (result.success) toast({ title: result.message }); else toast({ title: "删除失败", description: result.message, variant: "destructive" });
-        fetchAssets();
+        await fetchAssets();
     }
 
     const LlmForm = () => {
-        const form = useForm({ resolver: zodResolver(llmConnectionSchema), defaultValues: {modelName: "", provider: "", apiKey: "", type: "通用", tenantId: ""}});
+        const form = useForm({ 
+            resolver: zodResolver(llmConnectionSchema), 
+            defaultValues: { modelName: "", provider: "", apiKey: "", type: "通用", tenantId: "", status: "活跃" }
+        });
         const type = form.watch('type');
+        const [selectedProvider, setSelectedProvider] = useState<LlmProvider | null>(null);
+
+        const onProviderChange = (providerName: string) => {
+            const provider = llmProviders.find(p => p.providerName === providerName);
+            setSelectedProvider(provider || null);
+            form.setValue('provider', providerName);
+            if (provider?.models.length) {
+                form.setValue('modelName', provider.models[0]);
+            }
+        };
 
         const onSubmit = (values: z.infer<typeof llmConnectionSchema>) => {
             const finalValues = values.type === '通用' ? { ...values, tenantId: undefined } : values;
             handleSaveLlm(finalValues);
             form.reset();
+            setSelectedProvider(null);
         };
+
         return (
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
-                    <FormField control={form.control} name="modelName" render={({field}) => (<FormItem><FormControl><Input placeholder="模型名称 (例如: gemini-1.5-flash)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="provider" render={({field}) => (<FormItem><FormControl><Input placeholder="提供商 (例如: google)" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="apiKey" render={({field}) => (<FormItem><FormControl><Input placeholder="API Key" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                            <FormItem>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="通用">通用 (所有租户)</SelectItem>
-                                        <SelectItem value="专属">专属 (指定租户)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </FormItem>
-                        )}
-                    />
-                    {type === '专属' && (
-                         <FormField
-                            control={form.control}
-                            name="tenantId"
-                            render={({ field }) => (
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                    <Select onValueChange={onProviderChange}>
+                        <SelectTrigger><SelectValue placeholder="选择一个预设模型厂商..."/></SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                <SelectLabel>主流厂商</SelectLabel>
+                                {llmProviders.map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                    
+                    {selectedProvider && (
+                        <>
+                            <FormField
+                                control={form.control} name="modelName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>模型名称</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {selectedProvider.models.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage/>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField control={form.control} name="apiKey" render={({field}) => (
                                 <FormItem>
+                                    <FormLabel>API Key</FormLabel>
+                                    <FormControl><Input placeholder="在此粘贴您的 API Key" {...field}/></FormControl>
+                                    <FormDescription>{selectedProvider.apiKeyInstructions}</FormDescription>
+                                    <FormMessage/>
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="type" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>类型</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="选择一个租户..."/></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                         <SelectContent>
-                                            {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.companyName}</SelectItem>)}
+                                            <SelectItem value="通用">通用 (所有租户)</SelectItem>
+                                            <SelectItem value="专属">专属 (指定租户)</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <FormMessage />
                                 </FormItem>
+                            )} />
+                            {type === '专属' && (
+                                <FormField control={form.control} name="tenantId" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>所属租户</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="选择一个租户..."/></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {tenants.map(t => <SelectItem key={t.id} value={t.id}>{t.companyName}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
                             )}
-                        />
+                             <FormField control={form.control} name="status" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>初始状态</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="活跃">活跃</SelectItem>
+                                            <SelectItem value="已禁用">已禁用</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )} />
+                             <Button type="submit" size="sm" className="w-full !mt-4" disabled={isSubmitting}>
+                                {isSubmitting && <LoaderCircle className="animate-spin mr-2 h-4 w-4"/>}
+                                添加连接
+                            </Button>
+                        </>
                     )}
-                    <Button type="submit" size="sm" className="w-full !mt-4">添加连接</Button>
                 </form>
             </Form>
         )
@@ -832,7 +920,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                      <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                             <FormField control={form.control} name="name" render={({field}) => (<FormItem><FormLabel>领域名称</FormLabel><FormControl><Input placeholder="例如: 医疗健康专家" {...field}/></FormControl><FormMessage/></FormItem>)}/>
-                            <FormField control={form.control} name="domainId" render={({field}) => (<FormItem><FormLabel>领域ID</FormLabel><FormControl><Input placeholder="e.g., health-expert" {...field}/></FormControl><FormMessage/></FormItem>)}/>
+                            <FormField control={form.control} name="domainId" render={({field}) => (<FormItem><FormLabel>领域ID</FormLabel><FormControl><Input placeholder="e.g. health-expert" {...field}/></FormControl><FormMessage/></FormItem>)}/>
                             <Button type="submit" size="sm" className="w-full">添加领域</Button>
                         </form>
                     </Form>
@@ -841,11 +929,48 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         )
     };
 
+    const getTestResultComponent = (id: string) => {
+        const result = testResults[id];
+        if (!result) return null;
+        if (result.status === 'loading') {
+            return <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground"/>
+        }
+        if (result.status === 'success') {
+            return (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                           <CheckCircle className="h-4 w-4 text-green-500" />
+                        </TooltipTrigger>
+                         <TooltipContent>
+                           <p className="max-w-xs">{result.message}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )
+        }
+        if (result.status === 'error') {
+            return (
+                 <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                           <XCircle className="h-4 w-4 text-destructive" />
+                        </TooltipTrigger>
+                         <TooltipContent side="left">
+                           <p className="max-w-xs text-destructive">{result.message}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )
+        }
+        return null;
+    }
+
 
     return (
         <Dialog onOpenChange={(open) => { if (open) fetchAssets() }}>
             <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
-            <DialogContent className="max-w-5xl">
+            <DialogContent className="max-w-7xl">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
@@ -868,15 +993,36 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                     <CardContent>
                                         <ScrollArea className="h-[400px]">
                                             <Table>
-                                                <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>提供商</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                                <TableHeader>
+                                                  <TableRow>
+                                                    <TableHead>状态</TableHead>
+                                                    <TableHead>模型</TableHead>
+                                                    <TableHead>提供商</TableHead>
+                                                    <TableHead>类型</TableHead>
+                                                    <TableHead>校验</TableHead>
+                                                    <TableHead className="text-right">操作</TableHead>
+                                                  </TableRow>
+                                                </TableHeader>
                                                 <TableBody>
                                                     {isLoading ? (
-                                                        <TableRow><TableCell colSpan={4} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                                        <TableRow><TableCell colSpan={6} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                                                     ) : llmConnections.map(model => (
                                                         <TableRow key={model.id}>
+                                                            <TableCell>
+                                                                <Switch 
+                                                                    checked={model.status === '活跃'}
+                                                                    onCheckedChange={(checked) => handleSaveLlm({...model, status: checked ? '活跃' : '已禁用'})}
+                                                                />
+                                                            </TableCell>
                                                             <TableCell className="font-medium">{model.modelName}</TableCell>
                                                             <TableCell>{model.provider}</TableCell>
                                                             <TableCell><Badge variant={model.type === '通用' ? 'secondary' : 'outline'}>{model.type}</Badge></TableCell>
+                                                            <TableCell className="flex items-center gap-2">
+                                                                <Button variant="outline" size="sm" onClick={() => handleTestLlm(model)} disabled={!!testResults[model.id] && testResults[model.id].status === 'loading'}>
+                                                                    校验
+                                                                </Button>
+                                                                {getTestResultComponent(model.id)}
+                                                            </TableCell>
                                                             <TableCell className="text-right">
                                                                 <Button variant="ghost" size="icon" onClick={() => handleDeleteLlm(model.id)}>
                                                                     <Trash2 className="h-4 w-4 text-destructive/80"/>
@@ -892,7 +1038,17 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                             </div>
                             <div>
                                 <Card>
-                                    <CardHeader><CardTitle>添加新连接</CardTitle></CardHeader>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-center">
+                                             <CardTitle>添加新连接</CardTitle>
+                                              <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline" size="icon" className="h-7 w-7"><Settings className="h-4 w-4"/></Button>
+                                                </DialogTrigger>
+                                                {/* Manage LLM Providers Dialog would go here */}
+                                              </Dialog>
+                                        </div>
+                                    </CardHeader>
                                     <CardContent><LlmForm /></CardContent>
                                 </Card>
                             </div>

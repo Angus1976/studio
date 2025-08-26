@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -257,9 +256,20 @@ export const LlmConnectionSchema = z.object({
   apiKey: z.string(),
   type: z.enum(["通用", "专属"]),
   tenantId: z.string().optional(),
+  status: z.enum(["活跃", "已禁用"]),
+  lastChecked: z.string().optional(),
   createdAt: z.string(),
 });
 export type LlmConnection = z.infer<typeof LlmConnectionSchema>;
+
+export const LlmProviderSchema = z.object({
+  id: z.string(),
+  providerName: z.string(),
+  apiUrl: z.string().optional(),
+  apiKeyInstructions: z.string(),
+  models: z.array(z.string()),
+});
+export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 
 export const TokenAllocationSchema = z.object({
     id: z.string(),

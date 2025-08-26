@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset, ExpertDomain, LlmProvider } from '@/lib/data-types';
 
 // --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -417,22 +417,28 @@ export async function getApiKeys(input: { tenantId: string }): Promise<ApiKey[]>
 // --- Platform Asset Management ---
 const toISODate = (timestamp: any) => timestamp?.toDate ? timestamp.toDate().toISOString() : new Date().toISOString();
 
-export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], tokenAllocations: TokenAllocation[], softwareAssets: SoftwareAsset[], expertDomains: ExpertDomain[] }> {
+export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], tokenAllocations: TokenAllocation[], softwareAssets: SoftwareAsset[], expertDomains: ExpertDomain[], llmProviders: LlmProvider[] }> {
     const db = admin.firestore();
     try {
-        const [llmSnapshot, tokenSnapshot, assetSnapshot, domainSnapshot] = await Promise.all([
+        const [llmSnapshot, tokenSnapshot, assetSnapshot, domainSnapshot, providerSnapshot] = await Promise.all([
             db.collection('llm_connections').orderBy('createdAt', 'desc').get(),
             db.collection('token_allocations').orderBy('createdAt', 'desc').get(),
             db.collection('software_assets').orderBy('createdAt', 'desc').get(),
-            db.collection('expert_domains').orderBy('name').get()
+            db.collection('expert_domains').orderBy('name').get(),
+            db.collection('llm_providers').orderBy('providerName').get()
         ]);
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as LlmConnection));
         const tokenAllocations: TokenAllocation[] = tokenSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as TokenAllocation));
         const softwareAssets: SoftwareAsset[] = assetSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: toISODate(doc.data().createdAt) } as SoftwareAsset));
         const expertDomains: ExpertDomain[] = domainSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpertDomain));
+        let llmProviders: LlmProvider[] = providerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmProvider));
+        
+        if (llmProviders.length === 0) {
+            llmProviders = await initializeLlmProviders();
+        }
 
-        return { llmConnections, tokenAllocations, softwareAssets, expertDomains };
+        return { llmConnections, tokenAllocations, softwareAssets, expertDomains, llmProviders };
     } catch (error) {
         console.error("Error fetching platform assets:", error);
         throw new Error('无法从数据库加载平台资产。');
@@ -441,7 +447,13 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
 
 const SaveLlmConnectionSchema = z.object({
     id: z.string().optional(),
-    modelName: z.string(), provider: z.string(), apiKey: z.string(), type: z.enum(["通用", "专属"]), tenantId: z.string().optional()
+    modelName: z.string(), 
+    provider: z.string(), 
+    apiKey: z.string(), 
+    type: z.enum(["通用", "专属"]), 
+    status: z.enum(["活跃", "已禁用"]),
+    tenantId: z.string().optional(),
+    lastChecked: z.string().optional(),
 });
 export async function saveLlmConnection(input: z.infer<typeof SaveLlmConnectionSchema>): Promise<{ success: boolean; message: string; }> {
     const db = admin.firestore();
@@ -461,6 +473,33 @@ export async function deleteLlmConnection(input: { id: string }): Promise<{ succ
         await admin.firestore().collection('llm_connections').doc(input.id).delete();
         return { success: true, message: "LLM连接已删除" };
     } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+export async function testLlmConnection(input: LlmConnection): Promise<{ success: boolean; message: string }> {
+  try {
+    const testPrompt = {
+      modelId: input.id,
+      userPrompt: '你好，请确认你可以正常回复。',
+      temperature: 0.1,
+    };
+    
+    // Temporarily require the prompt-execution-flow.
+    // This creates a temporary circular dependency but is acceptable for this specific isolated use case.
+    const { executePrompt } = require('./prompt-execution-flow');
+    const result = await executePrompt(testPrompt);
+
+    if (result && result.response && !result.response.includes('发生错误')) {
+      await admin.firestore().collection('llm_connections').doc(input.id).set({
+        lastChecked: new Date().toISOString(),
+      }, { merge: true });
+      return { success: true, message: `连接成功！模型回复：${result.response.substring(0, 50)}...` };
+    } else {
+      return { success: false, message: `连接失败。${result.response}` };
+    }
+  } catch (e: any) {
+    console.error('LLM Connection test failed:', e);
+    return { success: false, message: `发生严重错误：${e.message}` };
+  }
 }
 
 const SaveTokenAllocationSchema = z.object({
@@ -622,4 +661,67 @@ export async function deleteExpertDomain(input: { id: string }): Promise<{ succe
     } catch (e: any) {
         return { success: false, message: e.message };
     }
+}
+
+// --- LLM Provider Preset Management ---
+async function initializeLlmProviders(): Promise<LlmProvider[]> {
+    const db = admin.firestore();
+    const defaultProviders: Omit<LlmProvider, 'id'>[] = [
+        { providerName: 'Google', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/', apiKeyInstructions: '从 Google AI Studio 获取', models: ['gemini-1.5-pro', 'gemini-1.5-flash'] },
+        { providerName: 'OpenAI', apiUrl: 'https://api.openai.com/v1', apiKeyInstructions: '从 OpenAI Platform 获取', models: ['gpt-4o', 'gpt-4-turbo'] },
+        { providerName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1', apiKeyInstructions: '从 DeepSeek 控制台获取', models: ['deepseek-chat', 'deepseek-coder'] },
+        { providerName: 'Anthropic', apiUrl: '', apiKeyInstructions: '从 Anthropic 控制台获取', models: ['claude-3-opus-20240229', 'claude-3.5-sonnet-20240620'] },
+        { providerName: '阿里云', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKeyInstructions: '从阿里百炼控制台获取', models: ['qwen-max', 'qwen-long'] },
+        { providerName: '字节跳动', apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/', apiKeyInstructions: '从火山方舟控制台获取', models: ['doubao-pro-128k', 'doubao-pro-32k'] },
+    ];
+    const batch = db.batch();
+    const createdDocs: LlmProvider[] = [];
+    defaultProviders.forEach(provider => {
+        const docRef = db.collection('llm_providers').doc();
+        batch.set(docRef, provider);
+        createdDocs.push({ id: docRef.id, ...provider });
+    });
+    await batch.commit();
+    return createdDocs;
+}
+
+export async function getLlmProviders(): Promise<LlmProvider[]> {
+    const db = admin.firestore();
+    try {
+        const snapshot = await db.collection('llm_providers').orderBy('providerName').get();
+        if (snapshot.empty) {
+            return await initializeLlmProviders();
+        }
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmProvider));
+    } catch (error) {
+        console.error("Error fetching LLM providers:", error);
+        throw new Error('无法从数据库加载LLM供应商列表。');
+    }
+}
+
+const SaveLlmProviderSchema = z.object({
+  id: z.string().optional(),
+  providerName: z.string(),
+  apiUrl: z.string().optional(),
+  apiKeyInstructions: z.string(),
+  models: z.array(z.string()),
+});
+export async function saveLlmProvider(input: z.infer<typeof SaveLlmProviderSchema>): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('llm_providers').doc(id).set(data, { merge: true });
+        } else {
+            await db.collection('llm_providers').add(data);
+        }
+        return { success: true, message: "预设模型信息已保存" };
+    } catch (e: any) { return { success: false, message: e.message }; }
+}
+
+export async function deleteLlmProvider(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    try {
+        await admin.firestore().collection('llm_providers').doc(input.id).delete();
+        return { success: true, message: "预设模型信息已删除" };
+    } catch (e: any) { return { success: false, message: e.message }; }
 }
