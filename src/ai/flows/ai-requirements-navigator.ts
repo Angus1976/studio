@@ -17,22 +17,26 @@ import type { LlmConnection } from '@/lib/data-types';
 
 
 // Helper function to find the first available general-purpose LLM connection
-async function getGeneralLlmConnection(): Promise<LlmConnection> {
+async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
-    // In a real app, you might have more sophisticated logic to select a model.
-    // For now, let's find one marked as '通用' (General Purpose).
-    const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
-    if (snapshot.empty) {
+    try {
+        const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
+        if (!snapshot.empty) {
+            const doc = snapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as LlmConnection;
+        }
         // Fallback to any model if no general one is found.
         const anySnapshot = await db.collection('llm_connections').limit(1).get();
-        if (anySnapshot.empty) {
-            throw new Error("No LLM connections configured in the database.");
+        if (!anySnapshot.empty) {
+            const doc = anySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as LlmConnection;
         }
-        const doc = anySnapshot.docs[0];
-        return { id: doc.id, ...doc.data() } as LlmConnection;
+        // Return null if no models are configured at all.
+        return null;
+    } catch (error) {
+        console.error("Error fetching LLM connection from database:", error);
+        return null;
     }
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as LlmConnection;
 }
 
 
@@ -68,6 +72,13 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
     }
     
     const llmConnection = await getGeneralLlmConnection();
+    if (!llmConnection) {
+        return {
+            response: "抱歉，当前平台没有配置可用的AI模型。请联系管理员进行配置后重试。",
+            isFinished: true, // End the conversation as no action can be taken.
+        };
+    }
+
 
     const lastMessage = input.conversationHistory[input.conversationHistory.length - 1];
     

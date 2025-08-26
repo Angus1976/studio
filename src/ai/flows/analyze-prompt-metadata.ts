@@ -18,19 +18,26 @@ import type { LlmConnection } from '@/lib/data-types';
 
 
 // Helper function to find the first available general-purpose LLM connection
-async function getGeneralLlmConnection(): Promise<LlmConnection> {
+async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
-    const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
-    if (snapshot.empty) {
-        const anySnapshot = await db.collection('llm_connections').limit(1).get();
-        if (anySnapshot.empty) {
-            throw new Error("No LLM connections configured in the database.");
+     try {
+        const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
+        if (!snapshot.empty) {
+            const doc = snapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as LlmConnection;
         }
-        const doc = anySnapshot.docs[0];
-        return { id: doc.id, ...doc.data() } as LlmConnection;
+        // Fallback to any model if no general one is found.
+        const anySnapshot = await db.collection('llm_connections').limit(1).get();
+        if (!anySnapshot.empty) {
+            const doc = anySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as LlmConnection;
+        }
+        // Return null if no models are configured at all.
+        return null;
+    } catch (error) {
+        console.error("Error fetching LLM connection from database:", error);
+        return null;
     }
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as LlmConnection;
 }
 
 
@@ -53,6 +60,9 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     if (input.negativePrompt) userPromptContent += `\n\n[Negative Prompt]:\n${input.negativePrompt}`;
     
     const llmConnection = await getGeneralLlmConnection();
+    if (!llmConnection) {
+      throw new Error("无法分析元数据，因为平台当前没有配置可用的AI模型。请联系管理员。");
+    }
     
     // We need to ask the model to produce JSON. A good way is to add it to the prompt.
     const finalUserPrompt = `${systemInstruction}\n\n${userPromptContent}\n\n请严格以JSON格式返回你的分析结果。`;

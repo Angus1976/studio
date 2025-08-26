@@ -74,7 +74,8 @@ export async function executePrompt(
 ): Promise<PromptExecutionOutput> {
     const { modelId } = input;
     if (!modelId) {
-        throw new Error("A modelId is required to execute the prompt.");
+        // This case handles when a model ID is not provided by the calling function.
+        return { response: "抱歉，执行操作所需的模型ID缺失。请在调用时提供一个模型。" };
     }
     
     // 1. Fetch the model connection details from Firestore
@@ -83,7 +84,8 @@ export async function executePrompt(
     const modelDoc = await modelRef.get();
 
     if (!modelDoc.exists) {
-        throw new Error(`Model with ID '${modelId}' not found in the database.`);
+        // This case handles when the provided model ID doesn't exist in the database.
+         return { response: `抱歉，无法找到ID为'${modelId}'的模型配置。请检查后台配置或联系管理员。` };
     }
 
     const modelData = LlmConnectionSchema.omit({createdAt: true, id: true}).parse(modelDoc.data());
@@ -130,6 +132,7 @@ export async function executePrompt(
 
     } catch (error: any) {
         console.error(`Error calling ${provider} API:`, error);
-        throw new Error(`Failed to execute prompt with model ${modelName}: ${error.message}`);
+        // Instead of re-throwing, return a user-friendly error message.
+        return { response: `调用模型'${modelName}'时发生错误，请稍后重试或联系管理员。错误详情: ${error.message}`};
     }
 }

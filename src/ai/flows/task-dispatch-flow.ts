@@ -19,19 +19,26 @@ import type { LlmConnection } from '@/lib/data-types';
 
 
 // Helper function to find the first available general-purpose LLM connection
-async function getGeneralLlmConnection(): Promise<LlmConnection> {
+async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
-    const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
-    if (snapshot.empty) {
-        const anySnapshot = await db.collection('llm_connections').limit(1).get();
-        if (anySnapshot.empty) {
-            throw new Error("No LLM connections configured in the database.");
+    try {
+        const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
+        if (!snapshot.empty) {
+            const doc = snapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as LlmConnection;
         }
-        const doc = anySnapshot.docs[0];
-        return { id: doc.id, ...doc.data() } as LlmConnection;
+        // Fallback to any model if no general one is found.
+        const anySnapshot = await db.collection('llm_connections').limit(1).get();
+        if (!anySnapshot.empty) {
+            const doc = anySnapshot.docs[0];
+            return { id: doc.id, ...doc.data() } as LlmConnection;
+        }
+        // Return null if no models are configured at all.
+        return null;
+    } catch (error) {
+        console.error("Error fetching LLM connection from database:", error);
+        return null;
     }
-    const doc = snapshot.docs[0];
-    return { id: doc.id, ...doc.data() } as LlmConnection;
 }
 
 
@@ -68,6 +75,14 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
 `;
     
     const llmConnection = await getGeneralLlmConnection();
+    if (!llmConnection) {
+       return {
+            planSummary: "抱歉，当前平台没有配置可用的AI模型，无法为您规划任务。请联系管理员。",
+            tasks: [],
+            isClarificationNeeded: true,
+       }
+    }
+
     
     const fullPrompt = `${systemPrompt}\n\nUser command: "${input.userCommand}"\n\nPlease provide your response as a single JSON object.`;
 
