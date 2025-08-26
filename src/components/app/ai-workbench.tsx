@@ -12,7 +12,7 @@ import { getPrompts } from '@/ai/flows/get-prompts-flow';
 import type { Prompt } from '@/lib/data-types';
 import { TaskDispatchCenter } from './task-dispatch-center';
 import { Button } from '../ui/button';
-import { Lightbulb, Wand2 } from 'lucide-react';
+import { Lightbulb, Wand2, Bot, BookCopy, TestTube2, AlertTriangle, Workflow } from 'lucide-react';
 import { Card } from '../ui/card';
 import { CollapsiblePanel, CollapsiblePanelHeader } from './layouts/collapsible-panel';
 
@@ -106,6 +106,11 @@ export function AIWorkbench() {
         if (workbenchMode === 'expert') {
             return (
                 <CollapsiblePanel id="left-panel">
+                    <CollapsiblePanelHeader>
+                        <span className="flex items-center gap-2">
+                           <Workflow className="h-5 w-5" /> AI 智能工作台
+                        </span>
+                    </CollapsiblePanelHeader>
                     <div className="p-4 h-full">
                         <TaskDispatchCenter />
                     </div>
@@ -114,6 +119,11 @@ export function AIWorkbench() {
         }
         return (
             <CollapsiblePanel id="left-panel">
+                <CollapsiblePanelHeader>
+                    <span className="flex items-center gap-2">
+                        <Bot className="h-5 w-5" /> AI 需求导航器
+                    </span>
+                </CollapsiblePanelHeader>
                 <div className="p-4 h-full">
                     <RequirementsNavigator onFinish={handleNavigationFinish} />
                 </div>
@@ -129,57 +139,74 @@ export function AIWorkbench() {
                     切换到{workbenchMode === 'guide' ? "专家模式" : "引导模式"}
                 </Button>
             </div>
-            <ThreeColumnLayout autoSaveId="ai-workbench-layout">
-                <ThreeColumnLayout.Left id="left-panel" defaultSize={25} minSize={20} maxSize={40}>
-                    <LeftPanel />
-                </ThreeColumnLayout.Left>
-                
-                <ThreeColumnLayout.Handle withHandle />
+            <div className="flex-1 p-4 md:p-6 lg:p-8 h-full">
+                <ThreeColumnLayout autoSaveId="ai-workbench-layout">
+                    <ThreeColumnLayout.Left id="left-panel" defaultSize={25} minSize={20} maxSize={40}>
+                        <LeftPanel />
+                    </ThreeColumnLayout.Left>
+                    
+                    <ThreeColumnLayout.Handle withHandle />
 
-                {workbenchMode === 'guide' ? (
-                    <>
-                        <ThreeColumnLayout.Main id="main-panel" defaultSize={45} minSize={30}>
-                             <CollapsiblePanel id="main-panel">
-                                <div className="p-4 h-full flex flex-col gap-4">
-                                    <ScenarioLibraryViewer
-                                        scenarios={recommendedScenarios}
-                                        isLoading={isLoading && !expertId}
-                                        onSelect={handleSelectScenario}
-                                        onTune={handleTuneScenario}
-                                    />
-                                    {tuningScenario && (
-                                        <ScenarioArchitectView
-                                            scenario={tuningScenario}
-                                            onSave={handleSaveTunedScenario}
-                                            onCancel={handleCancelTuning}
+                    {workbenchMode === 'guide' ? (
+                        <>
+                            <ThreeColumnLayout.Main id="main-panel" defaultSize={45} minSize={30}>
+                                <CollapsiblePanel id="main-panel">
+                                     <CollapsiblePanelHeader>
+                                        <span className="flex items-center gap-2">
+                                            <BookCopy className="h-5 w-5" /> 能力场景推荐与微调
+                                        </span>
+                                    </CollapsiblePanelHeader>
+                                    <div className="p-4 h-full flex flex-col gap-4 overflow-y-auto">
+                                        <ScenarioLibraryViewer
+                                            scenarios={recommendedScenarios}
+                                            isLoading={isLoading && !expertId}
+                                            onSelect={handleSelectScenario}
+                                            onTune={handleTuneScenario}
                                         />
-                                    )}
+                                        {tuningScenario && (
+                                            <ScenarioArchitectView
+                                                scenario={tuningScenario}
+                                                onSave={handleSaveTunedScenario}
+                                                onCancel={handleCancelTuning}
+                                            />
+                                        )}
+                                    </div>
+                                </CollapsiblePanel>
+                            </ThreeColumnLayout.Main>
+
+                            <ThreeColumnLayout.Handle withHandle />
+
+                            <ThreeColumnLayout.Right id="right-panel" defaultSize={30} minSize={25} maxSize={40}>
+                                <CollapsiblePanel id="right-panel">
+                                     <CollapsiblePanelHeader>
+                                        <span className="flex items-center gap-2">
+                                            <TestTube2 className="h-5 w-5" /> 操作面板
+                                        </span>
+                                    </CollapsiblePanelHeader>
+                                    <div className="p-4 h-full overflow-y-auto">
+                                        <UserActionPanel scenario={selectedScenario} />
+                                    </div>
+                                </CollapsiblePanel>
+                            </ThreeColumnLayout.Right>
+                        </>
+                    ) : (
+                        <ThreeColumnLayout.Main id="expert-main" defaultSize={75} minSize={30}>
+                            <CollapsiblePanel id="expert-main">
+                                <CollapsiblePanelHeader>
+                                    <span className="flex items-center gap-2">
+                                        <AlertTriangle className="h-5 w-5" /> 任务历史与结果
+                                    </span>
+                                </CollapsiblePanelHeader>
+                               <div className="p-4 h-full">
+                                    <Card className="h-full flex items-center justify-center text-center">
+                                       <p className="text-muted-foreground">专家模式的任务历史和结果区域将在此处显示。</p>
+                                    </Card>
                                 </div>
                             </CollapsiblePanel>
                         </ThreeColumnLayout.Main>
-
-                        <ThreeColumnLayout.Handle withHandle />
-
-                        <ThreeColumnLayout.Right id="right-panel" defaultSize={30} minSize={25} maxSize={40}>
-                             <CollapsiblePanel id="right-panel">
-                                <div className="p-4 h-full">
-                                    <UserActionPanel scenario={selectedScenario} />
-                                </div>
-                            </CollapsiblePanel>
-                        </ThreeColumnLayout.Right>
-                    </>
-                ) : (
-                    <ThreeColumnLayout.Main id="expert-main" defaultSize={75} minSize={30}>
-                        <CollapsiblePanel id="expert-main">
-                           <div className="p-4 h-full">
-                                <Card className="h-full flex items-center justify-center text-center">
-                                   <p className="text-muted-foreground">专家模式的任务历史和结果区域将在此处显示。</p>
-                                </Card>
-                            </div>
-                        </CollapsiblePanel>
-                    </ThreeColumnLayout.Main>
-                )}
-            </ThreeColumnLayout>
+                    )}
+                </ThreeColumnLayout>
+            </div>
         </div>
     );
 }
