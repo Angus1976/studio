@@ -11,22 +11,21 @@ const CollapsiblePanelContext = React.createContext<{ id: string }>({ id: '' });
 
 export function CollapsiblePanelHeader({ children }: { children: React.ReactNode }) {
   const { id } = React.useContext(CollapsiblePanelContext);
-  const { getPanelState, maximizePanel, minimizePanel, closePanel, openPanel } = usePanel();
+  const { getPanelState, maximizePanel, minimizePanel, closePanel, openPanel, maximizedPanel } = usePanel();
   
   const panelState = getPanelState(id);
-  const isMaximized = panelState === 'collapsed';
-  const isClosed = panelState === 'closed';
+  const isMaximized = maximizedPanel === id;
 
-  if (isClosed) {
+  if (panelState === 'closed') {
       return (
           <div className="flex items-center justify-between px-4 py-2 border-b">
-              <div className="flex-1 font-semibold text-muted-foreground">{children} (Closed)</div>
+              <div className="flex-1 font-semibold text-muted-foreground truncate pr-2">{children} (已关闭)</div>
               <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => openPanel(id)}
-                  title="Open panel"
+                  title="打开面板"
               >
                   <PanelBottomClose className="h-4 w-4" />
                   <span className="sr-only">打开</span>
@@ -54,7 +53,7 @@ export function CollapsiblePanelHeader({ children }: { children: React.ReactNode
             size="icon"
             className="h-7 w-7"
             onClick={() => closePanel(id)}
-            title="Close panel"
+            title="关闭面板"
           >
             <PanelTopClose className="h-4 w-4" />
             <span className="sr-only">关闭</span>
@@ -64,16 +63,36 @@ export function CollapsiblePanelHeader({ children }: { children: React.ReactNode
   );
 }
 
-export function CollapsiblePanel({ id, children }: { id: string, children: React.ReactNode }) {
+export function CollapsiblePanel({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
   const { getPanelState } = usePanel();
   
-  if (getPanelState(id) === 'closed') {
-      return null;
+  const state = getPanelState(id);
+
+  if (state === 'closed') {
+      // Return a placeholder with the header to allow re-opening
+      return (
+          <div className="flex flex-col h-full bg-card rounded-lg border">
+              <CollapsiblePanelContext.Provider value={{ id }}>
+                  {children}
+              </CollapsiblePanelContext.Provider>
+          </div>
+      );
   }
+
 
   return (
     <CollapsiblePanelContext.Provider value={{ id }}>
-        <div className="flex-1 flex flex-col h-full">{children}</div>
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {React.Children.map(children, (child) => {
+                if (React.isValidElement(child) && child.type === CollapsiblePanelHeader) {
+                    return child;
+                }
+                if (React.isValidElement(child) && state !== 'closed') {
+                    return child;
+                }
+                return null;
+            })}
+        </div>
     </CollapsiblePanelContext.Provider>
   );
 }

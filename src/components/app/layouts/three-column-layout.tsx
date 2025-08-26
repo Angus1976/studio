@@ -70,7 +70,7 @@ const ThreeColumnLayout = ({
 
   const getPanelState = (id: string) => {
     if (closedPanels.includes(id)) return "closed";
-    if (maximizedPanel === id) return "collapsed"; // 'collapsed' here means it's maximized for the toggle logic
+    if (maximizedPanel === id) return "expanded"; // 'expanded' means it is not collapsed or closed
     return "expanded";
   };
 
@@ -78,8 +78,10 @@ const ThreeColumnLayout = ({
     const group = panelGroupRef.current;
     if (!group) return;
 
-    if (!lastLayoutRef.current || lastLayoutRef.current.length === 0) {
-      lastLayoutRef.current = group.getLayout();
+    const currentLayout = group.getLayout();
+    if (!maximizedPanel) {
+        // If no panel is maximized, save the current layout before maximizing
+        lastLayoutRef.current = currentLayout;
     }
     
     const panelIds = getPanelIds();
@@ -100,32 +102,23 @@ const ThreeColumnLayout = ({
     if (!group) return;
 
     let layoutToRestore = lastLayoutRef.current;
-    const panelCount = getPanelIds().length;
+    const panelIds = getPanelIds();
+    const panelCount = panelIds.length;
 
      if (!layoutToRestore || layoutToRestore.length !== panelCount) {
-        if (panelCount > 0) {
-           const defaultSize = 100 / panelCount;
-           layoutToRestore = Array(panelCount).fill(defaultSize);
-        } else {
-            layoutToRestore = [25, 45, 30]; // Default fallback for 3 panels
-        }
-    }
+        const defaultSize = 100 / panelCount;
+        layoutToRestore = Array(panelCount).fill(defaultSize);
+     }
     
-    // Ensure the restored layout doesn't contain closed panels
-    const panelIds = getPanelIds();
     const finalLayout = layoutToRestore.map((size, index) => {
         return closedPanels.includes(panelIds[index]) ? 0 : size;
     });
     
-    // Normalize layout to sum to 100
     const totalSize = finalLayout.reduce((acc, size) => acc + size, 0);
     if (totalSize > 0 && totalSize !== 100) {
         const factor = 100 / totalSize;
-        for(let i=0; i<finalLayout.length; i++) {
-            finalLayout[i] *= factor;
-        }
+        finalLayout.forEach((_, i) => finalLayout[i] *= factor);
     }
-
 
     group.setLayout(finalLayout);
     setMaximizedPanel(null);
@@ -137,24 +130,23 @@ const ThreeColumnLayout = ({
     
     const panelIds = getPanelIds();
     const panelIndex = panelIds.indexOf(id);
-
     if (panelIndex === -1) return;
 
     lastLayoutRef.current = group.getLayout();
     const newLayout = [...lastLayoutRef.current];
+    const sizeToDistribute = newLayout[panelIndex];
     newLayout[panelIndex] = 0;
     
-    // Redistribute space
-    const totalSize = newLayout.reduce((acc, size) => acc + size, 0);
-    if(totalSize > 0 && totalSize !== 100) {
-        const factor = 100 / totalSize;
+    const openPanels = newLayout.filter(size => size > 0);
+    if(openPanels.length > 0) {
+        const spacePerPanel = sizeToDistribute / openPanels.length;
         for(let i=0; i<newLayout.length; i++) {
-            if(i !== panelIndex) {
-                 newLayout[i] *= factor;
+            if(newLayout[i] > 0) {
+                 newLayout[i] += spacePerPanel;
             }
         }
     }
-
+    
     group.setLayout(newLayout);
     setClosedPanels(prev => [...new Set([...prev, id])]);
   };
@@ -170,13 +162,15 @@ const ThreeColumnLayout = ({
       const currentLayout = group.getLayout();
       const layoutToRestore = lastLayoutRef.current || Array(panelIds.length).fill(100/panelIds.length);
       
-      currentLayout[panelIndex] = layoutToRestore[panelIndex] || 25; // Restore to previous size or a default
+      const sizeToRestore = layoutToRestore[panelIndex] || 25; // Restore to previous size or a default
+      currentLayout[panelIndex] = sizeToRestore;
 
-      // Normalize the rest
-      const totalSize = currentLayout.reduce((acc, size) => acc + size, 0);
-      if(totalSize > 0 && totalSize !== 100) {
-          const factor = 100 / totalSize;
-          for(let i=0; i<currentLayout.length; i++) {
+      // Normalize the rest by taking space from other open panels
+      const otherOpenPanelsTotalSize = currentLayout.reduce((acc, size, i) => (i !== panelIndex && size > 0 ? acc + size : acc), 0);
+      const factor = (100 - sizeToRestore) / otherOpenPanelsTotalSize;
+
+      for (let i=0; i < currentLayout.length; i++) {
+          if (i !== panelIndex && currentLayout[i] > 0) {
               currentLayout[i] *= factor;
           }
       }
@@ -194,6 +188,15 @@ const ThreeColumnLayout = ({
     maximizedPanel,
     closedPanels,
   };
+
+  const visibleChildren = React.Children.toArray(children).filter(child => {
+      if (!React.isValidElement(child)) return true;
+      if (!maximizedPanel) return true;
+      if (child.type === Left || child.type === Main || child.type === Right) {
+          return child.props.id === maximizedPanel;
+      }
+      return true; // Always show handles
+  });
 
 
   return (
@@ -220,16 +223,8 @@ const PanelComponent: React.FC<PanelComponentProps> = ({
   id,
   ...props
 }) => {
-    const { maximizedPanel } = usePanel();
-    const isThisMaximized = maximizedPanel === id;
-
-    // This component should not hide itself based on closedPanels state,
-    // because ResizablePanel itself must always be rendered for the layout logic to work.
-    // The visual hiding is managed by setting its size to 0.
-    // The "closed" state is handled by the CollapsiblePanel wrapper.
-    if (maximizedPanel && !isThisMaximized) {
-        return null;
-    }
+    const { getPanelState } = usePanel();
+    const state = getPanelState(id);
     
   return (
     <ResizablePanel
@@ -239,10 +234,17 @@ const PanelComponent: React.FC<PanelComponentProps> = ({
         className
       )}
       collapsible
+      collapsedSize={0}
       {...props}
     >
       <div className="flex-1 flex flex-col h-full">
-        {children}
+        {state !== 'closed' ? children : (
+            <div className="flex-1 flex flex-col h-full">
+                {React.Children.map(children, child =>
+                    React.isValidElement(child) && child.type === CollapsiblePanelHeader ? child : null
+                )}
+            </div>
+        )}
       </div>
     </ResizablePanel>
   );
@@ -260,3 +262,4 @@ ThreeColumnLayout.Right = Right;
 ThreeColumnLayout.Handle = ResizableHandle;
 
 export { ThreeColumnLayout };
+

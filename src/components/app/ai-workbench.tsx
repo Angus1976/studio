@@ -102,35 +102,22 @@ export function AIWorkbench() {
         setTuningScenario(null);
     };
     
-    const LeftPanel = () => {
+    const LeftPanelContent = () => {
         if (workbenchMode === 'expert') {
-            return (
-                <CollapsiblePanel id="left-panel">
-                    <CollapsiblePanelHeader>
-                        <span className="flex items-center gap-2">
-                           <Workflow className="h-5 w-5" /> AI 智能工作台
-                        </span>
-                    </CollapsiblePanelHeader>
-                    <div className="p-4 h-full">
-                        <TaskDispatchCenter />
-                    </div>
-                </CollapsiblePanel>
-            );
+            return <TaskDispatchCenter />;
         }
-        return (
-            <CollapsiblePanel id="left-panel">
-                <CollapsiblePanelHeader>
-                    <span className="flex items-center gap-2">
-                        <Bot className="h-5 w-5" /> AI 需求导航器
-                    </span>
-                </CollapsiblePanelHeader>
-                <div className="p-4 h-full">
-                    <RequirementsNavigator onFinish={handleNavigationFinish} />
-                </div>
-            </CollapsiblePanel>
-        );
+        return <RequirementsNavigator onFinish={handleNavigationFinish} />;
     };
     
+    const LeftPanelHeader = () => (
+        <CollapsiblePanelHeader>
+            <span className="flex items-center gap-2">
+                {workbenchMode === 'expert' ? <Workflow className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                {workbenchMode === 'expert' ? 'AI 智能工作台' : 'AI 需求导航器'}
+            </span>
+        </CollapsiblePanelHeader>
+    );
+
     return (
         <div className="h-full flex flex-col">
              <div className="p-4 border-b">
@@ -139,10 +126,15 @@ export function AIWorkbench() {
                     切换到{workbenchMode === 'guide' ? "专家模式" : "引导模式"}
                 </Button>
             </div>
-            <div className="flex-1 p-4 md:p-6 lg:p-8 h-full">
+            <div className="flex-1 p-4 md:p-6 lg:p-8 h-[calc(100%-73px)]">
                 <ThreeColumnLayout autoSaveId="ai-workbench-layout">
                     <ThreeColumnLayout.Left id="left-panel" defaultSize={25} minSize={20} maxSize={40}>
-                        <LeftPanel />
+                        <CollapsiblePanel id="left-panel">
+                            <LeftPanelHeader />
+                            <div className="p-4 h-full">
+                                <LeftPanelContent />
+                            </div>
+                        </CollapsiblePanel>
                     </ThreeColumnLayout.Left>
                     
                     <ThreeColumnLayout.Handle withHandle />
