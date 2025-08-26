@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,39 +11,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PackageSearch, BookCopy, LoaderCircle, Trash2, Bot } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import type { Prompt, ExpertDomain } from '@/lib/data-types';
-import { getExpertDomains } from '@/ai/flows/admin-management-flows';
-import { useToast } from '@/hooks/use-toast';
+import type { Prompt } from '@/lib/data-types';
+
+const expertDomainsMap: Record<string, string> = {
+    'general-expert': '通用专家',
+    'recruitment-expert': '招聘专家',
+    'marketing-expert': '营销专家',
+    'code-expert': '代码专家',
+    'sales-expert': '销售专家',
+    'copywriting-expert': '文案专家',
+};
 
 
 export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeletePrompt }: { prompts: Prompt[], onSelectPrompt: (prompt: Prompt) => void, isLoading: boolean, onDeletePrompt: (promptId: string) => void }) {
-    const { toast } = useToast();
     const [search, setSearch] = useState('');
-    const [expertDomainsMap, setExpertDomainsMap] = useState<Record<string, string>>({});
-    const [isLoadingDomains, setIsLoadingDomains] = useState(true);
-
-    useEffect(() => {
-        async function fetchDomains() {
-            try {
-                const domains = await getExpertDomains();
-                const domainMap = domains.reduce((acc, domain) => {
-                    acc[domain.id] = domain.name;
-                    return acc;
-                }, {} as Record<string, string>);
-                setExpertDomainsMap(domainMap);
-            } catch (error) {
-                console.error("Failed to fetch expert domains:", error);
-                toast({
-                    title: "加载专家领域失败",
-                    description: "无法获取领域列表用于显示。",
-                    variant: "destructive",
-                });
-            } finally {
-                setIsLoadingDomains(false);
-            }
-        }
-        fetchDomains();
-    }, [toast]);
 
     const filteredPrompts = prompts.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
@@ -80,7 +61,7 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading || isLoadingDomains ? (
+                            {isLoading ? (
                                 Array.from({ length: 4 }).map((_, i) => (
                                     <TableRow key={i}>
                                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -138,3 +119,5 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
         </Card>
     );
 }
+
+    

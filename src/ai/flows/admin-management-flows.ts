@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, TokenAllocation, SoftwareAsset } from '@/lib/data-types';
 
 // --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -556,34 +556,4 @@ export async function deleteProcurementItem(input: { id: string }): Promise<{ su
     }
 }
 
-// --- Expert Domain Management ---
-export async function getExpertDomains(): Promise<ExpertDomain[]> {
-    const db = admin.firestore();
-    try {
-        const snapshot = await db.collection('expert_domains').orderBy('name').get();
-        return snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
-    } catch (error) {
-        console.error("Error fetching expert domains:", error);
-        throw new Error('无法从数据库加载专家领域。');
-    }
-}
-
-const ExpertDomainSchema = z.object({
-  id: z.string().min(1).regex(/^[a-z0-9-]+$/, "ID 只能包含小写字母、数字和连字符"),
-  name: z.string().min(1),
-});
-export async function saveExpertDomain(input: z.infer<typeof ExpertDomainSchema>): Promise<{ success: boolean, message: string }> {
-    const db = admin.firestore();
-    try {
-        // Use the specified ID as the document ID for 'set'
-        await db.collection('expert_domains').doc(input.id).set({ name: input.name }, { merge: true });
-        return { success: true, message: "专家领域已保存" };
-    } catch (e: any) { return { success: false, message: e.message }; }
-}
-
-export async function deleteExpertDomain(input: { id: string }): Promise<{ success: boolean, message: string }> {
-    try {
-        await admin.firestore().collection('expert_domains').doc(input.id).delete();
-        return { success: true, message: "专家领域已删除" };
-    } catch (e: any) { return { success: false, message: e.message }; }
-}
+    

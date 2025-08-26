@@ -35,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
-import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset, ProcurementItem, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, Order, LlmConnection, TokenAllocation, SoftwareAsset, ProcurementItem } from '@/lib/data-types';
 import { 
     getTenantsAndUsers,
     saveTenant,
@@ -53,9 +53,6 @@ import {
     getProcurementItems,
     saveProcurementItem,
     deleteProcurementItem,
-    getExpertDomains,
-    saveExpertDomain,
-    deleteExpertDomain,
 } from '@/ai/flows/admin-management-flows';
 import { Textarea } from "../ui/textarea";
 
@@ -601,11 +598,6 @@ const procurementItemSchema = z.object({
   category: z.string().min(1, "分类不能为空"),
 });
 
-const expertDomainSchema = z.object({
-  id: z.string().min(1, "ID 不能为空，例如: 'legal-expert'").regex(/^[a-z0-9-]+$/, "ID 只能包含小写字母、数字和连字符"),
-  name: z.string().min(1, "名称不能为空"),
-});
-
 function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants: Tenant[], triggerButtonText: string, title: string }) {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
@@ -614,22 +606,18 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
     const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
     const [editingItem, setEditingItem] = useState<ProcurementItem | null>(null);
-    const [expertDomains, setExpertDomains] = useState<ExpertDomain[]>([]);
-    const [editingDomain, setEditingDomain] = useState<ExpertDomain | null>(null);
 
     const fetchAssets = React.useCallback(async () => {
         setIsLoading(true);
         try {
-            const [assets, items, domains] = await Promise.all([
+            const [assets, items] = await Promise.all([
                 getPlatformAssets(),
-                getProcurementItems(),
-                getExpertDomains()
+                getProcurementItems()
             ]);
             setLlmConnections(assets.llmConnections);
             setTokens(assets.tokenAllocations);
             setSoftwareAssets(assets.softwareAssets);
             setProcurementItems(items);
-            setExpertDomains(domains);
         } catch (error: any) {
             toast({ title: "加载资产失败", description: error.message, variant: "destructive" });
         } finally {
@@ -691,28 +679,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
             toast({ title: "删除失败", description: result.message, variant: "destructive" });
         }
     }
-    
-    const handleSaveDomain = async (values: z.infer<typeof expertDomainSchema>) => {
-        const result = await saveExpertDomain(values);
-        if (result.success) {
-            toast({ title: "专家领域已保存" });
-            setEditingDomain(null);
-            fetchAssets();
-        } else {
-            toast({ title: "保存失败", description: result.message, variant: "destructive" });
-        }
-    };
-
-    const handleDeleteDomain = async (id: string) => {
-        const result = await deleteExpertDomain({id});
-        if (result.success) {
-            toast({ title: "专家领域已删除" });
-            fetchAssets();
-        } else {
-            toast({ title: "删除失败", description: result.message, variant: "destructive" });
-        }
-    }
-
 
     const LlmForm = () => {
         const form = useForm({ resolver: zodResolver(llmConnectionSchema), defaultValues: {modelName: "", provider: "", apiKey: "", type: "通用", tenantId: ""}});
@@ -831,30 +797,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         );
     };
 
-    const ExpertDomainForm = ({ domain, onSubmit, onCancel }: { domain?: ExpertDomain | null, onSubmit: (v: any) => void, onCancel: () => void}) => {
-        const form = useForm({ 
-            resolver: zodResolver(expertDomainSchema), 
-            defaultValues: domain || { id: "", name: "" }
-        });
-        React.useEffect(() => {
-            form.reset(domain || { id: "", name: "" });
-        }, [domain, form]);
-    
-        return (
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField control={form.control} name="id" render={({field}) => (<FormItem><FormLabel>唯一ID</FormLabel><FormControl><Input placeholder="e.g., legal-expert" {...field} disabled={!!domain} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="name" render={({field}) => (<FormItem><FormLabel>显示名称</FormLabel><FormControl><Input placeholder="e.g., 法律专家" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
-                        <Button type="submit">保存领域</Button>
-                    </div>
-                </form>
-            </Form>
-        );
-    };
-
-
     return (
         <Dialog onOpenChange={(open) => { if (open) fetchAssets() }}>
             <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
@@ -866,9 +808,8 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                     </DialogDescription>
                 </DialogHeader>
                 <Tabs defaultValue="llm" className="mt-4">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 连接</TabsTrigger>
-                        <TabsTrigger value="domains"><BotMessageSquare className="mr-2 h-4 w-4" />专家领域</TabsTrigger>
                         <TabsTrigger value="procurement"><ShoppingBag className="mr-2 h-4 w-4" />集采商品</TabsTrigger>
                         <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量</TabsTrigger>
                         <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
@@ -910,47 +851,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                 </Card>
                             </div>
                        </div>
-                    </TabsContent>
-                    <TabsContent value="domains">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                            <div className="md:col-span-2">
-                                <Card>
-                                    <CardHeader><CardTitle>专家领域列表</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <ScrollArea className="h-[450px]">
-                                            <Table>
-                                                <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>名称</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                                <TableBody>
-                                                    {isLoading ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
-                                                    : expertDomains.map(domain => (
-                                                        <TableRow key={domain.id}>
-                                                            <TableCell><div className="font-mono text-xs">{domain.id}</div></TableCell>
-                                                            <TableCell className="font-medium">{domain.name}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Button variant="ghost" size="icon" onClick={() => setEditingDomain(domain)}><Pencil className="h-4 w-4"/></Button>
-                                                                <Button variant="ghost" size="icon" className="text-destructive/80" onClick={() => handleDeleteDomain(domain.id)}><Trash2 className="h-4 w-4"/></Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                            <div>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>{editingDomain ? "编辑领域" : "添加新领域"}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ScrollArea className="h-[450px] p-1">
-                                            <ExpertDomainForm domain={editingDomain} onSubmit={handleSaveDomain} onCancel={() => setEditingDomain(null)} />
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
                     </TabsContent>
                     <TabsContent value="tokens">
                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
@@ -1375,3 +1275,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    

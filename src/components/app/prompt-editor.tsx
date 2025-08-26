@@ -9,9 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from '@/components/ui/input';
 import { LoaderCircle, Save, Sparkles, Bot } from 'lucide-react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getExpertDomains } from '@/ai/flows/admin-management-flows';
-import type { ExpertDomain } from '@/lib/data-types';
-import { useToast } from '@/hooks/use-toast';
 
 export type PromptData = {
     id: string | null;
@@ -30,30 +27,17 @@ type PromptEditorProps = {
     isSaving: boolean;
 };
 
-export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: PromptEditorProps) {
-    const { toast } = useToast();
-    const [expertDomains, setExpertDomains] = useState<ExpertDomain[]>([]);
-    const [isLoadingDomains, setIsLoadingDomains] = useState(true);
+// Hardcoded list as a fallback/initial state
+const expertDomains = [
+    { id: 'general-expert', name: '通用专家' },
+    { id: 'recruitment-expert', name: '招聘专家' },
+    { id: 'marketing-expert', name: '营销专家' },
+    { id: 'code-expert', name: '代码专家' },
+    { id: 'sales-expert', name: '销售专家' },
+    { id: 'copywriting-expert', name: '文案专家' },
+];
 
-    useEffect(() => {
-        async function fetchDomains() {
-            try {
-                const domains = await getExpertDomains();
-                setExpertDomains(domains);
-            } catch (error) {
-                console.error("Failed to fetch expert domains:", error);
-                toast({
-                    title: "加载专家领域失败",
-                    description: "无法从数据库获取列表。",
-                    variant: "destructive",
-                });
-            } finally {
-                setIsLoadingDomains(false);
-            }
-        }
-        fetchDomains();
-    }, [toast]);
-    
+export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: PromptEditorProps) {
     const handleChange = (field: keyof PromptData, value: string) => {
         onPromptChange({ ...prompt, [field]: value });
     };
@@ -77,9 +61,9 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor="expert-id">专家领域</Label>
-                         <Select onValueChange={(value) => handleChange('expertId', value)} value={prompt.expertId} disabled={isLoadingDomains}>
+                         <Select onValueChange={(value) => handleChange('expertId', value)} value={prompt.expertId}>
                             <SelectTrigger id="expert-id">
-                                <SelectValue placeholder={isLoadingDomains ? "正在加载..." : "选择一个专家领域..."} />
+                                <SelectValue placeholder={"选择一个专家领域..."} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
@@ -116,7 +100,7 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
                </div>
             </CardContent>
              <CardFooter>
-                <Button className="w-full" onClick={() => onSave(prompt)} disabled={isSaving || isLoadingDomains}>
+                <Button className="w-full" onClick={() => onSave(prompt)} disabled={isSaving}>
                     {isSaving ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
                     保存到库
                 </Button>
@@ -124,3 +108,5 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
         </Card>
     );
 }
+
+    
