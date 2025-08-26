@@ -14,6 +14,7 @@ import { getExpertDomains, saveExpertDomain, deleteExpertDomain } from '@/ai/flo
 import type { ExpertDomain } from '@/lib/data-types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
