@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Wand2, TestTube2, Trash2, PlusCircle, Link, FileText } from 'lucide-react';
+import { LoaderCircle, Wand2, TestTube2, Link, FileText, Bot } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { digitalEmployee } from '@/ai/flows/digital-employee';
 import type { Scenario } from './ai-workbench';
@@ -21,6 +21,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select';
+import { getPlatformAssets } from '@/ai/flows/admin-management-flows';
+import type { LlmConnection } from '@/lib/data-types';
+
 
 type Variable = {
     id: string;
@@ -50,6 +54,33 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [variables, setVariables] = useState<Variable[]>([]);
     const [testResult, setTestResult] = useState('');
+    
+    const [models, setModels] = useState<LlmConnection[]>([]);
+    const [selectedModel, setSelectedModel] = useState<string>('');
+    const [isLoadingModels, setIsLoadingModels] = useState(true);
+
+    useEffect(() => {
+        async function fetchModels() {
+            try {
+                const { llmConnections } = await getPlatformAssets();
+                const generalPurposeModels = llmConnections.filter(m => m.type === '通用');
+                setModels(generalPurposeModels);
+                if (generalPurposeModels.length > 0) {
+                    setSelectedModel(generalPurposeModels[0].id);
+                }
+            } catch (error) {
+                console.error("Failed to fetch models", error);
+                toast({
+                    variant: "destructive",
+                    title: "加载模型失败",
+                    description: "无法获取通用模型列表。"
+                });
+            } finally {
+                setIsLoadingModels(false);
+            }
+        }
+        fetchModels();
+    }, [toast]);
 
     useEffect(() => {
         if (scenario) {
@@ -75,6 +106,10 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
             toast({ variant: 'destructive', title: "未选择场景", description: "请先从左侧选择一个能力场景。" });
             return;
         }
+        if (!selectedModel) {
+            toast({ variant: 'destructive', title: "未选择模型", description: "请选择一个测试模型。" });
+            return;
+        }
 
         setIsGenerating(true);
         setTestResult('');
@@ -85,10 +120,10 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
                 return acc;
             }, {} as Record<string, string>);
 
-            // If the scenario has an ID, we use it. If not, it's a tuned scenario without an ID, so we pass the content directly.
             const result = await digitalEmployee({
                 promptId: scenario.id ? scenario.id : undefined,
-                userPrompt: scenario.prompt, // Always pass the current prompt content for testing
+                userPrompt: scenario.prompt,
+                modelId: selectedModel,
                 variables: varsAsObject,
             });
             
@@ -165,6 +200,28 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 overflow-y-auto pr-2">
+                     <div>
+                        <Label htmlFor="model-select-user">测试模型</Label>
+                        <Select onValueChange={setSelectedModel} value={selectedModel} disabled={isLoadingModels}>
+                            <SelectTrigger id="model-select-user">
+                                <SelectValue placeholder={isLoadingModels ? "正在加载模型..." : "选择一个通用模型"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    <SelectLabel>通用模型</SelectLabel>
+                                    {models.map(model => (
+                                        <SelectItem key={model.id} value={model.id}>
+                                            <span className="flex items-center gap-2">
+                                                <Bot className="h-4 w-4" />
+                                                {model.modelName}
+                                            </span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     {variables.length > 0 ? variables.map((variable) => (
                         <div key={variable.id} className="space-y-1">
                             <Label htmlFor={variable.id}>{variable.key}</Label>
@@ -180,7 +237,7 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
                     )}
                 </CardContent>
                 <CardFooter className="flex flex-col gap-2">
-                     <Button className="w-full" onClick={handleTestPrompt} disabled={isGenerating}>
+                     <Button className="w-full" onClick={handleTestPrompt} disabled={isGenerating || isLoadingModels}>
                         {isGenerating ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}
                         测试该场景
                     </Button>

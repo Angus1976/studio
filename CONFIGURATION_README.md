@@ -1,17 +1,17 @@
-# Stable Configuration Reference
+# 稳定配置参考 (V4.0)
 
-This document outlines the key details of the stable working configuration for this Next.js project as of 2025-08-12. It serves as a reference to prevent and troubleshoot future build or startup errors.
+本文档概述了此 Next.js 项目在 **2025-08-25** 的稳定工作配置。它旨在作为解决未来构建或启动错误的参考。
 
-## 1. Key Dependencies (`package.json`)
+## 1. 关键依赖 (`package.json`)
 
-The project stability relies on specific versions of key packages. Any changes to these may require careful testing.
+项目的稳定性依赖于特定版本的关键包。
 
-- **Next.js Version**: The application is stable on `next@14.2.3`. Upgrading this may re-introduce compatibility issues seen previously.
+- **Next.js 版本**: 应用在 `next@14.2.3` 上稳定。
   ```json
   "next": "14.2.3",
   ```
 
-- **Development Script**: The `dev` script should be kept simple to avoid conflicts with parameters injected by the development environment. The `--turbopack` flag was removed for stability.
+- **开发脚本**: `dev` 脚本应保持简洁，以避免与开发环境注入的参数冲突。
   ```json
   "scripts": {
     "dev": "next dev",
@@ -19,14 +19,14 @@ The project stability relies on specific versions of key packages. Any changes t
   },
   ```
 
-- **AI/Genkit Dependencies**: All `genkit` and `@genkit-ai/*` packages have been **removed**. They were found to be incompatible with `next@14.x`, causing `npm install` failures. Re-enabling AI features will require finding compatible versions or upgrading the entire Next.js stack and resolving any new issues that arise.
+- **AI/Genkit 依赖**: 所有 `genkit` 和 `@genkit-ai/*` 包已被**移除**。它们与 `next@14.x` 不兼容。AI 功能现在通过**直接调用原生模型 API** 的方式实现，这种方式更稳定且与模型无关。
 
-## 2. Next.js Configuration (`next.config.js`)
+## 2. Next.js 配置 (`next.config.js`)
 
-The configuration file **must** be named `next.config.js` and use the CommonJS `module.exports` syntax. Using `next.config.ts` is not supported by the current setup and will cause startup failures.
+配置文件**必须**命名为 `next.config.js` 并使用 CommonJS `module.exports` 语法。
 
-- **Correct Filename**: `next.config.js`
-- **Correct Syntax**:
+- **正确文件名**: `next.config.js`
+- **正确语法**:
   ```javascript
   /** @type {import('next').NextConfig} */
   const nextConfig = {
@@ -52,11 +52,18 @@ The configuration file **must** be named `next.config.js` and use the CommonJS `
   module.exports = nextConfig;
   ```
 
-## 3. Disabled AI Features
+## 3. 已启用的 AI 功能 (原生 API 调用)
 
-The AI flows located in `src/ai/flows/` are currently commented out because their `genkit` dependencies were removed. To re-enable them, you must:
-1.  Find `genkit` package versions that are compatible with `next@14.2.3`.
-2.  Or, upgrade `next` to `15.x` and ensure all other dependencies are compatible, then re-install the latest `genkit` packages.
-3.  Uncomment the code in the flow files (e.g., `src/ai/flows/ai-requirements-navigator.ts`) and the `genkit` initialization file (`src/ai/genkit.ts`).
+位于 `src/ai/flows/` 的 AI 流程**已完全启用并与后端打通**。
 
-By adhering to these configurations, the application should remain stable.
+- **实现方式**: 我们没有使用任何特定的 AI SDK（如 Genkit），而是采取了“模型解耦”的策略。核心执行流程 `src/ai/flows/prompt-execution-flow.ts` 会：
+    1.  从 Firestore 数据库中根据 `modelId` 查询模型的提供商 (`provider`) 和 `apiKey`。
+    2.  使用 `fetch` API 构建符合该模型厂商规范的原生 API 请求。
+    3.  直接调用模型 API 并返回结果。
+
+- **优势**:
+    - **稳定**: 彻底解决了第三方 SDK 与 Next.js 的兼容性问题。
+    - **灵活**: 支持对接任何拥有 API 的大语言模型。要添加新模型，只需在管理员后台的“资产管理”中配置其信息，并在后端执行流程中增加一个新的 `case` 即可。
+    - **生产就绪**: 平台现在是一个真正的模型中立（Model-Agnostic）应用。
+
+遵循这些配置，应用将保持稳定运行。

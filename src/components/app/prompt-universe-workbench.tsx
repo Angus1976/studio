@@ -105,6 +105,7 @@ export function PromptUniverseWorkbench() {
                 toast({ title: result.message });
                 await fetchPrompts(); // Refresh library
                 if (!activePrompt.id) { // If it was a new prompt
+                   // update the active prompt with the new ID
                    setActivePrompt(prev => ({ ...prev, id: result.id }));
                 }
             } else {
