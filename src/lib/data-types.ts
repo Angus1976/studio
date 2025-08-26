@@ -138,6 +138,7 @@ export type PromptExecutionOutput = z.infer<typeof PromptExecutionOutputSchema>;
 
 export const DigitalEmployeeInputSchema = z.object({
   promptId: z.string().optional().describe("The ID of the prompt scenario to execute from the library."),
+  modelId: z.string().optional().describe("The ID of the LLM connection to use for execution."),
   variables: z.record(z.string()).optional().describe("Key-value pairs for variables in the prompt."),
   temperature: z.number().min(0).max(1).optional().describe("The temperature for the model."),
   // The following are used for testing prompts that haven't been saved yet.

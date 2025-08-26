@@ -1,3 +1,4 @@
+
 "use server";
 /**
  * @fileOverview A digital employee flow that executes a prompt from a library.
@@ -17,7 +18,7 @@ import {
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<PromptExecutionOutput> {
-  const { promptId, variables, temperature, systemPrompt, userPrompt, context, negativePrompt } = input;
+  const { modelId, promptId, variables, temperature, systemPrompt, userPrompt, context, negativePrompt } = input;
 
     let finalSystemPrompt: string | undefined = systemPrompt;
     let finalUserPrompt: string | undefined = userPrompt;
@@ -43,20 +44,12 @@ export async function digitalEmployee(
         throw new Error("A user prompt is required to execute the flow.");
     }
     
-    // We can reuse the main execution flow. 
-    // The `executePrompt` flow requires a modelId. If it's a generic test,
-    // we don't have a model specified. We will have to pass it in or pick a default.
-    // For now, the testbed component (`prompt-testbed.tsx`) will select a model,
-    // but the user action panel (`user-action-panel.tsx`) does not.
-    // This needs to be resolved by adding a model selector there or assigning a default.
-    // Let's assume for now the client provides a modelId if it's a test.
+    if (!modelId) {
+        throw new Error("A modelId is required to execute the flow. The client must provide one.");
+    }
     
     const result = await executePrompt({
-        // modelId is now required by executePrompt, but this flow doesn't receive it.
-        // This is a logic gap. The user-action-panel needs to be updated to select a model.
-        // For now, let's pass a placeholder and rely on executePrompt to handle it,
-        // which currently throws an error. The client call in UserActionPanel must be fixed.
-        ...input, // Pass all fields, including the optional modelId
+        modelId,
         systemPrompt: finalSystemPrompt,
         userPrompt: finalUserPrompt,
         context: finalContext,
