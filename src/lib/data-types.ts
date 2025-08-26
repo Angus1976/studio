@@ -59,6 +59,12 @@ export type RequirementsNavigatorOutput = z.infer<typeof RequirementsNavigatorOu
 
 // --- Prompt Management (Get/Save/Delete) ---
 
+export const ExpertDomainSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+});
+export type ExpertDomain = z.infer<typeof ExpertDomainSchema>;
+
 export const PromptSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -271,3 +277,5 @@ export const SoftwareAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type SoftwareAsset = z.infer<typeof SoftwareAssetSchema>;
+
+    
