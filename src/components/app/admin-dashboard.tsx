@@ -968,7 +968,9 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                                         <CardTitle>{editingItem ? "编辑商品" : "添加新商品"}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        <ProcurementItemForm item={editingItem} onSubmit={handleSaveProcurementItem} onCancel={() => setEditingItem(null)} />
+                                        <ScrollArea className="h-[450px] p-1">
+                                            <ProcurementItemForm item={editingItem} onSubmit={handleSaveProcurementItem} onCancel={() => setEditingItem(null)} />
+                                        </ScrollArea>
                                     </CardContent>
                                 </Card>
                             </div>
