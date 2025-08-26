@@ -6,9 +6,16 @@ import { Maximize, Minimize } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePanel } from './three-column-layout';
 
+// A new context to pass the panel ID down to the header.
+const CollapsiblePanelContext = React.createContext<{ id: string }>({ id: '' });
+
 export function CollapsiblePanelHeader({ children }: { children: React.ReactNode }) {
+  // Use the context to get the panel's ID.
   const { id } = React.useContext(CollapsiblePanelContext);
   const { getPanelState, togglePanel } = usePanel();
+  
+  // Determine if the current panel is the one that's maximized.
+  // The state 'collapsed' in the layout context means this panel is maximized.
   const isMaximized = getPanelState(id) === 'collapsed';
 
   return (
@@ -21,32 +28,24 @@ export function CollapsiblePanelHeader({ children }: { children: React.ReactNode
         onClick={() => togglePanel(id)}
       >
         {isMaximized ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-        <span className="sr-only">{isMaximized ? 'Restore' : 'Maximize'}</span>
+        <span className="sr-only">{isMaximized ? '恢复' : '最大化'}</span>
       </Button>
     </div>
   );
 }
 
-const CollapsiblePanelContext = React.createContext<{ id: string }>({ id: '' });
-
-export function CollapsiblePanel({ children }: { children: React.ReactNode }) {
+export function CollapsiblePanel({ id, children }: { id: string, children: React.ReactNode }) {
   const { isAnyPanelMaximized, getPanelState } = usePanel();
-  const id = React.useContext(CollapsiblePanelContext).id || '';
   const isThisPanelMaximized = getPanelState(id) === 'collapsed';
   
+  // If any panel is maximized, but it's not this one, don't render this panel at all.
   if (isAnyPanelMaximized && !isThisPanelMaximized) {
-    return null; // Don't render other panels when one is maximized
+    return null;
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full">{children}</div>
+    <CollapsiblePanelContext.Provider value={{ id }}>
+        <div className="flex-1 flex flex-col h-full">{children}</div>
+    </CollapsiblePanelContext.Provider>
   );
-}
-
-export const withCollapsibleContext = (Component: React.ComponentType, id: string) => {
-    return (props: any) => (
-        <CollapsiblePanelContext.Provider value={{ id }}>
-            <Component {...props} />
-        </CollapsiblePanelContext.Provider>
-    )
 }

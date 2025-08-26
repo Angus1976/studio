@@ -147,7 +147,7 @@ export function PromptUniverseWorkbench() {
     return (
         <ThreeColumnLayout autoSaveId="prompt-universe-workbench-layout">
             <ThreeColumnLayout.Left id="prompt-library" defaultSize={25} minSize={20} maxSize={30}>
-                 <CollapsiblePanel>
+                 <CollapsiblePanel id="prompt-library">
                      <CollapsiblePanelHeader>
                         <h2 className="font-semibold flex items-center gap-2"><BookCopy className="h-5 w-5"/> 提示词库</h2>
                      </CollapsiblePanelHeader>
@@ -163,7 +163,7 @@ export function PromptUniverseWorkbench() {
             <ThreeColumnLayout.Handle withHandle />
 
             <ThreeColumnLayout.Main id="prompt-editor" defaultSize={45} minSize={30}>
-                <CollapsiblePanel>
+                <CollapsiblePanel id="prompt-editor">
                     <CollapsiblePanelHeader>
                         <h2 className="font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5"/> 编辑器</h2>
                     </CollapsiblePanelHeader>
@@ -179,7 +179,7 @@ export function PromptUniverseWorkbench() {
             <ThreeColumnLayout.Handle withHandle />
 
             <ThreeColumnLayout.Right id="prompt-tools" defaultSize={30} minSize={20} maxSize={40}>
-                 <CollapsiblePanel>
+                 <CollapsiblePanel id="prompt-tools">
                     <CollapsiblePanelHeader>
                         <h2 className="font-semibold flex items-center gap-2"><TestTube2 className="h-5 w-5"/> 测试与分析</h2>
                     </CollapsiblePanelHeader>

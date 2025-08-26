@@ -105,7 +105,7 @@ export function AIWorkbench() {
     const LeftPanel = () => {
         if (workbenchMode === 'expert') {
             return (
-                <CollapsiblePanel>
+                <CollapsiblePanel id="left-panel">
                     <CollapsiblePanelHeader>
                          <h2 className="font-semibold flex items-center gap-2">
                             <Bot className="h-5 w-5" />
@@ -117,7 +117,7 @@ export function AIWorkbench() {
             );
         }
         return (
-            <CollapsiblePanel>
+            <CollapsiblePanel id="left-panel">
                  <CollapsiblePanelHeader>
                      <h2 className="font-semibold flex items-center gap-2">
                         <Bot className="h-5 w-5" />
@@ -147,7 +147,7 @@ export function AIWorkbench() {
                 {workbenchMode === 'guide' ? (
                     <>
                         <ThreeColumnLayout.Main id="main-panel" defaultSize={45} minSize={30}>
-                             <CollapsiblePanel>
+                             <CollapsiblePanel id="main-panel">
                                 <CollapsiblePanelHeader>
                                     <h2 className="font-semibold flex items-center gap-2"><BookCopy className="h-5 w-5"/> 能力场景库</h2>
                                 </CollapsiblePanelHeader>
@@ -172,7 +172,7 @@ export function AIWorkbench() {
                         <ThreeColumnLayout.Handle withHandle />
 
                         <ThreeColumnLayout.Right id="right-panel" defaultSize={30} minSize={25} maxSize={40}>
-                             <CollapsiblePanel>
+                             <CollapsiblePanel id="right-panel">
                                  <CollapsiblePanelHeader>
                                     <h2 className="font-semibold flex items-center gap-2"><Settings className="h-5 w-5"/> 操作面板</h2>
                                 </CollapsiblePanelHeader>
@@ -182,7 +182,7 @@ export function AIWorkbench() {
                     </>
                 ) : (
                     <ThreeColumnLayout.Main id="expert-main" defaultSize={75} minSize={30}>
-                        <CollapsiblePanel>
+                        <CollapsiblePanel id="expert-main">
                             <CollapsiblePanelHeader>
                                  <h2 className="font-semibold">任务历史与结果</h2>
                             </CollapsiblePanelHeader>
