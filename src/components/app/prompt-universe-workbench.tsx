@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { getPrompts, type GetPromptsOutput } from '@/ai/flows/get-prompts-flow';
 import { ThreeColumnLayout } from './layouts/three-column-layout';
+import { CollapsiblePanel, CollapsiblePanelHeader } from './layouts/collapsible-panel';
 import { PromptLibrary } from './prompt-library';
 import { PromptEditor, PromptData } from './prompt-editor';
 import { PromptTestbed } from './prompt-testbed';
@@ -13,6 +14,7 @@ import { savePrompt } from '@/ai/flows/save-prompt-flow';
 import { deletePrompt } from '@/ai/flows/delete-prompt-flow';
 import { analyzePromptMetadata, type AnalyzePromptMetadataOutput } from '@/ai/flows/analyze-prompt-metadata';
 import type { Prompt } from '@/lib/data-types';
+import { BookCopy, Sparkles, TestTube2 } from 'lucide-react';
 
 
 export function PromptUniverseWorkbench() {
@@ -144,33 +146,48 @@ export function PromptUniverseWorkbench() {
 
     return (
         <ThreeColumnLayout autoSaveId="prompt-universe-workbench-layout">
-            <ThreeColumnLayout.Left defaultSize={25} minSize={20} maxSize={30}>
-                 <PromptLibrary 
-                    prompts={prompts} 
-                    onSelectPrompt={handleSelectPrompt}
-                    isLoading={isLoadingPrompts}
-                    onDeletePrompt={handleDeletePrompt}
-                />
+            <ThreeColumnLayout.Left id="prompt-library" defaultSize={25} minSize={20} maxSize={30}>
+                 <CollapsiblePanel>
+                     <CollapsiblePanelHeader>
+                        <h2 className="font-semibold flex items-center gap-2"><BookCopy className="h-5 w-5"/> 提示词库</h2>
+                     </CollapsiblePanelHeader>
+                    <PromptLibrary 
+                        prompts={prompts} 
+                        onSelectPrompt={handleSelectPrompt}
+                        isLoading={isLoadingPrompts}
+                        onDeletePrompt={handleDeletePrompt}
+                    />
+                </CollapsiblePanel>
             </ThreeColumnLayout.Left>
             
             <ThreeColumnLayout.Handle withHandle />
 
-            <ThreeColumnLayout.Main defaultSize={45} minSize={30}>
-                 <PromptEditor 
-                    prompt={activePrompt}
-                    onPromptChange={setActivePrompt}
-                    onSave={handleSavePrompt}
-                    isSaving={isSaving}
-                 />
+            <ThreeColumnLayout.Main id="prompt-editor" defaultSize={45} minSize={30}>
+                <CollapsiblePanel>
+                    <CollapsiblePanelHeader>
+                        <h2 className="font-semibold flex items-center gap-2"><Sparkles className="h-5 w-5"/> 编辑器</h2>
+                    </CollapsiblePanelHeader>
+                    <PromptEditor 
+                        prompt={activePrompt}
+                        onPromptChange={setActivePrompt}
+                        onSave={handleSavePrompt}
+                        isSaving={isSaving}
+                    />
+                </CollapsiblePanel>
             </ThreeColumnLayout.Main>
 
             <ThreeColumnLayout.Handle withHandle />
 
-            <ThreeColumnLayout.Right defaultSize={30} minSize={20} maxSize={40}>
-                <div className="flex flex-col gap-6 h-full">
-                   <PromptTestbed prompt={activePrompt} />
-                   <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
-                </div>
+            <ThreeColumnLayout.Right id="prompt-tools" defaultSize={30} minSize={20} maxSize={40}>
+                 <CollapsiblePanel>
+                    <CollapsiblePanelHeader>
+                        <h2 className="font-semibold flex items-center gap-2"><TestTube2 className="h-5 w-5"/> 测试与分析</h2>
+                    </CollapsiblePanelHeader>
+                    <div className="flex flex-col gap-6 h-full">
+                       <PromptTestbed prompt={activePrompt} />
+                       <MetadataAnalyzer prompt={activePrompt} onApply={handleApplyMetadata} />
+                    </div>
+                </CollapsiblePanel>
             </ThreeColumnLayout.Right>
         </ThreeColumnLayout>
     );

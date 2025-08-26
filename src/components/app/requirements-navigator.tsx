@@ -85,7 +85,15 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
 
 
     return (
-        <div className="h-full flex flex-col">
+        <Card className="h-full flex flex-col shadow-lg">
+            <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                    AI 需求导航器
+                </CardTitle>
+                <CardDescription>
+                    与 AI 对话，帮您梳理业务需求，并推荐最合适的 AI 能力。
+                </CardDescription>
+            </CardHeader>
             <CardContent className="flex-1 flex flex-col gap-4 p-4 overflow-hidden">
                 <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
                     <div className="space-y-4">
@@ -142,6 +150,6 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                     </Button>
                 </form>
             </CardContent>
-        </div>
+        </Card>
     );
 }
