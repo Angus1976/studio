@@ -143,7 +143,7 @@ export function PromptUniverseWorkbench() {
     };
 
     return (
-        <ThreeColumnLayout autoSaveId="prompt-universe-workbench">
+        <ThreeColumnLayout autoSaveId="prompt-universe-workbench-layout">
             <ThreeColumnLayout.Left defaultSize={25} minSize={20} maxSize={30}>
                  <PromptLibrary 
                     prompts={prompts} 

@@ -150,7 +150,7 @@ export function AIWorkbench() {
 
 
   return (
-    <ThreeColumnLayout autoSaveId="ai-workbench">
+    <ThreeColumnLayout autoSaveId="ai-workbench-layout">
         <ThreeColumnLayout.Left defaultSize={25} minSize={20} maxSize={40}>
             <LeftPanelWrapper>
                 <LeftPanel />

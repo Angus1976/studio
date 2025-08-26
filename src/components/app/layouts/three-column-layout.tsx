@@ -7,6 +7,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 const ThreeColumnLayout = ({
   children,
@@ -17,11 +18,24 @@ const ThreeColumnLayout = ({
   className?: string;
   autoSaveId: string;
 }) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const onLayout = (sizes: number[]) => {
+      if(isMounted) {
+          document.cookie = `react-resizable-panels:${autoSaveId}=${JSON.stringify(sizes)}; max-age=31536000; path=/`;
+      }
+  }
+
   return (
     <ResizablePanelGroup
       direction="horizontal"
       className={cn("h-full max-h-full items-stretch", className)}
       autoSaveId={autoSaveId}
+      onLayout={onLayout}
     >
       {children}
     </ResizablePanelGroup>
