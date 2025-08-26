@@ -575,7 +575,7 @@ const ExpertDomainSchema = z.object({
 export async function saveExpertDomain(input: z.infer<typeof ExpertDomainSchema>): Promise<{ success: boolean, message: string }> {
     const db = admin.firestore();
     try {
-        // Use the specified ID as the document ID
+        // Use the specified ID as the document ID for 'set'
         await db.collection('expert_domains').doc(input.id).set({ name: input.name }, { merge: true });
         return { success: true, message: "专家领域已保存" };
     } catch (e: any) { return { success: false, message: e.message }; }
@@ -587,8 +587,3 @@ export async function deleteExpertDomain(input: { id: string }): Promise<{ succe
         return { success: true, message: "专家领域已删除" };
     } catch (e: any) { return { success: false, message: e.message }; }
 }
-    
-
-    
-
-    
