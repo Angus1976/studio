@@ -737,29 +737,25 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
     const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
     const [tokens, setTokens] = useState<TokenAllocation[]>([]);
     const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
-    const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
     const [llmProviders, setLlmProviders] = useState<LlmProvider[]>([]);
     const [selectedProvider, setSelectedProvider] = useState<LlmProvider | null>(null);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [testResults, setTestResults] = useState<Record<string, { status: 'loading' | 'success' | 'error', message: string }>>({});
     
-    const [editingItem, setEditingItem] = useState<ProcurementItem | null>(null);
     const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
 
 
     const fetchAssets = React.useCallback(async () => {
         setIsLoading(true);
         try {
-            const [assets, items, providers] = await Promise.all([
+            const [assets, providers] = await Promise.all([
                 getPlatformAssets(),
-                getProcurementItems(),
                 getLlmProviders(),
             ]);
             setLlmConnections(assets.llmConnections);
             setTokens(assets.tokenAllocations);
             setSoftwareAssets(assets.softwareAssets);
-            setProcurementItems(items);
             setLlmProviders(providers);
         } catch (error: any) {
             toast({ title: "加载资产失败", description: error.message, variant: "destructive" });
@@ -815,26 +811,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
         await fetchAssets();
     };
     
-    const handleSaveProcurementItem = async (values: z.infer<typeof procurementItemSchema>) => {
-        const result = await saveProcurementItem({id: editingItem?.id, ...values});
-        if (result.success) {
-            toast({ title: result.message });
-            setEditingItem(null);
-            await fetchAssets();
-        } else {
-            toast({ title: "保存失败", description: result.message, variant: "destructive" });
-        }
-    };
-
-    const handleDeleteProcurementItem = async (id: string) => {
-        const result = await deleteProcurementItem({id});
-        if (result.success) {
-            toast({ title: result.message });
-            await fetchAssets();
-        } else {
-            toast({ title: "删除失败", description: result.message, variant: "destructive" });
-        }
-    }
 
     const LlmForm = () => {
         const form = useForm({ 
@@ -996,34 +972,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
             </Form>
         )
     };
-    
-    const ProcurementItemForm = ({ item, onSubmit, onCancel }: { item?: ProcurementItem | null, onSubmit: (v: any) => void, onCancel: () => void}) => {
-        const form = useForm({ 
-            resolver: zodResolver(procurementItemSchema), 
-            defaultValues: item || { title: "", description: "", icon: "", tag: "", price: 0, unit: "", category: "" }
-        });
-        React.useEffect(() => {
-            form.reset(item || { title: "", description: "", icon: "", tag: "", price: 0, unit: "", category: "" });
-        }, [item, form]);
-
-        return (
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-                    <FormField control={form.control} name="title" render={({field}) => (<FormItem><FormLabel>标题</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="description" render={({field}) => (<FormItem><FormLabel>描述</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="icon" render={({field}) => (<FormItem><FormLabel>图标 (Lucide)</FormLabel><FormControl><Input placeholder="e.g., Mail, Video" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="tag" render={({field}) => (<FormItem><FormLabel>标签</FormLabel><FormControl><Input placeholder="e.g., 办公基础" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="category" render={({field}) => (<FormItem><FormLabel>分类</FormLabel><FormControl><Input placeholder="e.g., 办公基础" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="price" render={({field}) => (<FormItem><FormLabel>价格</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <FormField control={form.control} name="unit" render={({field}) => (<FormItem><FormLabel>单位</FormLabel><FormControl><Input placeholder="e.g., 用户/年" {...field} /></FormControl><FormMessage/></FormItem>)}/>
-                    <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
-                        <Button type="submit">保存商品</Button>
-                    </div>
-                </form>
-            </Form>
-        );
-    };
 
     const getTestResultComponent = (id: string) => {
         const result = testResults[id];
@@ -1074,9 +1022,8 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                     </DialogDescription>
                 </DialogHeader>
                 <Tabs defaultValue="llm" className="mt-4">
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 连接</TabsTrigger>
-                        <TabsTrigger value="procurement"><ShoppingBag className="mr-2 h-4 w-4" />集采商品</TabsTrigger>
                         <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量</TabsTrigger>
                         <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
                     </TabsList>
@@ -1219,47 +1166,6 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
                             </div>
                         </div>
                     </TabsContent>
-                    <TabsContent value="procurement">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                            <div className="md:col-span-2">
-                                <Card>
-                                    <CardHeader><CardTitle>集采商品列表</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <ScrollArea className="h-[450px]">
-                                            <Table>
-                                                <TableHeader><TableRow><TableHead>商品</TableHead><TableHead>价格</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                                <TableBody>
-                                                    {isLoading ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
-                                                    : procurementItems.map(item => (
-                                                        <TableRow key={item.id}>
-                                                            <TableCell><div className="font-medium">{item.title}</div><div className="text-xs text-muted-foreground">{item.category} / {item.tag}</div></TableCell>
-                                                            <TableCell>¥{item.price} / {item.unit}</TableCell>
-                                                            <TableCell className="text-right">
-                                                                <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}><Pencil className="h-4 w-4"/></Button>
-                                                                <Button variant="ghost" size="icon" className="text-destructive/80" onClick={() => handleDeleteProcurementItem(item.id)}><Trash2 className="h-4 w-4"/></Button>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                            <div>
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>{editingItem ? "编辑商品" : "添加新商品"}</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ScrollArea className="h-[450px] p-1">
-                                            <ProcurementItemForm item={editingItem} onSubmit={handleSaveProcurementItem} onCancel={() => setEditingItem(null)} />
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    </TabsContent>
                 </Tabs>
                 <DialogFooter className="mt-4">
                     <DialogClose asChild>
@@ -1275,25 +1181,67 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
 // --- Transaction Management ---
 type OrderStatus = "待平台确认" | "待支付" | "配置中" | "已完成" | "已取消";
 
-
 type OrderWithTenantInfo = Order & { tenantCompanyName?: string };
 
 function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
     const [orders, setOrders] = useState<OrderWithTenantInfo[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
+    const [isLoading, setIsLoading] = useState({ orders: true, items: true });
+    const [editingItem, setEditingItem] = useState<ProcurementItem | null>(null);
     const { toast } = useToast();
 
     const fetchOrders = React.useCallback(async () => {
-        setIsLoading(true);
+        setIsLoading(prev => ({...prev, orders: true}));
         try {
             const fetchedOrders = await getAllOrders();
             setOrders(fetchedOrders);
         } catch (error: any) {
             toast({ title: "加载订单失败", description: error.message, variant: "destructive" });
         } finally {
-            setIsLoading(false);
+            setIsLoading(prev => ({...prev, orders: false}));
         }
     }, [toast]);
+    
+    const fetchProcurementItems = React.useCallback(async () => {
+        setIsLoading(prev => ({...prev, items: true}));
+        try {
+            const items = await getProcurementItems();
+            setProcurementItems(items);
+        } catch(e: any) {
+            toast({ title: "加载商品失败", description: e.message, variant: "destructive"});
+        } finally {
+            setIsLoading(prev => ({...prev, items: false}));
+        }
+    }, [toast]);
+    
+    const handleOpen = (open: boolean) => {
+        if(open) {
+            fetchOrders();
+            fetchProcurementItems();
+        }
+    };
+    
+    const handleSaveProcurementItem = async (values: z.infer<typeof procurementItemSchema>) => {
+        const result = await saveProcurementItem({id: editingItem?.id, ...values});
+        if (result.success) {
+            toast({ title: result.message });
+            setEditingItem(null);
+            await fetchProcurementItems();
+        } else {
+            toast({ title: "保存失败", description: result.message, variant: "destructive" });
+        }
+    };
+
+    const handleDeleteProcurementItem = async (id: string) => {
+        const result = await deleteProcurementItem({id});
+        if (result.success) {
+            toast({ title: result.message });
+            await fetchProcurementItems();
+        } else {
+            toast({ title: "删除失败", description: result.message, variant: "destructive" });
+        }
+    }
+
 
     const handleUpdateStatus = (orderId: string, newStatus: OrderStatus) => {
         // SIMULATED API CALL to update status. In a real app, this would be a server flow.
@@ -1311,66 +1259,129 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
             default: return "default";
         }
     };
+    
+    const ProcurementItemForm = ({ item, onSubmit, onCancel }: { item?: ProcurementItem | null, onSubmit: (v: any) => void, onCancel: () => void}) => {
+        const form = useForm({ 
+            resolver: zodResolver(procurementItemSchema), 
+            defaultValues: item || { title: "", description: "", icon: "", tag: "", price: 0, unit: "", category: "" }
+        });
+        React.useEffect(() => {
+            form.reset(item || { title: "", description: "", icon: "", tag: "", price: 0, unit: "", category: "" });
+        }, [item, form]);
+
+        return (
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+                    <FormField control={form.control} name="title" render={({field}) => (<FormItem><FormLabel>标题</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="description" render={({field}) => (<FormItem><FormLabel>描述</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="icon" render={({field}) => (<FormItem><FormLabel>图标 (Lucide)</FormLabel><FormControl><Input placeholder="e.g., Mail, Video" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="tag" render={({field}) => (<FormItem><FormLabel>标签</FormLabel><FormControl><Input placeholder="e.g., 办公基础" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="category" render={({field}) => (<FormItem><FormLabel>分类</FormLabel><FormControl><Input placeholder="e.g., 办公基础" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="price" render={({field}) => (<FormItem><FormLabel>价格</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <FormField control={form.control} name="unit" render={({field}) => (<FormItem><FormLabel>单位</FormLabel><FormControl><Input placeholder="e.g., 用户/年" {...field} /></FormControl><FormMessage/></FormItem>)}/>
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
+                        <Button type="submit">保存商品</Button>
+                    </div>
+                </form>
+            </Form>
+        );
+    };
 
     return (
-        <Dialog onOpenChange={(open) => { if (open) fetchOrders() }}>
+        <Dialog onOpenChange={handleOpen}>
             <DialogTrigger asChild>
                 <Button>{buttonText}</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-5xl">
+            <DialogContent className="max-w-6xl">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
-                <Card className="mt-4">
-                    <CardHeader><CardTitle>所有订单</CardTitle></CardHeader>
-                    <CardContent>
-                        <ScrollArea className="h-[50vh]">
-                            {isLoading ? (
-                                <div className="space-y-4">
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                    <Skeleton className="h-12 w-full" />
-                                </div>
-                            ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>订单号</TableHead>
-                                        <TableHead>租户</TableHead>
-                                        <TableHead>金额</TableHead>
-                                        <TableHead>状态</TableHead>
-                                        <TableHead className="text-right">操作</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {orders.map(order => (
-                                        <TableRow key={order.id}>
-                                            <TableCell className="font-medium">{order.id}</TableCell>
-                                            <TableCell>{order.tenantCompanyName || 'N/A'}</TableCell>
-                                            <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {order.status === '待平台确认' && (
-                                                     <Button size="sm" onClick={() => handleUpdateStatus(order.id, '待支付')}>确认订单</Button>
-                                                )}
-                                                {order.status === '待支付' && (
-                                                     <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(order.id, '配置中')}>确认收款</Button>
-                                                )}
-                                                {order.status === '配置中' && (
-                                                     <Button size="sm" onClick={() => handleUpdateStatus(order.id, '已完成')}>完成配置</Button>
-                                                )}
-                                            </TableCell>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <Card>
+                        <CardHeader><CardTitle className="text-lg">订单流水</CardTitle></CardHeader>
+                        <CardContent>
+                            <ScrollArea className="h-[50vh]">
+                                {isLoading.orders ? (
+                                    <div className="space-y-4">
+                                        <Skeleton className="h-12 w-full" />
+                                        <Skeleton className="h-12 w-full" />
+                                        <Skeleton className="h-12 w-full" />
+                                    </div>
+                                ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>订单号/租户</TableHead>
+                                            <TableHead>金额</TableHead>
+                                            <TableHead>状态</TableHead>
+                                            <TableHead className="text-right">操作</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                            )}
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {orders.map(order => (
+                                            <TableRow key={order.id}>
+                                                <TableCell>
+                                                    <div className="font-mono text-xs">{order.id}</div>
+                                                    <div className="font-medium text-sm">{order.tenantCompanyName || 'N/A'}</div>
+                                                </TableCell>
+                                                <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {order.status === '待平台确认' && (
+                                                         <Button size="sm" onClick={() => handleUpdateStatus(order.id, '待支付')}>确认订单</Button>
+                                                    )}
+                                                    {order.status === '待支付' && (
+                                                         <Button size="sm" variant="secondary" onClick={() => handleUpdateStatus(order.id, '配置中')}>确认收款</Button>
+                                                    )}
+                                                    {order.status === '配置中' && (
+                                                         <Button size="sm" onClick={() => handleUpdateStatus(order.id, '已完成')}>完成配置</Button>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                )}
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                           <div className="flex items-center justify-between">
+                             <CardTitle className="text-lg">集采商品管理</CardTitle>
+                             <Button size="sm" onClick={() => setEditingItem(null)}><PlusCircle className="mr-2 h-4 w-4"/>添加</Button>
+                           </div>
+                        </CardHeader>
+                        <CardContent>
+                             <ScrollArea className="h-[50vh]">
+                                {editingItem === null ? (
+                                     <Table>
+                                        <TableHeader><TableRow><TableHead>商品</TableHead><TableHead>价格</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {isLoading.items ? <TableRow><TableCell colSpan={3} className="h-24 text-center"><LoaderCircle className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                                            : procurementItems.map(item => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell><div className="font-medium">{item.title}</div><div className="text-xs text-muted-foreground">{item.category} / {item.tag}</div></TableCell>
+                                                    <TableCell>¥{item.price} / {item.unit}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}><Pencil className="h-4 w-4"/></Button>
+                                                        <Button variant="ghost" size="icon" className="text-destructive/80" onClick={() => handleDeleteProcurementItem(item.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <ProcurementItemForm item={editingItem} onSubmit={handleSaveProcurementItem} onCancel={() => setEditingItem(null)} />
+                                )}
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                </div>
                  <DialogFooter className="mt-4">
                     <DialogClose asChild>
                         <Button variant="outline">关闭</Button>
@@ -1406,7 +1417,7 @@ const managementPanels = [
      {
         id: "transactions",
         title: "交易管理",
-        description: "审核订单、确认支付并管理平台交易。",
+        description: "审核订单、管理集采商品。",
         icon: FileText,
         buttonText: "管理交易",
     },
@@ -1562,3 +1573,4 @@ export function AdminDashboard() {
     </div>
   );
 }
+
