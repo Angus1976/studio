@@ -9,6 +9,7 @@ import { ScenarioArchitectView } from './scenario-architect-view';
 import { UserActionPanel } from './user-action-panel';
 import { useToast } from '@/hooks/use-toast';
 import { getPrompts } from '@/ai/flows/get-prompts-flow';
+import { savePrompt } from '@/ai/flows/save-prompt-flow';
 import type { Prompt } from '@/lib/data-types';
 import { TaskDispatchCenter } from './task-dispatch-center';
 import { Button } from '../ui/button';
@@ -92,10 +93,39 @@ export function AIWorkbench() {
         setSelectedScenario(null); // Deselect from main panel
     };
 
-    const handleSaveTunedScenario = (tunedScenario: Scenario) => {
-        setTuningScenario(null);
-        setSelectedScenario(tunedScenario);
-        toast({ title: `已保存自定义场景: ${tunedScenario.title}`, description: "您现在可以测试这个微调后的版本。" });
+    const handleSaveTunedScenario = async (tunedScenario: Scenario) => {
+        try {
+            const result = await savePrompt({
+                name: tunedScenario.title,
+                expertId: tunedScenario.expertId,
+                userPrompt: tunedScenario.prompt,
+                context: tunedScenario.description,
+                scope: "专属",
+                tenantId: "mock-tenant-id-123", // Should come from user session
+            });
+            
+            if (result.success) {
+                const newScenario = { ...tunedScenario, id: result.id };
+                setTuningScenario(null);
+                setSelectedScenario(newScenario);
+                toast({ title: `已保存自定义场景: ${newScenario.title}`, description: "您现在可以测试这个新的专属场景。" });
+                
+                // Refresh all scenarios list in the background
+                const fetchedPrompts: Prompt[] = await getPrompts();
+                const scenarios: Scenario[] = fetchedPrompts.map(p => ({
+                    id: p.id,
+                    title: p.name,
+                    description: p.context || '未提供描述。',
+                    prompt: p.userPrompt,
+                    expertId: p.expertId,
+                }));
+                setAllScenarios(scenarios);
+            } else {
+                toast({ variant: 'destructive', title: '保存失败', description: result.message });
+            }
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: '发生错误', description: error.message });
+        }
     };
 
     const handleCancelTuning = () => {

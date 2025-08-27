@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Building, Code, User, Shield, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -89,12 +90,29 @@ export default function LoginPage() {
             <CardContent className="p-6 space-y-6">
                 <div>
                      <h3 className="text-sm font-medium text-muted-foreground text-center mb-4">平台方</h3>
-                     <Button variant="outline" size="lg" className="w-full justify-between text-base py-6">
-                        <div className="flex items-center">
-                            <Shield className="mr-4 text-accent" /> 平台管理员
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                     </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button variant="outline" size="lg" className="w-full justify-between text-base py-6">
+                              <div className="flex items-center">
+                                  <Shield className="mr-4 text-accent" /> 平台管理员
+                              </div>
+                              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                           </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>管理员登录说明</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              平台管理员账户拥有最高权限，为安全起见，账户由系统超级管理员在后台直接创建和分配，不提供公开的注册或登录入口。
+                              <br/><br/>
+                              如果您是平台管理员且无法登录，请联系您的系统或技术支持团队。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogAction>我明白了</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                 </div>
                 
                 <div className="flex items-center">
