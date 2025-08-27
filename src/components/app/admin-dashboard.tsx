@@ -854,7 +854,7 @@ function AssetManagementDialog({ tenants, triggerButtonText, title }: { tenants:
             } else {
                  setSelectedProvider(null);
             }
-        }, [providerName, form]);
+        }, [providerName, form, llmProviders]);
 
         const onSubmit = (values: z.infer<typeof llmConnectionSchema>) => {
             const finalValues = values.type === '通用' ? { ...values, tenantId: undefined } : values;
@@ -1562,9 +1562,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
-
-    
-
-    

@@ -58,15 +58,19 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
 
 
 // --- Get Data for a specific Tenant ---
-export async function getTenantData(input: { tenantId: string }): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[], tokenUsage: { month: string, tokens: number }[] }> {
+export async function getTenantData(input: { tenantId: string }): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[], tokenUsage: { month: string, tokens: number }[], apiKeys: ApiKey[] }> {
     const db = admin.firestore();
     const { tenantId } = input;
 
     try {
         // In a real, large-scale app, you'd paginate these queries.
-        const usersSnapshot = await db.collection('users').where('tenantId', '==', tenantId).get();
-        const ordersSnapshot = await db.collection('orders').where('tenantId', '==', tenantId).get();
-        const rolesSnapshot = await db.collection('roles').where('tenantId', '==', tenantId).get();
+        const [usersSnapshot, ordersSnapshot, rolesSnapshot, apiKeysSnapshot] = await Promise.all([
+            db.collection('users').where('tenantId', '==', tenantId).get(),
+            db.collection('orders').where('tenantId', '==', tenantId).get(),
+            db.collection('roles').where('tenantId', '==', tenantId).get(),
+            db.collection('api_keys').where('tenantId', '==', tenantId).get(),
+        ]);
+
 
         const users: IndividualUser[] = usersSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -116,6 +120,8 @@ export async function getTenantData(input: { tenantId: string }): Promise<{ user
             roles.push({ id: roleRef.id, ...defaultRole });
         }
         
+        const apiKeys: ApiKey[] = apiKeysSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ApiKey));
+
         // Aggregate token usage from completed orders
         const tokenUsage: { [key: string]: number } = {};
         const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
@@ -140,7 +146,7 @@ export async function getTenantData(input: { tenantId: string }): Promise<{ user
         const tokenUsageChartData = Object.entries(tokenUsage).map(([month, tokens]) => ({ month, tokens }));
 
 
-        return { users, orders, roles, tokenUsage: tokenUsageChartData };
+        return { users, orders, roles, tokenUsage: tokenUsageChartData, apiKeys };
 
     } catch (error) {
         console.error(`Error fetching data for tenant ${tenantId}:`, error);
@@ -335,15 +341,20 @@ export async function saveTenantRole(input: { tenantId: string, role: Role }): P
         const { id, ...data } = input.role;
         const dataToSave = { ...data, tenantId: input.tenantId };
         if (id) {
-            await db.collection('roles').doc(id).set(dataToSave, { merge: true });
+            const roleRef = db.collection('roles').doc(id);
+            const doc = await roleRef.get();
+            if (!doc.exists || doc.data()?.tenantId !== input.tenantId) {
+              throw new Error("Role not found or does not belong to this tenant.");
+            }
+            await roleRef.set(dataToSave, { merge: true });
             return { success: true, message: '角色已更新。', id };
         } else {
             const ref = await db.collection('roles').add(dataToSave);
             return { success: true, message: '角色已创建。', id: ref.id };
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error saving tenant role:", error);
-        throw new Error("保存角色时出错。");
+        throw new Error(`保存角色时出错: ${error.message}`);
     }
 }
 
@@ -732,3 +743,4 @@ export async function deleteLlmProvider(input: { id: string }): Promise<{ succes
         return { success: false, message: error.message };
     }
 }
+
