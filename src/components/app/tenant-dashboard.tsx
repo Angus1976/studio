@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "../ui/textarea";
 import { Skeleton } from "../ui/skeleton";
-import type { IndividualUser, Role, Order, ProcurementItem, ApiKey } from "@/lib/data-types";
+import type { IndividualUser, Role, Order, ProcurementItem, ApiKey, Department, Position } from "@/lib/data-types";
 import { 
     getTenantData, 
     inviteUsers, 
@@ -23,14 +23,12 @@ import {
     saveTenantRole,
     deleteTenantRole,
     createPreOrder,
-    getApiKeys,
-    createApiKey,
-    revokeApiKey,
     getProcurementItems,
 } from "@/ai/flows/tenant-management-flows";
 import { MembersCard } from "./members-card";
 import { OrganizationAndRolesCard } from "./organization-and-roles-card";
 import { MyOrdersCard } from "./my-orders-card";
+import { ApiKeyManagementCard } from "./api-key-management-card";
 
 
 const chartConfig = {
@@ -151,6 +149,8 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
   const [users, setUsers] = useState<IndividualUser[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [tokenUsage, setTokenUsage] = useState<{ month: string, tokens: number }[]>([]);
   const [procurementItems, setProcurementItems] = useState<ProcurementItem[]>([]);
   const [isLoading, setIsLoading] = useState({ data: true, procurement: true });
@@ -163,6 +163,8 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
         setUsers(data.users);
         setOrders(data.orders);
         setRoles(data.roles);
+        setDepartments(data.departments);
+        setPositions(data.positions);
         setTokenUsage(data.tokenUsage);
     } catch (error: any) {
         toast({ title: "数据加载失败", description: error.message, variant: "destructive" });
@@ -225,7 +227,13 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
 
   const handleUpdateUser = async (values: any) => {
     try {
-      await updateTenantUser({ tenantId: tenantId, userId: values.id, role: values.role });
+      await updateTenantUser({ 
+          tenantId: tenantId, 
+          userId: values.id, 
+          role: values.role,
+          departmentId: values.departmentId === 'none' ? null : values.departmentId,
+          positionId: values.positionId === 'none' ? null : values.positionId,
+      });
       toast({ title: "成员已更新", description: `成员 ${values.name} 的信息已更新。` });
       await fetchData();
     } catch (e: any) {
@@ -385,6 +393,8 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
                     isLoading={isLoading.data}
                     users={users} 
                     roles={roles}
+                    departments={departments}
+                    positions={positions}
                     onInviteUser={handleInviteUser}
                     onUpdateUser={handleUpdateUser}
                     onBatchImport={handleBatchImport}
@@ -393,13 +403,16 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
                  <OrganizationAndRolesCard 
                     tenantId={tenantId}
                     roles={roles}
+                    departments={departments}
+                    positions={positions}
                     onSaveRole={handleSaveRole}
                     onDeleteRole={handleDeleteRole}
+                    onOrgChange={fetchData}
                  />
             </TabsContent>
             
             <TabsContent value="settings" className="mt-6">
-                 <MyOrdersCard tenantId={tenantId} />
+                 <ApiKeyManagementCard tenantId={tenantId} />
             </TabsContent>
         </Tabs>
     </div>

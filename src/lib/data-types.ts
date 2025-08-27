@@ -26,8 +26,8 @@ export const IndividualUserSchema = z.object({
   status: z.enum(["活跃", "待审核", "已禁用", "邀请中"]),
   tenantId: z.string().optional(),
   registeredDate: z.string(),
-  department: z.string().optional(),
-  position: z.string().optional(),
+  departmentId: z.string().optional(),
+  positionId: z.string().optional(),
 });
 export type IndividualUser = z.infer<typeof IndividualUserSchema>;
 

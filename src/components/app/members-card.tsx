@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle, Trash2, Pencil, Upload, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { IndividualUser, Role } from "@/lib/data-types";
+import type { IndividualUser, Role, Department, Position } from "@/lib/data-types";
 import { Skeleton } from "../ui/skeleton";
 
 
@@ -30,6 +30,8 @@ const editUserSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   role: z.string().min(1, { message: "请为用户选择一个角色。" }),
+  departmentId: z.string().optional(),
+  positionId: z.string().optional(),
 });
 
 function InviteUserDialog({ roles, onInvite, children }: { roles: Role[]; onInvite: (values: z.infer<typeof inviteUserSchema>) => void, children: React.ReactNode }) {
@@ -102,23 +104,48 @@ function InviteUserDialog({ roles, onInvite, children }: { roles: Role[]; onInvi
   );
 }
 
-function EditUserDialog({ user, roles, onUpdate, children }: { user: IndividualUser, roles: Role[], onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
+function EditUserDialog({ user, roles, departments, positions, onUpdate, children }: { user: IndividualUser, roles: Role[], departments: Department[], positions: Position[], onUpdate: (values: z.infer<typeof editUserSchema>) => void, children: React.ReactNode }) {
   const form = useForm<z.infer<typeof editUserSchema>>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: user,
+    defaultValues: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        departmentId: user.departmentId,
+        positionId: user.positionId,
+    },
   });
   const [open, setOpen] = useState(false);
+  const selectedDepartmentId = form.watch("departmentId");
 
   React.useEffect(() => {
     if (open) {
-      form.reset(user);
+      form.reset({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        departmentId: user.departmentId,
+        positionId: user.positionId,
+      });
     }
   }, [open, user, form]);
+  
+   React.useEffect(() => {
+    // Reset position if department changes and the current position is not in the new department
+    const currentPosition = positions.find(p => p.id === form.getValues('positionId'));
+    if (currentPosition && currentPosition.departmentId !== selectedDepartmentId) {
+        form.setValue('positionId', undefined);
+    }
+  }, [selectedDepartmentId, positions, form]);
 
   const onSubmit = (values: z.infer<typeof editUserSchema>) => {
     onUpdate(values);
     setOpen(false);
   };
+  
+  const filteredPositions = positions.filter(p => p.departmentId === selectedDepartmentId);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -126,11 +153,11 @@ function EditUserDialog({ user, roles, onUpdate, children }: { user: IndividualU
       <DialogContent>
         <DialogHeader>
           <DialogTitle>编辑成员: {user.name}</DialogTitle>
-          <DialogDescription>修改成员的角色信息。</DialogDescription>
+          <DialogDescription>修改成员的角色、部门和岗位信息。</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
+             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
@@ -143,19 +170,42 @@ function EditUserDialog({ user, roles, onUpdate, children }: { user: IndividualU
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>邮箱地址</FormLabel>
-                  <FormControl>
-                    <Input {...field} disabled />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>部门</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="选择部门" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            <SelectItem value="none">无</SelectItem>
+                            {departments.map((dept) => (<SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="positionId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>岗位</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedDepartmentId || filteredPositions.length === 0}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="选择岗位" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                             <SelectItem value="none">无</SelectItem>
+                            {filteredPositions.map((pos) => (<SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
             <FormField
               control={form.control}
               name="role"
@@ -269,13 +319,17 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
   )
 }
 
-export function MembersCard({ isLoading, users, roles, onInviteUser, onUpdateUser, onBatchImport, onExport }: { isLoading: boolean, users: IndividualUser[], roles: Role[], onInviteUser: (values: any) => void, onUpdateUser: (values: any) => void, onBatchImport: (users: any) => void, onExport: () => void }) {
+export function MembersCard({ isLoading, users, roles, departments, positions, onInviteUser, onUpdateUser, onBatchImport, onExport }: { isLoading: boolean, users: IndividualUser[], roles: Role[], departments: Department[], positions: Position[], onInviteUser: (values: any) => void, onUpdateUser: (values: any) => void, onBatchImport: (users: any) => void, onExport: () => void }) {
+    
+    const departmentMap = React.useMemo(() => new Map(departments.map(d => [d.id, d.name])), [departments]);
+    const positionMap = React.useMemo(() => new Map(positions.map(p => [p.id, p.name])), [positions]);
+    
     return (
         <Card>
             <CardHeader className="flex flex-row items-start justify-between">
                 <div>
                     <CardTitle>成员管理</CardTitle>
-                    <CardDescription>管理您企业下的成员账户和权限。</CardDescription>
+                    <CardDescription>管理您企业下的成员账户，并将其分配到具体的部门和岗位。</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                     <BatchImportDialog roles={roles} onImport={onBatchImport} />
@@ -300,7 +354,8 @@ export function MembersCard({ isLoading, users, roles, onInviteUser, onUpdateUse
                 <TableHeader>
                     <TableRow>
                         <TableHead>姓名</TableHead>
-                        <TableHead>邮箱</TableHead>
+                        <TableHead>部门</TableHead>
+                        <TableHead>岗位</TableHead>
                         <TableHead>角色</TableHead>
                         <TableHead>状态</TableHead>
                         <TableHead className="text-right">操作</TableHead>
@@ -309,8 +364,12 @@ export function MembersCard({ isLoading, users, roles, onInviteUser, onUpdateUse
                 <TableBody>
                     {users.map(user => (
                         <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.name}</TableCell>
-                            <TableCell>{user.email}</TableCell>
+                            <TableCell className="font-medium">
+                                <div>{user.name}</div>
+                                <div className="text-xs text-muted-foreground">{user.email}</div>
+                            </TableCell>
+                            <TableCell>{user.departmentId ? departmentMap.get(user.departmentId) : '—'}</TableCell>
+                            <TableCell>{user.positionId ? positionMap.get(user.positionId) : '—'}</TableCell>
                             <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
                             <TableCell>
                                 <Badge variant={user.status === '活跃' ? 'default' : user.status === '待审核' ? 'secondary' : 'destructive'}>
@@ -318,7 +377,7 @@ export function MembersCard({ isLoading, users, roles, onInviteUser, onUpdateUse
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                                <EditUserDialog user={user} roles={roles} onUpdate={onUpdateUser}>
+                                <EditUserDialog user={user} roles={roles} departments={departments} positions={positions} onUpdate={onUpdateUser}>
                                     <Button variant="outline" size="sm">
                                         <Pencil className="mr-2 h-3 w-3" />
                                         编辑

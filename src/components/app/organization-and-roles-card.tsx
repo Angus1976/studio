@@ -285,7 +285,7 @@ const positionSchema = z.object({
 });
 
 function OrgEditDialog({ item, itemType, departments, onSave, onCancel }: { item: Department | Position | null; itemType: 'department' | 'position'; departments: Department[], onSave: (values: any) => void; onCancel: () => void }) {
-    const isEditing = !!item;
+    const isEditing = !!item?.id;
     const form = useForm({
         resolver: zodResolver(itemType === 'department' ? departmentSchema : positionSchema),
         defaultValues: item || {},
@@ -331,32 +331,13 @@ function OrgEditDialog({ item, itemType, departments, onSave, onCancel }: { item
     )
 }
 
-export function OrganizationAndRolesCard({ tenantId, roles, onSaveRole, onDeleteRole }: { tenantId: string, roles: Role[], onSaveRole: (role: Role) => void, onDeleteRole: (roleId: string) => void }) {
+export function OrganizationAndRolesCard({ tenantId, roles, departments, positions, onSaveRole, onDeleteRole, onOrgChange }: { tenantId: string, roles: Role[], departments: Department[], positions: Position[], onSaveRole: (role: Role) => void, onDeleteRole: (roleId: string) => void, onOrgChange: () => void }) {
     const { toast } = useToast();
-    const [departments, setDepartments] = useState<Department[]>([]);
-    const [positions, setPositions] = useState<Position[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [editingItem, setEditingItem] = useState<Department | Position | null>(null);
     const [editingItemType, setEditingItemType] = useState<'department' | 'position'>('department');
     
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const { departments: fetchedDepts, positions: fetchedPos } = await getOrganizationStructure({ tenantId });
-            setDepartments(fetchedDepts);
-            setPositions(fetchedPos);
-        } catch (e: any) {
-            toast({ title: "加载组织架构失败", description: e.message, variant: "destructive" });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [tenantId, toast]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     const handleEdit = (item: Department | Position, type: 'department' | 'position') => {
         setEditingItem(item);
         setEditingItemType(type);
@@ -380,7 +361,7 @@ export function OrganizationAndRolesCard({ tenantId, roles, onSaveRole, onDelete
             }
             toast({ title: "保存成功" });
             setEditingItem(null);
-            fetchData();
+            onOrgChange();
         } catch (e: any) {
             toast({ title: "保存失败", description: e.message, variant: "destructive" });
         }
@@ -394,7 +375,7 @@ export function OrganizationAndRolesCard({ tenantId, roles, onSaveRole, onDelete
                 await deletePosition({ tenantId, positionId: item.id });
             }
             toast({ title: "删除成功" });
-            fetchData();
+            onOrgChange();
         } catch (e: any) {
             toast({ title: "删除失败", description: e.message, variant: "destructive" });
         }
@@ -455,4 +436,3 @@ export function OrganizationAndRolesCard({ tenantId, roles, onSaveRole, onDelete
         </div>
     );
 }
-

@@ -9,7 +9,7 @@ const tenantIdSchema = z.object({
     tenantId: z.string(),
 });
 
-export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[], tokenUsage: any[] }> {
+export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Promise<{ users: IndividualUser[], orders: Order[], roles: Role[], departments: Department[], positions: Position[], tokenUsage: any[] }> {
     const db = admin.firestore();
     try {
         const tenantRef = db.collection('tenants').doc(input.tenantId);
@@ -17,6 +17,8 @@ export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Prom
         const usersSnapshot = await tenantRef.collection('users').get();
         const ordersSnapshot = await tenantRef.collection('orders').orderBy('createdAt', 'desc').get();
         const rolesSnapshot = await tenantRef.collection('roles').get();
+        const departmentsSnapshot = await tenantRef.collection('departments').get();
+        const positionsSnapshot = await tenantRef.collection('positions').get();
 
         const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IndividualUser));
         const orders = ordersSnapshot.docs.map(doc => {
@@ -29,6 +31,8 @@ export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Prom
             } as Order;
         });
         const roles = rolesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
+        const departments = departmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Department));
+        const positions = positionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Position));
 
         // Mock token usage data
         const tokenUsage = [
@@ -40,7 +44,7 @@ export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Prom
           { month: '六月', tokens: Math.floor(Math.random() * 5000) + 1000 },
         ];
 
-        return { users, orders, roles, tokenUsage };
+        return { users, orders, roles, departments, positions, tokenUsage };
     } catch (error) {
         console.error(`Error fetching data for tenant ${input.tenantId}:`, error);
         throw new Error('无法从数据库加载租户数据。');
@@ -76,14 +80,21 @@ const updateTenantUserSchema = z.object({
     tenantId: z.string(),
     userId: z.string(),
     role: z.string(),
+    departmentId: z.string().nullable().optional(),
+    positionId: z.string().nullable().optional(),
 });
 export async function updateTenantUser(input: z.infer<typeof updateTenantUserSchema>): Promise<{ success: boolean }> {
+    const { tenantId, userId, role, departmentId, positionId } = input;
     await admin.firestore()
         .collection('tenants')
-        .doc(input.tenantId)
+        .doc(tenantId)
         .collection('users')
-        .doc(input.userId)
-        .update({ role: input.role });
+        .doc(userId)
+        .update({ 
+            role: role,
+            departmentId: departmentId,
+            positionId: positionId,
+        });
     return { success: true };
 }
 
