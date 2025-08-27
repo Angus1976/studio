@@ -139,6 +139,7 @@ function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: 
 function RoleManagementDialog({ roles, onSave, onDelete, children }: { roles: Role[]; onSave: (role: Role) => void; onDelete: (roleId: string) => void; children: React.ReactNode; }) {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleSaveRole = (values: Role) => {
     onSave(values);
@@ -166,7 +167,7 @@ function RoleManagementDialog({ roles, onSave, onDelete, children }: { roles: Ro
   }
 
   return (
-    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
+    <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) handleCancelForm(); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>

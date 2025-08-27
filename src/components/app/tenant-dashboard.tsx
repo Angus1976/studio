@@ -315,7 +315,7 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Token 使用量统计</CardTitle>
-                                <CardDescription>过去六个月的每月 Token 总消耗量。</CardDescription>
+                                <CardDescription>过去六个月的每月 Token 总消耗量（基于已完成订单模拟）。</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[300px] pl-2">
                                 {isLoading.data ? (

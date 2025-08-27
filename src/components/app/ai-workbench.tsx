@@ -101,10 +101,12 @@ export function AIWorkbench({ userName }: { userName: string | null }) {
                 userPrompt: tunedScenario.prompt,
                 context: tunedScenario.description,
                 scope: "专属",
-                tenantId: "mock-tenant-id-123", // Should come from user session
+                // In a real multi-tenant app, this ID would come from the user's session.
+                // For this demonstration, a mock ID is sufficient to test the '专属' scope logic.
+                tenantId: "user-specific-mock-id",
             });
             
-            if (result.success) {
+            if (result.success && result.id) {
                 const newScenarioWithId = { ...tunedScenario, id: result.id };
                 setAllScenarios(prev => [...prev, newScenarioWithId]);
                 setTuningScenario(null);

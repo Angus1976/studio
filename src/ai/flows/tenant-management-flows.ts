@@ -34,15 +34,32 @@ export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Prom
         const departments = departmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Department));
         const positions = positionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Position));
 
-        // Mock token usage data
-        const tokenUsage = [
-          { month: '一月', tokens: Math.floor(Math.random() * 5000) + 1000 },
-          { month: '二月', tokens: Math.floor(Math.random() * 5000) + 1000 },
-          { month: '三月', tokens: Math.floor(Math.random() * 5000) + 1000 },
-          { month: '四月', tokens: Math.floor(Math.random() * 5000) + 1000 },
-          { month: '五月', tokens: Math.floor(Math.random() * 5000) + 1000 },
-          { month: '六月', tokens: Math.floor(Math.random() * 5000) + 1000 },
-        ];
+        // Aggregate token usage from completed orders.
+        // This is a simplified simulation. A real system would use a more direct metric.
+        const monthlyUsage: {[key: string]: number} = {};
+        const completedOrders = orders.filter(o => o.status === '已完成');
+        
+        completedOrders.forEach(order => {
+            const month = new Date(order.createdAt).toLocaleString('default', { month: 'long' });
+            const tokensFromOrder = Math.floor(order.totalAmount * 1000); // 1 CNY = 1000 tokens (example rate)
+            if (!monthlyUsage[month]) {
+                monthlyUsage[month] = 0;
+            }
+            monthlyUsage[month] += tokensFromOrder;
+        });
+        
+        // Ensure we have data for the last 6 months for chart stability
+        const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        const currentMonthIndex = new Date().getMonth();
+        const tokenUsage = Array.from({ length: 6 }, (_, i) => {
+            const monthIndex = (currentMonthIndex - 5 + i + 12) % 12;
+            const monthName = monthNames[monthIndex];
+            return {
+                month: monthName,
+                tokens: monthlyUsage[monthName] || 0,
+            };
+        });
+
 
         return { users, orders, roles, departments, positions, tokenUsage };
     } catch (error) {
@@ -105,12 +122,12 @@ const saveTenantRoleSchema = z.object({
 
 export async function saveTenantRole(input: z.infer<typeof saveTenantRoleSchema>): Promise<{ success: boolean }> {
     const { id, ...roleData } = input.role;
-    await admin.firestore()
-        .collection('tenants')
-        .doc(input.tenantId)
-        .collection('roles')
-        .doc(id)
-        .set(roleData, { merge: true });
+    const rolesRef = admin.firestore().collection('tenants').doc(input.tenantId).collection('roles');
+    if (id && !id.startsWith('role-')) { // Check if it's a real ID from Firestore
+        await rolesRef.doc(id).set(roleData, { merge: true });
+    } else {
+        await rolesRef.add(roleData);
+    }
     return { success: true };
 }
 
