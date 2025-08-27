@@ -747,97 +747,95 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     };
     
     return (
-        <>
-            <Dialog open={open} onOpenChange={setOpen}>
-                <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
-                <DialogContent className="max-w-6xl">
-                    <DialogHeader>
-                        <DialogTitle>{title}</DialogTitle>
-                        <DialogDescription>
-                            管理平台级的LLM，对接全球LLM及其不同版本，分配TOKEN KEY,统计分析用量、充值、控制盗用，其他各类软件资产及其许可管理。
-                        </DialogDescription>
-                    </DialogHeader>
-                    <Tabs defaultValue="llm" className="mt-4">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 对接</TabsTrigger>
-                            <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
-                            <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="llm">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                                <div className="md:col-span-2">
-                                    <Card>
-                                        <CardHeader className="flex-row items-center justify-between"><CardTitle className="text-lg">已配置模型</CardTitle><Button size="sm" onClick={() => { setEditingLlmConnection(null); setIsLlmFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/>添加新连接</Button></CardHeader>
-                                        <CardContent><ScrollArea className="h-[400px]">
-                                            {isLlmLoading ? <Skeleton className="h-full w-full"/> : <Table>
-                                                <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>类型</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                                <TableBody>
-                                                    {llmConnections.map(c => <TableRow key={c.id}>
-                                                        <TableCell><div className="font-medium">{c.modelName}</div><div className="text-xs text-muted-foreground">{c.provider}</div></TableCell>
-                                                        <TableCell><Badge variant="outline">{c.type}</Badge></TableCell>
-                                                        <TableCell><Badge variant={c.status === '活跃' ? 'default' : 'destructive'}>{c.status}</Badge></TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleTestConnection(c.id)}><LinkIcon className="h-4 w-4"/></Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLlmConnection(c); setIsLlmFormOpen(true);}}><Pencil className="h-4 w-4"/></Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDeleteLlmConnection(c.id)}><Trash2 className="h-4 w-4"/></Button>
-                                                        </TableCell>
-                                                    </TableRow>)}
-                                                </TableBody>
-                                            </Table>}
-                                            </ScrollArea></CardContent>
-                                    </Card>
-                                </div>
-                                <div className="md:col-span-1"><Card>
-                                    <CardHeader><CardTitle className="text-lg">{editingLlmConnection ? '编辑连接' : isLlmFormOpen ? '添加新连接' : '管理'}</CardTitle></CardHeader>
-                                    <CardContent>
-                                        {isLlmFormOpen ? <LlmConnectionForm connection={editingLlmConnection} onSubmit={handleSaveLlmConnection} onCancel={() => setIsLlmFormOpen(false)} /> : <div className="text-center text-sm text-muted-foreground py-10">选择一个连接或添加新连接。</div>}
-                                    </CardContent>
-                                </Card></div>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
+            <DialogContent className="max-w-6xl">
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        管理平台级的LLM，对接全球LLM及其不同版本，分配TOKEN KEY,统计分析用量、充值、控制盗用，其他各类软件资产及其许可管理。
+                    </DialogDescription>
+                </DialogHeader>
+                <Tabs defaultValue="llm" className="mt-4">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="llm"><BrainCircuit className="mr-2 h-4 w-4" />LLM 对接</TabsTrigger>
+                        <TabsTrigger value="software"><Package className="mr-2 h-4 w-4" />软件资产</TabsTrigger>
+                        <TabsTrigger value="tokens"><KeyRound className="mr-2 h-4 w-4" />Token/用量</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="llm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                            <div className="md:col-span-2">
+                                <Card>
+                                    <CardHeader className="flex-row items-center justify-between"><CardTitle className="text-lg">已配置模型</CardTitle><Button size="sm" onClick={() => { setEditingLlmConnection(null); setIsLlmFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/>添加新连接</Button></CardHeader>
+                                    <CardContent><ScrollArea className="h-[400px]">
+                                        {isLlmLoading ? <Skeleton className="h-full w-full"/> : <Table>
+                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>类型</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {llmConnections.map(c => <TableRow key={c.id}>
+                                                    <TableCell><div className="font-medium">{c.modelName}</div><div className="text-xs text-muted-foreground">{c.provider}</div></TableCell>
+                                                    <TableCell><Badge variant="outline">{c.type}</Badge></TableCell>
+                                                    <TableCell><Badge variant={c.status === '活跃' ? 'default' : 'destructive'}>{c.status}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleTestConnection(c.id)}><LinkIcon className="h-4 w-4"/></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingLlmConnection(c); setIsLlmFormOpen(true);}}><Pencil className="h-4 w-4"/></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDeleteLlmConnection(c.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                    </TableCell>
+                                                </TableRow>)}
+                                            </TableBody>
+                                        </Table>}
+                                        </ScrollArea></CardContent>
+                                </Card>
                             </div>
-                        </TabsContent>
-                        <TabsContent value="software">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                                <div className="md:col-span-2">
-                                    <Card>
-                                        <CardHeader className="flex-row items-center justify-between"><CardTitle className="text-lg">已配置软件资产</CardTitle><Button size="sm" onClick={() => { setEditingSoftwareAsset(null); setIsSoftwareFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/>添加新资产</Button></CardHeader>
-                                        <CardContent><ScrollArea className="h-[400px]">
-                                            {isSoftwareLoading ? <Skeleton className="h-full w-full"/> : <Table>
-                                                <TableHeader><TableRow><TableHead>资产名称</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
-                                                <TableBody>
-                                                    {softwareAssets.map(s => <TableRow key={s.id}>
-                                                        <TableCell>{s.name}</TableCell>
-                                                        <TableCell>{s.type}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingSoftwareAsset(s); setIsSoftwareFormOpen(true);}}><Pencil className="h-4 w-4"/></Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDeleteSoftwareAsset(s.id)}><Trash2 className="h-4 w-4"/></Button>
-                                                        </TableCell>
-                                                    </TableRow>)}
-                                                </TableBody>
-                                            </Table>}
-                                            </ScrollArea></CardContent>
-                                    </Card>
-                                </div>
-                                <div className="md:col-span-1"><Card>
-                                    <CardHeader><CardTitle className="text-lg">{editingSoftwareAsset ? '编辑资产' : isSoftwareFormOpen ? '添加新资产' : '管理'}</CardTitle></CardHeader>
-                                    <CardContent>
-                                        {isSoftwareFormOpen ? <SoftwareAssetForm asset={editingSoftwareAsset} onSubmit={handleSaveSoftwareAsset} onCancel={() => setIsSoftwareFormOpen(false)} /> : <div className="text-center text-sm text-muted-foreground py-10">选择一个资产或添加新资产。</div>}
-                                    </CardContent>
-                                </Card></div>
+                            <div className="md:col-span-1"><Card>
+                                <CardHeader><CardTitle className="text-lg">{editingLlmConnection ? '编辑连接' : isLlmFormOpen ? '添加新连接' : '管理'}</CardTitle></CardHeader>
+                                <CardContent>
+                                    {isLlmFormOpen ? <LlmConnectionForm connection={editingLlmConnection} onSubmit={handleSaveLlmConnection} onCancel={() => setIsLlmFormOpen(false)} /> : <div className="text-center text-sm text-muted-foreground py-10">选择一个连接或添加新连接。</div>}
+                                </CardContent>
+                            </Card></div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="software">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                            <div className="md:col-span-2">
+                                <Card>
+                                    <CardHeader className="flex-row items-center justify-between"><CardTitle className="text-lg">已配置软件资产</CardTitle><Button size="sm" onClick={() => { setEditingSoftwareAsset(null); setIsSoftwareFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/>添加新资产</Button></CardHeader>
+                                    <CardContent><ScrollArea className="h-[400px]">
+                                        {isSoftwareLoading ? <Skeleton className="h-full w-full"/> : <Table>
+                                            <TableHeader><TableRow><TableHead>资产名称</TableHead><TableHead>类型</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {softwareAssets.map(s => <TableRow key={s.id}>
+                                                    <TableCell>{s.name}</TableCell>
+                                                    <TableCell>{s.type}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingSoftwareAsset(s); setIsSoftwareFormOpen(true);}}><Pencil className="h-4 w-4"/></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/80" onClick={() => handleDeleteSoftwareAsset(s.id)}><Trash2 className="h-4 w-4"/></Button>
+                                                    </TableCell>
+                                                </TableRow>)}
+                                            </TableBody>
+                                        </Table>}
+                                        </ScrollArea></CardContent>
+                                </Card>
                             </div>
-                        </TabsContent>
-                        <TabsContent value="tokens">
-                            <Card>
-                                <CardHeader><CardTitle>Token/用量</CardTitle></CardHeader>
-                                <CardContent className="text-center text-muted-foreground p-8">此功能正在开发中。</CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
-                    <DialogFooter className="mt-4">
-                        <DialogClose asChild><Button variant="outline">关闭</Button></DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </>
+                            <div className="md:col-span-1"><Card>
+                                <CardHeader><CardTitle className="text-lg">{editingSoftwareAsset ? '编辑资产' : isSoftwareFormOpen ? '添加新资产' : '管理'}</CardTitle></CardHeader>
+                                <CardContent>
+                                    {isSoftwareFormOpen ? <SoftwareAssetForm asset={editingSoftwareAsset} onSubmit={handleSaveSoftwareAsset} onCancel={() => setIsSoftwareFormOpen(false)} /> : <div className="text-center text-sm text-muted-foreground py-10">选择一个资产或添加新资产。</div>}
+                                </CardContent>
+                            </Card></div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="tokens">
+                        <Card>
+                            <CardHeader><CardTitle>Token/用量</CardTitle></CardHeader>
+                            <CardContent className="text-center text-muted-foreground p-8">此功能正在开发中。</CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+                <DialogFooter className="mt-4">
+                    <DialogClose asChild><Button variant="outline">关闭</Button></DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -891,10 +889,10 @@ export function AdminDashboard() {
     .slice(0, 5);
 
   const kpiData = [
-    { title: "总收入", value: "¥1,250,345", change: "+12.5%", icon: BarChart3, isLoading: true },
-    { title: "活跃租户", value: tenants.filter(t => t.status === '活跃').length, change: "+30", icon: Building, isLoading },
-    { title: "活跃工程师", value: users.filter(u => u.role === '技术工程师' && u.status === '活跃').length, change: "+4", icon: Code, isLoading },
-    { title: "个人用户", value: users.filter(u => u.role === '个人用户' && u.status === '活跃').length, change: "+201", icon: User, isLoading },
+    { title: "总收入", value: "¥0", change: "N/A", icon: BarChart3, isLoading: isLoading }, // Placeholder until transactions are real
+    { title: "活跃租户", value: tenants.filter(t => t.status === '活跃').length, change: "", icon: Building, isLoading },
+    { title: "活跃工程师", value: users.filter(u => u.role === '技术工程师' && u.status === '活跃').length, change: "", icon: Code, isLoading },
+    { title: "个人用户", value: users.filter(u => u.role === '个人用户' && u.status === '活跃').length, change: "", icon: User, isLoading },
   ];
 
   const managementPanels = [
@@ -949,7 +947,7 @@ export function AdminDashboard() {
                         ) : (
                             <>
                                 <div className="text-2xl font-bold">{typeof item.value === 'number' ? item.value.toLocaleString() : item.value}</div>
-                                <p className="text-xs text-muted-foreground">{item.change} from last month</p>
+                                {item.change && <p className="text-xs text-muted-foreground">{item.change}</p>}
                             </>
                         )}
                     </CardContent>
