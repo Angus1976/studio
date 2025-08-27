@@ -103,9 +103,9 @@ export default function LoginPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>管理员登录说明</AlertDialogTitle>
                             <AlertDialogDescription>
-                              平台管理员账户拥有最高权限，为安全起见，账户由系统超级管理员在后台直接创建和分配，不提供公开的注册或登录入口。
+                              平台管理员账户拥有最高权限，为安全起见，账户由系统超级管理员在后台直接创建和分配，不支持公开注册或登录入口。
                               <br/><br/>
-                              如果您是平台管理员且无法登录，请联系您的系统或技术支持团队。
+                              如果您是平台管理员且无法登录，请联系您的系统或技术支持团队获取帮助。
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
