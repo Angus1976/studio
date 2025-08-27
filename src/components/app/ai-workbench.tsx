@@ -105,21 +105,11 @@ export function AIWorkbench() {
             });
             
             if (result.success) {
-                const newScenario = { ...tunedScenario, id: result.id };
+                const newScenarioWithId = { ...tunedScenario, id: result.id };
+                setAllScenarios(prev => [...prev, newScenarioWithId]);
                 setTuningScenario(null);
-                setSelectedScenario(newScenario);
-                toast({ title: `已保存自定义场景: ${newScenario.title}`, description: "您现在可以测试这个新的专属场景。" });
-                
-                // Refresh all scenarios list in the background
-                const fetchedPrompts: Prompt[] = await getPrompts();
-                const scenarios: Scenario[] = fetchedPrompts.map(p => ({
-                    id: p.id,
-                    title: p.name,
-                    description: p.context || '未提供描述。',
-                    prompt: p.userPrompt,
-                    expertId: p.expertId,
-                }));
-                setAllScenarios(scenarios);
+                setSelectedScenario(newScenarioWithId); // Select the newly saved scenario
+                toast({ title: `已保存自定义场景: ${newScenarioWithId.title}`, description: "您现在可以测试这个新的专属场景。" });
             } else {
                 toast({ variant: 'destructive', title: '保存失败', description: result.message });
             }
