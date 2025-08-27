@@ -33,12 +33,16 @@ async function getModelDetails(modelId: string) {
     }
     const modelData = LlmConnectionSchema.omit({createdAt: true, id: true}).parse(modelDoc.data());
 
-    const providerSnapshot = await db.collection('llm_providers').where('providerName', '==', modelData.provider).limit(1).get();
-    
-    if (providerSnapshot.empty) {
+    // Fetch all providers and find the matching one in a case-insensitive way
+    const providersSnapshot = await db.collection('llm_providers').get();
+    const providers = providersSnapshot.docs.map(doc => LlmProviderSchema.parse({ id: doc.id, ...doc.data() }));
+
+    const modelProviderLower = modelData.provider.toLowerCase();
+    const providerData = providers.find(p => p.providerName.toLowerCase() === modelProviderLower);
+
+    if (!providerData) {
         throw new Error(`无法找到厂商'${modelData.provider}'的配置信息。`);
     }
-    const providerData = LlmProviderSchema.omit({ id: true }).parse(providerSnapshot.docs[0].data());
     
     if (!providerData.apiUrl) {
          throw new Error(`厂商'${modelData.provider}'的API地址未配置。`);
