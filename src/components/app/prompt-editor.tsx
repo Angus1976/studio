@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -78,7 +77,7 @@ function ManageDomainsDialog({ onDomainsUpdate }: { onDomainsUpdate: () => void 
             const result = await saveExpertDomain(values);
             if (result.success) {
                 toast({ title: result.message });
-                form.reset();
+                form.reset({ name: "", domainId: "" });
                 await fetchDomains();
                 onDomainsUpdate(); // Notify parent to refetch
             } else {
@@ -174,12 +173,12 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
         try {
             const domains = await getExpertDomains();
             setExpertDomains(domains);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch expert domains", error);
             toast({
                 variant: "destructive",
                 title: "加载专家领域失败",
-                description: "无法从数据库获取专家领域列表。"
+                description: error.message || "无法从数据库获取专家领域列表。"
             });
         } finally {
             setIsLoadingDomains(false);

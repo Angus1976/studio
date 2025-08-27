@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, LlmProvider, Order, OrderStatus } from '@/lib/data-types';
+import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, LlmProvider, Order, OrderStatus, ExpertDomain } from '@/lib/data-types';
 
 // --- Get All Data for Admin Dashboard ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -400,5 +400,56 @@ export async function cleanDatabase(input: CleanDatabaseInput): Promise<{ succes
     } catch (error: any) {
         console.error(`Error cleaning ${input.type}:`, error);
         return { success: false, message: `清理 ${input.type} 时发生错误。` };
+    }
+}
+
+
+// --- Expert Domain Management ---
+
+export async function getExpertDomains(): Promise<ExpertDomain[]> {
+    const db = admin.firestore();
+    try {
+        const snapshot = await db.collection('expert_domains').orderBy('name').get();
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExpertDomain));
+    } catch (error: any) {
+        console.error("Error fetching expert domains:", error);
+        throw new Error("无法获取专家领域列表。");
+    }
+}
+
+const ExpertDomainInputSchema = z.object({
+    id: z.string().optional(),
+    name: z.string(),
+    domainId: z.string(),
+});
+
+export async function saveExpertDomain(input: z.infer<typeof ExpertDomainInputSchema>): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    try {
+        const { id, ...data } = input;
+        if (id) {
+            await db.collection('expert_domains').doc(id).set(data, { merge: true });
+            return { success: true, message: "领域已更新。" };
+        } else {
+            // Check for duplicate domainId before creating
+            const existing = await db.collection('expert_domains').where('domainId', '==', data.domainId).get();
+            if(!existing.empty) {
+                return { success: false, message: "该领域ID已存在。" };
+            }
+            await db.collection('expert_domains').add(data);
+            return { success: true, message: "领域已创建。" };
+        }
+    } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}
+
+export async function deleteExpertDomain(input: { id: string }): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    try {
+        await db.collection('expert_domains').doc(input.id).delete();
+        return { success: true, message: "领域已删除。" };
+    } catch (error: any) {
+        return { success: false, message: error.message };
     }
 }

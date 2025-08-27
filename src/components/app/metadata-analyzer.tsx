@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from "@/hooks/use-toast";
-import { LoaderCircle, Sparkles, BrainCircuit, Zap as Apply } from 'lucide-react';
+import { LoaderCircle, Sparkles, BrainCircuit, Zap } from 'lucide-react';
 import { analyzePromptMetadata } from '@/ai/flows/analyze-prompt-metadata';
 import type { PromptData } from './prompt-editor';
 import type { AnalyzePromptMetadataOutput } from '@/lib/data-types';
@@ -37,12 +37,12 @@ export function MetadataAnalyzer({ prompt, onApply }: MetadataAnalyzerProps) {
                 title: "元数据分析完成",
                 description: "AI 已成功为您的提示词生成元数据。"
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error analyzing metadata:", error);
             toast({
                 variant: "destructive",
                 title: "分析失败",
-                description: "AI 分析元数据时发生错误。",
+                description: error.message || "AI 分析元数据时发生错误。",
             });
         } finally {
             setIsAnalyzing(false);
@@ -99,7 +99,7 @@ export function MetadataAnalyzer({ prompt, onApply }: MetadataAnalyzerProps) {
                             <p className="text-muted-foreground whitespace-pre-wrap">{metadata.scenario}</p>
                         </div>
                         <Button variant="outline" className="w-full" onClick={handleApplyMetadata}>
-                            <Apply className="mr-2 h-4 w-4"/>
+                            <Zap className="mr-2 h-4 w-4"/>
                             应用元数据到名称
                         </Button>
                     </div>

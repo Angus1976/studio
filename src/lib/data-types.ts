@@ -1,5 +1,4 @@
 
-
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -26,8 +25,8 @@ export const IndividualUserSchema = z.object({
   status: z.enum(["活跃", "待审核", "已禁用", "邀请中"]),
   tenantId: z.string().optional(),
   registeredDate: z.string(),
-  departmentId: z.string().optional(),
-  positionId: z.string().optional(),
+  departmentId: z.string().nullable().optional(),
+  positionId: z.string().nullable().optional(),
 });
 export type IndividualUser = z.infer<typeof IndividualUserSchema>;
 
@@ -42,7 +41,7 @@ export type Role = z.infer<typeof RoleSchema>;
 export const DepartmentSchema = z.object({
     id: z.string(),
     name: z.string(),
-    parentId: z.string().nullable(),
+    parentId: z.string().nullable().optional(),
 });
 export type Department = z.infer<typeof DepartmentSchema>;
 

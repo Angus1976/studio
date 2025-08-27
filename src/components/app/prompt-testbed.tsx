@@ -30,10 +30,7 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
     const { toast } = useToast();
     const [isGenerating, setIsGenerating] = useState(false);
     const [temperature, setTemperature] = useState(0.7);
-    const [variables, setVariables] = useState<Variable[]>([
-        { id: 'var1', key: 'language', value: 'French' },
-        { id: 'var2', key: 'text', value: 'Hello, world!' }
-    ]);
+    const [variables, setVariables] = useState<Variable[]>([]);
     const [testResult, setTestResult] = useState('');
     
     const [models, setModels] = useState<LlmConnection[]>([]);
@@ -48,12 +45,12 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                 if (llmConnections.length > 0) {
                     setSelectedModel(llmConnections[0].id);
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch models", error);
                 toast({
                     variant: "destructive",
                     title: "加载模型失败",
-                    description: "无法从数据库获取已配置的模型列表。"
+                    description: error.message || "无法从数据库获取已配置的模型列表。"
                 });
             } finally {
                 setIsLoadingModels(false);
@@ -61,6 +58,22 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
         }
         fetchModels();
     }, [toast]);
+    
+    // Auto-update variables when prompt changes
+    useEffect(() => {
+        const regex = /{{\s*(\w+)\s*}}/g;
+        const newVars = new Set<string>();
+        let match;
+        while(match = regex.exec(prompt.userPrompt)) {
+            newVars.add(match[1]);
+        }
+        setVariables(Array.from(newVars).map((key, i) => ({
+            id: `var-${key}-${i}`,
+            key: key,
+            value: ''
+        })));
+    }, [prompt.userPrompt]);
+
 
     const handleAddVariable = () => {
         setVariables([...variables, { id: `var${Date.now()}`, key: '', value: '' }]);
@@ -163,12 +176,11 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                         <Label>测试变量</Label>
                         {variables.map((variable) => (
                             <div key={variable.id} className="flex items-center gap-2">
-                                <Input placeholder="Key" value={variable.key} onChange={e => handleVariableChange(variable.id, 'key', e.target.value)} />
-                                <Input placeholder="Value" value={variable.value} onChange={e => handleVariableChange(variable.id, 'value', e.target.value)} />
-                                <Button variant="ghost" size="icon" onClick={() => handleRemoveVariable(variable.id)}><Trash2 className="h-4 w-4"/></Button>
+                                <Input disabled className="w-1/3 font-mono text-xs" value={variable.key} />
+                                <Input placeholder={`Value for ${variable.key}`} value={variable.value} onChange={e => handleVariableChange(variable.id, 'value', e.target.value)} />
                             </div>
                         ))}
-                        <Button variant="outline" size="sm" onClick={handleAddVariable}><PlusCircle className="mr-2 h-4 w-4"/>添加变量</Button>
+                        {variables.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">此提示词没有可替换的变量。</p>}
                     </div>
                     <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleTestPrompt} disabled={isGenerating || isLoadingModels}>
                         {isGenerating ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Wand2 className="mr-2 h-5 w-5" />}

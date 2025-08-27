@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -112,7 +111,7 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
                                             <Button size="sm" variant="outline" onClick={() => onSelectPrompt(prompt)}>选用</Button>
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button size="sm" variant="destructive">
+                                                    <Button size="sm" variant="destructive" className="px-2">
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </AlertDialogTrigger>

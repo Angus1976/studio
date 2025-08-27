@@ -25,7 +25,7 @@ export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null 
     const [activePrompt, setActivePrompt] = useState<PromptData>({
         id: null,
         name: '新的提示词',
-        expertId: 'general-expert',
+        expertId: 'recruitment-expert',
         systemPrompt: 'You are a helpful assistant.',
         userPrompt: 'Translate the following text to {{language}}: "{{text}}"',
         context: '',
@@ -65,7 +65,7 @@ export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null 
         setActivePrompt({
             id: prompt.id,
             name: prompt.name,
-            expertId: prompt.expertId || 'general-expert',
+            expertId: prompt.expertId || 'recruitment-expert',
             systemPrompt: prompt.systemPrompt || '',
             userPrompt: prompt.userPrompt,
             context: prompt.context || '',
@@ -134,7 +134,7 @@ export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null 
                  if(activePrompt.id === promptId) {
                     // Clear the editor if the active prompt was deleted
                     setActivePrompt({
-                        id: null, name: '新的提示词', expertId: 'general-expert',
+                        id: null, name: '新的提示词', expertId: 'recruitment-expert',
                         systemPrompt: '', userPrompt: '', context: '', negativePrompt: '',
                         scope: '专属', tenantId: tenantId || undefined
                     });
@@ -149,7 +149,10 @@ export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null 
     }
 
     const handleApplyMetadata = (metadata: AnalyzePromptMetadataOutput) => {
-        setActivePrompt(p => ({...p, name: `${metadata.scope} - ${metadata.scenario}`}));
+        // A smarter way to name could be implemented, but this is a good starting point.
+        // e.g. "营销文案 - 为新产品生成社交媒体帖子"
+        const newName = `${metadata.scope} - ${metadata.scenario.split('\n')[0]}`;
+        setActivePrompt(p => ({...p, name: newName}));
     };
 
     return (

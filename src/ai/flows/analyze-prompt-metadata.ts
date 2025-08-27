@@ -82,6 +82,9 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     } catch (error) {
         console.error("Failed to parse AI metadata response:", error);
         console.error("Raw AI response:", result.response);
+        // Fallback to a default error structure if parsing fails, but the schema is strict.
+        // A better approach would be a more lenient parsing or manual object construction.
+        // For now, we throw an error to make it clear that the AI response was invalid.
         throw new Error("AI返回的元数据格式无效，无法解析。");
     }
 }
