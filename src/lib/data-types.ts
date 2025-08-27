@@ -71,6 +71,7 @@ export const PromptSchema = z.object({
     description: z.string().optional(),
     userPrompt: z.string(),
     expertId: z.string(),
+    scope: z.enum(["通用", "专属"]).optional(),
     tenantId: z.string().optional(),
     systemPrompt: z.string().optional(),
     context: z.string().optional(),
@@ -233,7 +234,7 @@ export const PreOrderSchema = OrderSchema.omit({id: true, createdAt: true, updat
     createdAt: z.any(),
     updatedAt: z.any(),
 });
-export type PreOrder = z.infer<typeof PreOrderSchema>;
+export type PreOrder = z.infer<typeof PreOrder>;
 
 
 // --- API Keys ---

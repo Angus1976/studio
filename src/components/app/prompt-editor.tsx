@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from '@/components/ui/input';
-import { LoaderCircle, Save, Sparkles, Bot, Settings, PlusCircle, Trash2 } from 'lucide-react';
+import { LoaderCircle, Save, Sparkles, Bot, Settings, PlusCircle, Trash2, Globe, Building } from 'lucide-react';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { getExpertDomains, saveExpertDomain, deleteExpertDomain } from '@/ai/flows/admin-management-flows';
@@ -18,6 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from 'react-hook-form';
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 
 export type PromptData = {
@@ -28,12 +29,14 @@ export type PromptData = {
     userPrompt: string;
     context: string;
     negativePrompt: string;
+    scope: '通用' | '专属';
+    tenantId?: string;
 };
 
 type PromptEditorProps = {
     prompt: PromptData;
     onPromptChange: (prompt: PromptData) => void;
-    onSave: (prompt: PromptData, metadata?: any) => void;
+    onSave: (prompt: PromptData, saveAs: 'universal' | 'tenant') => void;
     isSaving: boolean;
 };
 
@@ -164,6 +167,7 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
     const [expertDomains, setExpertDomains] = useState<ExpertDomain[]>([]);
     const [isLoadingDomains, setIsLoadingDomains] = useState(true);
     const [isManageDomainsOpen, setIsManageDomainsOpen] = useState(false);
+    const [saveAs, setSaveAs] = useState<'universal' | 'tenant'>('tenant');
 
     const fetchDomains = useCallback(async () => {
         setIsLoadingDomains(true);
@@ -186,7 +190,7 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
         fetchDomains();
     }, [fetchDomains]);
     
-    const handleChange = (field: keyof PromptData, value: string) => {
+    const handleChange = (field: keyof Omit<PromptData, 'tenantId'>, value: string | '通用' | '专属') => {
         onPromptChange({ ...prompt, [field]: value });
     };
 
@@ -266,8 +270,19 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
                         </div>
                    </div>
                 </CardContent>
-                 <CardFooter>
-                    <Button className="w-full" onClick={() => onSave(prompt)} disabled={isSaving || isLoadingDomains}>
+                 <CardFooter className="flex items-center justify-between gap-4">
+                    <RadioGroup defaultValue={saveAs} onValueChange={(value: 'universal' | 'tenant') => setSaveAs(value)} className="flex items-center gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="tenant" id="r2" />
+                            <Label htmlFor="r2" className="flex items-center gap-1.5"><Building className="h-4 w-4"/>保存为租户专属</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="universal" id="r1" />
+                            <Label htmlFor="r1" className="flex items-center gap-1.5"><Globe className="h-4 w-4"/>保存为平台通用</Label>
+                        </div>
+                    </RadioGroup>
+
+                    <Button className="w-1/3" onClick={() => onSave(prompt, saveAs)} disabled={isSaving || isLoadingDomains}>
                         {isSaving ? <LoaderCircle className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
                         保存到库
                     </Button>

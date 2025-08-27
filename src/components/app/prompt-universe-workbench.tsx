@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -30,6 +31,8 @@ export function PromptUniverseWorkbench() {
         userPrompt: 'Translate the following text to {{language}}: "{{text}}"',
         context: '',
         negativePrompt: '',
+        scope: '专属', // Default to tenant-specific
+        tenantId: 'mock-tenant-id-123', // In a real app, this would come from user session
     });
     
     // Prompt Library State
@@ -68,6 +71,8 @@ export function PromptUniverseWorkbench() {
             userPrompt: prompt.userPrompt,
             context: prompt.context || '',
             negativePrompt: prompt.negativePrompt || '',
+            scope: prompt.scope || '专属',
+            tenantId: prompt.tenantId
         });
         
         toast({
@@ -76,7 +81,7 @@ export function PromptUniverseWorkbench() {
         });
     };
 
-    const handleSavePrompt = async (promptToSave: PromptData) => {
+    const handleSavePrompt = async (promptToSave: PromptData, saveAs: 'universal' | 'tenant') => {
         setIsSaving(true);
         try {
             // Step 1: Always analyze metadata first
@@ -99,6 +104,8 @@ export function PromptUniverseWorkbench() {
                 context: promptToSave.context,
                 negativePrompt: promptToSave.negativePrompt,
                 metadata: metadata,
+                scope: saveAs === 'universal' ? '通用' : '专属',
+                tenantId: saveAs === 'tenant' ? 'mock-tenant-id-123' : undefined
             });
 
             if (result.success) {
@@ -129,7 +136,8 @@ export function PromptUniverseWorkbench() {
                     // Clear the editor if the active prompt was deleted
                     setActivePrompt({
                         id: null, name: '新的提示词', expertId: 'general-expert',
-                        systemPrompt: '', userPrompt: '', context: '', negativePrompt: ''
+                        systemPrompt: '', userPrompt: '', context: '', negativePrompt: '',
+                        scope: '专属', tenantId: 'mock-tenant-id-123'
                     });
                 }
             } else {
