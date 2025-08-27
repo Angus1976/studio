@@ -90,6 +90,9 @@ export async function executePrompt(
                     contents: [{ parts: [{ text: fullPrompt }] }],
                     generationConfig: { temperature },
                 };
+                 if (input.responseFormat === 'json_object') {
+                    requestBody.generationConfig.responseMimeType = 'application/json';
+                }
                 responsePath = ['candidates', 0, 'content', 'parts', 0, 'text'];
                 break;
             
@@ -123,6 +126,9 @@ export async function executePrompt(
                     temperature,
                     stream: false,
                  };
+                 if (input.responseFormat === 'json_object') {
+                    requestBody.response_format = { type: 'json_object' };
+                }
                  responsePath = ['choices', 0, 'message', 'content'];
                  break;
         }

@@ -71,6 +71,7 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
       modelId: llmConnection.id,
       userPrompt: finalUserPrompt,
       temperature: 0.2,
+      responseFormat: 'json_object',
     });
     
     try {

@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -142,6 +141,7 @@ export const PromptExecutionInputSchema = z.object({
   negativePrompt: z.string().optional().describe('Content that the model should avoid generating.'),
   variables: z.record(z.string()).optional().describe('A key-value object for replacing variables in the user prompt.'),
   temperature: z.number().min(0).max(1).optional().describe('The temperature for the model.'),
+  responseFormat: z.enum(['text', 'json_object']).optional().describe('The desired response format from the model.'),
 });
 export type PromptExecutionInput = z.infer<typeof PromptExecutionInputSchema>;
 
