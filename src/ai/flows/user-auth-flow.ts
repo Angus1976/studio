@@ -60,7 +60,7 @@ export async function loginUser(input: LoginUserInput) {
     try {
         const userDoc = await admin.firestore().collection('users').doc(input.uid).get();
         if (!userDoc.exists) {
-            throw new Error('用户数据不存在。');
+            throw new Error('用户数据不存在。这可能是因为数据库记录与认证信息不一致，请尝试重新注册或联系管理员。');
         }
         const userData = userDoc.data();
         if (!userData) {
@@ -75,6 +75,7 @@ export async function loginUser(input: LoginUserInput) {
         };
     } catch (error: any) {
         console.error("Error in loginUser flow: ", error);
-        throw new Error('无法从数据库加载用户角色。');
+        // Re-throw the specific error message from the try block or a generic one.
+        throw new Error(error.message || '无法从数据库加载用户角色。');
     }
 }
