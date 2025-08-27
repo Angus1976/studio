@@ -22,30 +22,29 @@ export function PromptLibrary({ prompts, onSelectPrompt, isLoading, onDeleteProm
     const [isLoadingDomains, setIsLoadingDomains] = useState(true);
     const { toast } = useToast();
 
-    const fetchDomains = useCallback(async () => {
-        setIsLoadingDomains(true);
-        try {
-            const domains = await getExpertDomains();
-            const domainMap = domains.reduce((acc: Record<string, string>, domain: ExpertDomain) => {
-                acc[domain.domainId] = domain.name;
-                return acc;
-            }, {});
-            setExpertDomainsMap(domainMap);
-        } catch (error) {
-            console.error("Failed to fetch expert domains map", error);
-            toast({
-                variant: "destructive",
-                title: "加载领域失败",
-                description: "无法获取专家领域映射。"
-            });
-        } finally {
-            setIsLoadingDomains(false);
-        }
-    }, [toast]);
-
     useEffect(() => {
+        async function fetchDomains() {
+            setIsLoadingDomains(true);
+            try {
+                const domains = await getExpertDomains();
+                const domainMap = domains.reduce((acc: Record<string, string>, domain: ExpertDomain) => {
+                    acc[domain.domainId] = domain.name;
+                    return acc;
+                }, {});
+                setExpertDomainsMap(domainMap);
+            } catch (error) {
+                console.error("Failed to fetch expert domains map", error);
+                toast({
+                    variant: "destructive",
+                    title: "加载领域失败",
+                    description: "无法获取专家领域映射。"
+                });
+            } finally {
+                setIsLoadingDomains(false);
+            }
+        }
         fetchDomains();
-    }, [fetchDomains]);
+    }, [toast]);
 
 
     const filteredPrompts = prompts.filter(p =>
