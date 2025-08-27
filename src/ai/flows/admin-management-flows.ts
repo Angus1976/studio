@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
 import type { Tenant, IndividualUser, Role, ApiKey, Order, ProcurementItem, PreOrder, LlmConnection, LlmProvider, TokenAllocation, SoftwareAsset, ExpertDomain } from '@/lib/data-types';
+import { executePrompt } from './prompt-execution-flow';
 
 // --- Get All Data for Platform Admin ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -412,7 +413,7 @@ export async function revokeApiKey(input: { tenantId: string, keyId: string }): 
     const db = admin.firestore();
     const keyRef = db.collection('api_keys').doc(input.keyId);
     const doc = await keyRef.get();
-    if (!doc.exists || doc.data()?.tenantId !== input.tenantId) {
+    if (!doc.exists || doc.data()?.tenantId !== input.keyId) {
         throw new Error("API Key not found or does not belong to this tenant.");
     }
     await keyRef.update({ status: '已撤销' });
@@ -480,21 +481,16 @@ export async function deleteLlmConnection(input: { id: string }): Promise<{ succ
     } catch (e: any) { return { success: false, message: e.message }; }
 }
 
-export async function testLlmConnection(input: LlmConnection): Promise<{ success: boolean; message: string }> {
+export async function testLlmConnection(connection: LlmConnection): Promise<{ success: boolean; message: string }> {
   try {
-    const testPrompt = {
-      modelId: input.id,
+    const result = await executePrompt({
+      modelId: connection.id,
       userPrompt: '你好，请确认你可以正常回复。',
       temperature: 0.1,
-    };
-    
-    // Temporarily require the prompt-execution-flow.
-    // This creates a temporary circular dependency but is acceptable for this specific isolated use case.
-    const { executePrompt } = require('./prompt-execution-flow');
-    const result = await executePrompt(testPrompt);
+    });
 
     if (result && result.response && !result.response.includes('发生错误')) {
-      await admin.firestore().collection('llm_connections').doc(input.id).set({
+      await admin.firestore().collection('llm_connections').doc(connection.id).set({
         lastChecked: new Date().toISOString(),
       }, { merge: true });
       return { success: true, message: `连接成功！模型回复：${result.response.substring(0, 50)}...` };
@@ -743,6 +739,3 @@ export async function deleteLlmProvider(input: { id: string }): Promise<{ succes
         return { success: false, message: error.message };
     }
 }
-
-
-
