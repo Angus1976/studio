@@ -118,9 +118,9 @@ export default function LoginPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>管理员登录说明</AlertDialogTitle>
                             <AlertDialogDescription>
-                              平台管理员账户拥有最高权限，为安全起见，此账户由系统在后台为第一位注册的用户自动创建，不提供单独的登录入口。
+                              平台管理员账户拥有最高权限，为安全起见，此账户将在平台**首次注册**时自动创建，不提供单独的登录入口。
                               <br/><br/>
-                              如果您是平台的第一个用户并希望以管理员身份登录，请使用您注册时的邮箱和密码从下方的用户方入口登录。
+                              如果您是平台的第一个注册用户，请使用您注册时的邮箱和密码从下方的“用户方”入口登录。
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
