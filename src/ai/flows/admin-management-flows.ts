@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset } from '@/lib/data-types';
+import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, LlmProvider, Order, OrderStatus } from '@/lib/data-types';
 
 // --- Get All Data for Admin Dashboard ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
@@ -157,11 +157,12 @@ export async function deleteUser(input: { id: string }): Promise<{ success: bool
 
 // --- Asset Management Flows ---
 
-export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], softwareAssets: SoftwareAsset[] }> {
+export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], softwareAssets: SoftwareAsset[], llmProviders: LlmProvider[] }> {
     const db = admin.firestore();
     try {
         const llmSnapshot = await db.collection('llm_connections').get();
         const softwareSnapshot = await db.collection('software_assets').get();
+        const providersSnapshot = await db.collection('llm_providers').get();
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => ({
             id: doc.id,
@@ -174,8 +175,13 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
             ...doc.data(),
              createdAt: doc.data().createdAt.toDate().toISOString(),
         } as SoftwareAsset));
+        
+        const llmProviders: LlmProvider[] = providersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as LlmProvider));
 
-        return { llmConnections, softwareAssets };
+        return { llmConnections, softwareAssets, llmProviders };
     } catch (error: any) {
         console.error("Error fetching platform assets:", error);
         throw new Error('无法从数据库加载平台资产。');
@@ -184,8 +190,8 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
 
 const llmConnectionSchema = z.object({
     id: z.string().optional(),
-    modelName: z.string().min(2),
-    provider: z.string().min(2),
+    modelName: z.string().min(1),
+    provider: z.string().min(1),
     apiKey: z.string().min(10),
     type: z.enum(["通用", "专属"]),
     status: z.enum(["活跃", "已禁用"]),
@@ -268,5 +274,56 @@ export async function deleteSoftwareAsset(input: { id: string }): Promise<{ succ
         return { success: true, message: '软件资产已删除。' };
     } catch (error: any) {
         return { success: false, message: error.message };
+    }
+}
+
+
+// --- Transaction Management Flows ---
+
+export async function getAllOrders(): Promise<Order[]> {
+    const db = admin.firestore();
+    try {
+        const ordersSnapshot = await db.collection('orders').orderBy('createdAt', 'desc').get();
+        
+        const orders: Order[] = await Promise.all(ordersSnapshot.docs.map(async (doc) => {
+            const orderData = doc.data();
+            let tenantName = '未知租户';
+            if (orderData.tenantId) {
+                const tenantDoc = await db.collection('tenants').doc(orderData.tenantId).get();
+                if (tenantDoc.exists) {
+                    tenantName = tenantDoc.data()?.companyName || '未知租户';
+                }
+            }
+
+            return {
+                id: doc.id,
+                tenantId: orderData.tenantId,
+                tenantName: tenantName,
+                items: orderData.items || [],
+                totalAmount: orderData.totalAmount || 0,
+                status: orderData.status || '待平台确认',
+                createdAt: orderData.createdAt?.toDate().toISOString() || new Date().toISOString(),
+                updatedAt: orderData.updatedAt?.toDate().toISOString() || new Date().toISOString(),
+            };
+        }));
+        
+        return orders;
+    } catch (error) {
+        console.error("Error fetching all orders:", error);
+        throw new Error('无法从数据库加载订单列表。');
+    }
+}
+
+export async function updateOrderStatus(input: { orderId: string, status: OrderStatus }): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    try {
+        await db.collection('orders').doc(input.orderId).update({
+            status: input.status,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { success: true, message: '订单状态已更新。' };
+    } catch (error: any) {
+        console.error("Error updating order status:", error);
+        return { success: false, message: '更新订单状态时出错。' };
     }
 }

@@ -19,7 +19,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -31,16 +30,17 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
-import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset } from '@/lib/data-types';
+import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, Order, OrderStatus } from '@/lib/data-types';
 import { 
     getTenantsAndUsers, saveTenant, deleteTenant, saveUser, deleteUser,
-    getPlatformAssets, saveLlmConnection, deleteLlmConnection, testLlmConnection, saveSoftwareAsset, deleteSoftwareAsset
+    getPlatformAssets, saveLlmConnection, deleteLlmConnection, testLlmConnection, saveSoftwareAsset, deleteSoftwareAsset,
+    getAllOrders, updateOrderStatus
 } from '@/ai/flows/admin-management-flows';
 
 
@@ -546,16 +546,24 @@ function UserManagementDialog({ users, onRefresh, buttonText, title, description
 
 
 // --- Asset Management ---
+const llmProviderSchema = z.object({
+    id: z.string().optional(),
+    providerName: z.string().min(1, "厂商名称不能为空"),
+    apiUrl: z.string().url("请输入有效的API URL"),
+    apiKeyHeader: z.string().min(1, "认证头不能为空"),
+    apiKeyPrefix: z.string().optional(),
+});
+
 const llmConnectionSchema = z.object({
     id: z.string().optional(),
     modelName: z.string().min(1, "模型名称不能为空"),
-    provider: z.string().min(1, "厂商不能为空"),
+    provider: z.string().min(1, "请选择一个厂商"),
     apiKey: z.string().min(10, "API Key不合法"),
     type: z.enum(["通用", "专属"]),
     status: z.enum(["活跃", "已禁用"]),
 });
 
-function LlmConnectionForm({ connection, onSubmit, onCancel }: { connection?: LlmConnection | null, onSubmit: (values: z.infer<typeof llmConnectionSchema>) => void, onCancel: () => void }) {
+function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { connection?: LlmConnection | null, providers: z.infer<typeof llmProviderSchema>[], onSubmit: (values: z.infer<typeof llmConnectionSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof llmConnectionSchema>>({
         resolver: zodResolver(llmConnectionSchema),
         defaultValues: connection || { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃" },
@@ -564,15 +572,32 @@ function LlmConnectionForm({ connection, onSubmit, onCancel }: { connection?: Ll
     useEffect(() => {
         form.reset(connection || { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃" });
     }, [connection, form]);
-
+    
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="provider"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>厂商/平台</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="选择一个厂商" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {providers.map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField control={form.control} name="modelName" render={({ field }) => (
-                    <FormItem><FormLabel>模型名称</FormLabel><FormControl><Input placeholder="e.g., gemini-1.5-pro" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="provider" render={({ field }) => (
-                    <FormItem><FormLabel>厂商/平台</FormLabel><FormControl><Input placeholder="e.g., Google" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>模型名称</FormLabel><FormControl><Input placeholder="e.g., gemini-1.5-pro, deepseek-chat" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <FormField control={form.control} name="apiKey" render={({ field }) => (
                     <FormItem><FormLabel>API Key</FormLabel><FormControl><Input type="password" placeholder="••••••••••••••" {...field} /></FormControl><FormMessage /></FormItem>
@@ -603,6 +628,7 @@ function LlmConnectionForm({ connection, onSubmit, onCancel }: { connection?: Ll
         </Form>
     );
 }
+
 
 const softwareAssetSchema = z.object({
     id: z.string().optional(),
@@ -647,6 +673,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     const { toast } = useToast();
 
     const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
+    const [llmProviders, setLlmProviders] = useState<z.infer<typeof llmProviderSchema>[]>([]);
     const [editingLlmConnection, setEditingLlmConnection] = useState<LlmConnection | null>(null);
     const [isLlmFormOpen, setIsLlmFormOpen] = useState(false);
     const [isLlmLoading, setIsLlmLoading] = useState(true);
@@ -661,9 +688,10 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
         setIsLlmLoading(true);
         setIsSoftwareLoading(true);
         try {
-            const { llmConnections: fetchedLlm, softwareAssets: fetchedSoftware } = await getPlatformAssets();
-            setLlmConnections(fetchedLlm);
-            setSoftwareAssets(fetchedSoftware);
+            const { llmConnections, softwareAssets, llmProviders } = await getPlatformAssets();
+            setLlmConnections(llmConnections);
+            setSoftwareAssets(softwareAssets);
+            setLlmProviders(llmProviders);
         } catch (error: any) {
             toast({ variant: "destructive", title: "资产加载失败", description: error.message });
         } finally {
@@ -789,7 +817,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
                             <div className="md:col-span-1"><Card>
                                 <CardHeader><CardTitle className="text-lg">{editingLlmConnection ? '编辑连接' : isLlmFormOpen ? '添加新连接' : '管理'}</CardTitle></CardHeader>
                                 <CardContent>
-                                    {isLlmFormOpen ? <LlmConnectionForm connection={editingLlmConnection} onSubmit={handleSaveLlmConnection} onCancel={() => setIsLlmFormOpen(false)} /> : <div className="text-center text-sm text-muted-foreground py-10">选择一个连接或添加新连接。</div>}
+                                    {isLlmFormOpen ? <LlmConnectionForm connection={editingLlmConnection} providers={llmProviders} onSubmit={handleSaveLlmConnection} onCancel={() => setIsLlmFormOpen(false)} /> : <div className="text-center text-sm text-muted-foreground py-10">选择一个连接或添加新连接。</div>}
                                 </CardContent>
                             </Card></div>
                         </div>
@@ -840,18 +868,163 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
 }
 
 // --- Transaction Management (placeholder for now) ---
-function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
+function AuditOrderDialog({ order, onUpdate, children }: { order: Order; onUpdate: () => void; children: React.ReactNode }) {
+    const { toast } = useToast();
+    const [status, setStatus] = useState<OrderStatus>(order.status);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [open, setOpen] = useState(false);
+
+    const handleStatusUpdate = async () => {
+        setIsSubmitting(true);
+        try {
+            const result = await updateOrderStatus({ orderId: order.id, status });
+            if (result.success) {
+                toast({ title: "订单状态已更新" });
+                onUpdate();
+                setOpen(false);
+            } else {
+                toast({ title: "更新失败", description: result.message, variant: "destructive" });
+            }
+        } catch (error: any) {
+            toast({ title: "发生错误", description: error.message, variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{children}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>审核订单: {order.id}</DialogTitle>
+                    <DialogDescription>
+                        查看订单详情并更新订单状态。
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <p><strong>客户:</strong> {order.tenantName}</p>
+                    <p><strong>总金额:</strong> ¥{order.totalAmount.toFixed(2)}</p>
+                    <p><strong>订单内容:</strong></p>
+                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                        {order.items.map((item, index) => <li key={index}>{item.title} (x{item.quantity})</li>)}
+                    </ul>
+                     <div className="space-y-2">
+                        <Label htmlFor="order-status">订单状态</Label>
+                        <Select value={status} onValueChange={(value: OrderStatus) => setStatus(value)}>
+                            <SelectTrigger id="order-status">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="待平台确认">待平台确认</SelectItem>
+                                <SelectItem value="待支付">待支付</SelectItem>
+                                <SelectItem value="配置中">配置中</SelectItem>
+                                <SelectItem value="已完成">已完成</SelectItem>
+                                <SelectItem value="已取消">已取消</SelectItem>
+                            </SelectContent>
+                        </Select>
+                     </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button variant="ghost">取消</Button></DialogClose>
+                    <Button onClick={handleStatusUpdate} disabled={isSubmitting}>
+                        {isSubmitting && <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />}
+                        更新状态
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
+    const [open, setOpen] = useState(false);
+
+    const fetchOrders = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedOrders = await getAllOrders();
+            setOrders(fetchedOrders);
+        } catch (error: any) {
+            toast({ title: "加载订单失败", description: error.message, variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        if (open) {
+            fetchOrders();
+        }
+    }, [open, fetchOrders]);
+    
+    const getStatusBadgeVariant = (status: OrderStatus) => {
+        switch (status) {
+            case "待支付": return "destructive";
+            case "待平台确认": return "secondary";
+            case "配置中": return "default";
+            case "已完成": return "outline";
+            case "已取消": return "destructive";
+            default: return "default";
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button>{buttonText}</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-5xl">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
-                 <div className="text-center text-muted-foreground p-8">此功能正在开发中。</div>
+                <Card>
+                    <CardContent className="mt-6">
+                        <ScrollArea className="h-[60vh]">
+                            {isLoading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>订单号</TableHead>
+                                            <TableHead>企业</TableHead>
+                                            <TableHead>金额</TableHead>
+                                            <TableHead>状态</TableHead>
+                                            <TableHead>创建时间</TableHead>
+                                            <TableHead className="text-right">操作</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {orders.map(order => (
+                                            <TableRow key={order.id}>
+                                                <TableCell className="font-mono text-xs">{order.id}</TableCell>
+                                                <TableCell>{order.tenantName}</TableCell>
+                                                <TableCell>¥{order.totalAmount.toFixed(2)}</TableCell>
+                                                <TableCell><Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge></TableCell>
+                                                <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <AuditOrderDialog order={order} onUpdate={fetchOrders}>
+                                                        <Button variant="outline" size="sm">
+                                                            <Edit className="h-3 w-3 mr-1.5" />
+                                                            审核
+                                                        </Button>
+                                                    </AuditOrderDialog>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
             </DialogContent>
         </Dialog>
     );

@@ -1,4 +1,5 @@
 
+
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -25,8 +26,32 @@ export const IndividualUserSchema = z.object({
   status: z.enum(["活跃", "待审核", "已禁用"]),
   tenantId: z.string().optional(),
   registeredDate: z.string(),
+  department: z.string().optional(),
+  position: z.string().optional(),
 });
 export type IndividualUser = z.infer<typeof IndividualUserSchema>;
+
+export const RoleSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    permissions: z.array(z.string()),
+});
+export type Role = z.infer<typeof RoleSchema>;
+
+export const DepartmentSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    parentId: z.string().nullable(),
+});
+export type Department = z.infer<typeof DepartmentSchema>;
+
+export const PositionSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    departmentId: z.string(),
+});
+export type Position = z.infer<typeof PositionSchema>;
 
 
 // --- AI Requirements Navigator ---
@@ -193,6 +218,15 @@ export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 
 // --- Platform Asset Management ---
 
+export const LlmProviderSchema = z.object({
+    id: z.string(),
+    providerName: z.string(),
+    apiUrl: z.string(),
+    apiKeyHeader: z.string(),
+    apiKeyPrefix: z.string().optional(),
+});
+export type LlmProvider = z.infer<typeof LlmProviderSchema>;
+
 export const LlmConnectionSchema = z.object({
   id: z.string(),
   modelName: z.string(),
@@ -224,3 +258,41 @@ export const SoftwareAssetSchema = z.object({
   createdAt: z.string(),
 });
 export type SoftwareAsset = z.infer<typeof SoftwareAssetSchema>;
+
+// --- Procurement & Orders ---
+export const ProcurementItemSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    description: z.string(),
+    tag: z.string(),
+    icon: z.string(),
+    price: z.number(),
+    unit: z.string(),
+});
+export type ProcurementItem = z.infer<typeof ProcurementItemSchema>;
+
+export const OrderStatusSchema = z.enum(["待平台确认", "待支付", "配置中", "已完成", "已取消"]);
+export type OrderStatus = z.infer<typeof OrderStatusSchema>;
+
+export const OrderSchema = z.object({
+    id: z.string(),
+    tenantId: z.string(),
+    tenantName: z.string().optional(),
+    items: z.array(z.any()),
+    totalAmount: z.number(),
+    status: OrderStatusSchema,
+    createdAt: z.string(),
+    updatedAt: z.string(),
+});
+export type Order = z.infer<typeof OrderSchema>;
+
+
+// --- API Keys ---
+export const ApiKeySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    key: z.string(),
+    createdAt: z.string(),
+    status: z.enum(['活跃', '已撤销']),
+});
+export type ApiKey = z.infer<typeof ApiKeySchema>;
