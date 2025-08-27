@@ -68,6 +68,7 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
     - \`copywriting-expert\`: 用于通用文案写作、文章生成、摘要总结等。
 - **默认开场白**: 如果对话历史为空，你的第一句话必须是：“${initialGreeting}”`;
 
+    // The first message is always a greeting, no AI needed.
     if (input.conversationHistory.length === 0) {
         return {
             response: initialGreeting,
@@ -75,6 +76,7 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         }
     }
     
+    // Find the highest priority, available, general-purpose LLM.
     const llmConnection = await getGeneralLlmConnection();
     if (!llmConnection) {
         return {
@@ -82,31 +84,29 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
             isFinished: true, // End the conversation as no action can be taken.
         };
     }
-
-
-    const lastMessage = input.conversationHistory[input.conversationHistory.length - 1];
     
-    // Simple logic to finish conversation
+    // In a real app, the model itself should determine when the conversation is finished.
+    // This is a simplified "override" to ensure the flow can complete for demonstration purposes.
+    const lastMessage = input.conversationHistory[input.conversationHistory.length - 1];
     if (lastMessage?.parts[0]?.text.toLowerCase().includes("确认")) {
-        // In a real app, the model itself should set isFinished based on the prompt.
-        // This is a simplified "override" to ensure the flow can complete.
          return {
           response: "我的理解完全正确。很高兴能帮助您！现在我将为您推荐最适合的AI能力场景。",
           isFinished: true,
-          suggestedPromptId: 'recruitment-expert'
+          suggestedPromptId: 'recruitment-expert' // Default to one for demonstration.
       };
     }
 
+    // Construct the full prompt including history and system instructions.
     const fullPrompt = `${systemPrompt}\n\nConversation History:\n${input.conversationHistory.map(m => `${m.role}: ${m.parts[0].text}`).join('\n')}\nmodel:`;
 
     const result = await executePrompt({
-        modelId: llmConnection.id,
+        modelId: llmConnection.id, // Use the highest-priority model found.
         userPrompt: fullPrompt, // We are stuffing everything into the user prompt for this conversational model.
         temperature: 0.5,
     });
     
     return {
         response: result.response,
-        isFinished: false, // Let the conversation continue
+        isFinished: false, // Let the conversation continue.
     };
 }

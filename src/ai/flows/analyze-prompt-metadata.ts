@@ -58,6 +58,7 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     if (input.context) userPromptContent += `\n\n[Context/Examples]:\n${input.context}`;
     if (input.negativePrompt) userPromptContent += `\n\n[Negative Prompt]:\n${input.negativePrompt}`;
     
+    // Find the highest priority, available, general-purpose LLM.
     const llmConnection = await getGeneralLlmConnection();
     if (!llmConnection) {
       throw new Error("无法分析元数据，因为平台当前没有配置可用的AI模型。请联系管理员。");
@@ -66,22 +67,25 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     const finalUserPrompt = `${systemInstruction}\n\n${userPromptContent}\n\n请严格以JSON格式返回你的分析结果。`;
 
     const result = await executePrompt({
-      modelId: llmConnection.id,
+      modelId: llmConnection.id, // Use the highest-priority model found.
       userPrompt: finalUserPrompt,
       temperature: 0.2,
-      responseFormat: 'json_object',
+      responseFormat: 'json_object', // Request JSON output explicitly.
     });
     
     try {
+        // The model might return the JSON inside a markdown block, so we need to extract it.
         const jsonMatch = result.response.match(/```json\n([\s\S]*?)\n```/);
         const jsonString = jsonMatch ? jsonMatch[1] : result.response;
         const parsedJson = JSON.parse(jsonString);
 
+        // Use safeParse to avoid crashing on unexpected AI responses.
         const safeParsed = AnalyzePromptMetadataOutputSchema.safeParse(parsedJson);
 
         if (safeParsed.success) {
             return safeParsed.data;
         } else {
+             // If parsing fails, fall back to manually extracting fields to ensure the app doesn't crash.
              console.warn("AI metadata response did not match schema:", safeParsed.error);
              return {
                 scope: parsedJson.scope || 'AI未提供范围',
@@ -93,6 +97,7 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     } catch (error) {
         console.error("Failed to parse AI metadata response:", error);
         console.error("Raw AI response:", result.response);
+        // This error is thrown if the AI response is not valid JSON at all.
         throw new Error("AI返回的元数据格式无效，无法解析。");
     }
 }

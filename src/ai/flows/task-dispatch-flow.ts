@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for an AI to understand a user's command, decompose it into tasks,
@@ -73,6 +74,7 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
 \`\`\`
 `;
     
+    // Find the highest priority, available, general-purpose LLM.
     const llmConnection = await getGeneralLlmConnection();
     if (!llmConnection) {
        return {
@@ -81,15 +83,14 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
             isClarificationNeeded: true,
        }
     }
-
     
     const fullPrompt = `${systemPrompt}\n\nUser command: "${input.userCommand}"\n\nPlease provide your response as a single JSON object.`;
 
     const result = await executePrompt({
-        modelId: llmConnection.id,
+        modelId: llmConnection.id, // Use the highest-priority model found.
         userPrompt: fullPrompt,
         temperature: 0.3,
-        responseFormat: 'json_object',
+        responseFormat: 'json_object', // Request JSON output explicitly.
     });
     
     try {
@@ -101,6 +102,7 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
     } catch (error) {
         console.error("Failed to parse AI task dispatch response:", error);
         console.error("Raw AI response:", result.response);
+        // This error is thrown if the AI response is not valid JSON at all.
         throw new Error("AI返回的任务计划格式无效，无法解析。");
     }
 }
