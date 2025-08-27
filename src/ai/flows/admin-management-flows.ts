@@ -172,19 +172,21 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => {
             const data = doc.data();
+            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                createdAt: createdAt,
             } as LlmConnection;
         });
 
         const softwareAssets: SoftwareAsset[] = softwareSnapshot.docs.map(doc => {
             const data = doc.data();
+            const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                createdAt: createdAt,
             } as SoftwareAsset;
         });
         
@@ -245,10 +247,12 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
             temperature: 0.1,
         });
 
-        if (result && result.response) {
+        if (result && result.response && !result.response.startsWith("调用模型")) {
             return { success: true, message: `连接成功，模型返回: "${result.response.substring(0, 50)}..."` };
         }
-        return { success: false, message: `测试失败，模型无响应。` };
+        
+        const errorMessage = result?.response || '测试失败，模型无响应。';
+        return { success: false, message: errorMessage };
 
     } catch (error: any) {
         return { success: false, message: error.message };

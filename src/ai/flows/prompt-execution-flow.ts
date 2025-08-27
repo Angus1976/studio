@@ -83,9 +83,8 @@ export async function executePrompt(
         // To support a new provider, just add a new case here.
         switch (provider.toLowerCase()) {
             case 'google':
-                // Google's API needs the model name prefixed in the URL and the key as a query param.
-                const finalModelName = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
-                requestUrl = `${apiUrl}/${finalModelName}:generateContent?key=${apiKey}`;
+                // Per Google API docs, the model name is part of the URL path, not prefixed with 'models/'.
+                requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
                 requestBody = {
                     contents: [{ parts: [{ text: fullPrompt }] }],
                     generationConfig: { temperature },
