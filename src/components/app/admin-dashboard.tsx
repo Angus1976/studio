@@ -665,7 +665,7 @@ function SoftwareAssetForm({ asset, onSubmit, onCancel }: { asset?: SoftwareAsse
                     <FormItem><FormLabel>资产类型</FormLabel><FormControl><Input placeholder="e.g., RPA, Data Analytics" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <FormField control={form.control} name="licenseKey" render={({ field }) => (
-                    <FormItem><FormLabel>许可证密钥 (可选)</FormLabel><FormControl><Input placeholder="••••••••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>许可证密钥 (可选)</FormLabel><FormControl><Input type="password" placeholder="••••••••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>

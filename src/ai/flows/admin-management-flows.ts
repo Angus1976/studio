@@ -170,17 +170,23 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
         const softwareSnapshot = await db.collection('software_assets').get();
         const providersSnapshot = await db.collection('llm_providers').get();
 
-        const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt.toDate().toISOString(),
-        } as LlmConnection));
+        const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            } as LlmConnection;
+        });
 
-        const softwareAssets: SoftwareAsset[] = softwareSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-             createdAt: doc.data().createdAt.toDate().toISOString(),
-        } as SoftwareAsset));
+        const softwareAssets: SoftwareAsset[] = softwareSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            } as SoftwareAsset;
+        });
         
         const llmProviders: LlmProvider[] = providersSnapshot.docs.map(doc => ({
             id: doc.id,
