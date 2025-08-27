@@ -28,14 +28,6 @@ export const IndividualUserSchema = z.object({
 });
 export type IndividualUser = z.infer<typeof IndividualUserSchema>;
 
-export const RoleSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  permissions: z.array(z.string()),
-});
-export type Role = z.infer<typeof RoleSchema>;
-
 
 // --- AI Requirements Navigator ---
 
@@ -59,13 +51,6 @@ export type RequirementsNavigatorOutput = z.infer<typeof RequirementsNavigatorOu
 
 
 // --- Prompt Management (Get/Save/Delete) ---
-
-export const ExpertDomainSchema = z.object({
-    id: z.string(),
-    domainId: z.string(),
-    name: z.string(),
-});
-export type ExpertDomain = z.infer<typeof ExpertDomainSchema>;
 
 export const PromptSchema = z.object({
     id: z.string(),
@@ -205,50 +190,6 @@ export const TaskDispatchOutputSchema = z.object({
 });
 export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 
-// --- Procurement & Orders ---
-
-export const ProcurementItemSchema = z.object({
-    id: z.string(),
-    title: z.string(),
-    description: z.string(),
-    icon: z.string(),
-    tag: z.string(),
-    price: z.number(),
-    unit: z.string(),
-    category: z.string(),
-});
-export type ProcurementItem = z.infer<typeof ProcurementItemSchema>;
-
-
-export const OrderSchema = z.object({
-  id: z.string(),
-  tenantId: z.string(),
-  items: z.array(ProcurementItemSchema.extend({ quantity: z.number() })),
-  totalAmount: z.number(),
-  status: z.enum(["待平台确认", "待支付", "配置中", "已完成", "已取消"]),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-export type Order = z.infer<typeof OrderSchema>;
-
-export const PreOrderSchema = OrderSchema.omit({id: true, createdAt: true, updatedAt: true}).extend({
-    notes: z.string().optional(),
-    createdAt: z.any(),
-    updatedAt: z.any(),
-});
-export type PreOrder = z.infer<typeof PreOrderSchema>;
-
-
-// --- API Keys ---
-export const ApiKeySchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    key: z.string(),
-    tenantId: z.string(),
-    createdAt: z.string(),
-    status: z.enum(["活跃", "已撤销"]),
-});
-export type ApiKey = z.infer<typeof ApiKeySchema>;
 
 // --- Platform Asset Management ---
 
@@ -264,15 +205,6 @@ export const LlmConnectionSchema = z.object({
   createdAt: z.string(),
 });
 export type LlmConnection = z.infer<typeof LlmConnectionSchema>;
-
-export const LlmProviderSchema = z.object({
-  id: z.string(),
-  providerName: z.string(),
-  apiUrl: z.string().url().optional().or(z.literal('')),
-  apiKeyInstructions: z.string(),
-  models: z.array(z.string()),
-});
-export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 
 export const TokenAllocationSchema = z.object({
     id: z.string(),
