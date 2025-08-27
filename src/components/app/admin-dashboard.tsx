@@ -135,7 +135,7 @@ function TenantForm({ tenant, onSubmit, onCancel }: { tenant?: Tenant | null, on
 }
 
 
-function TenantManagementDialog({ tenants, setTenants, onRefresh, buttonText, title, description }: { tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>, onRefresh: () => Promise<void>, buttonText: string, title: string, description: string }) {
+function TenantManagementDialog({ open, onOpenChange, tenants, onRefresh, title, description }: { open: boolean, onOpenChange: (open: boolean) => void, tenants: Tenant[], onRefresh: () => Promise<void>, title: string, description: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -194,12 +194,16 @@ function TenantManagementDialog({ tenants, setTenants, onRefresh, buttonText, ti
       setEditingTenant(null);
       setIsFormOpen(false);
   }
+  
+   useEffect(() => {
+    if (!open) {
+      handleCancelForm();
+    }
+  }, [open]);
+
 
   return (
-    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
-        <DialogTrigger asChild>
-            <Button>{buttonText}</Button>
-        </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl">
             <DialogHeader>
                 <DialogTitle>{title}</DialogTitle>
@@ -398,7 +402,7 @@ function UserForm({ user, onSubmit, onCancel }: { user?: IndividualUser | null, 
     );
 }
 
-function UserManagementDialog({ users, onRefresh, buttonText, title, description }: { users: IndividualUser[], onRefresh: () => Promise<void>, buttonText: string, title: string, description: string }) {
+function UserManagementDialog({ open, onOpenChange, users, onRefresh, title, description }: { open: boolean, onOpenChange: (open: boolean) => void, users: IndividualUser[], onRefresh: () => Promise<void>, title: string, description: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [editingUser, setEditingUser] = useState<IndividualUser | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -459,11 +463,15 @@ function UserManagementDialog({ users, onRefresh, buttonText, title, description
       setIsFormOpen(false);
   };
   
+  useEffect(() => {
+    if (!open) {
+      handleCancelForm();
+    }
+  }, [open]);
+
+  
   return (
-    <Dialog onOpenChange={(open) => { if (!open) handleCancelForm() }}>
-        <DialogTrigger asChild>
-            <Button>{buttonText}</Button>
-        </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl">
             <DialogHeader>
                 <DialogTitle>{title}</DialogTitle>
@@ -668,8 +676,7 @@ function SoftwareAssetForm({ asset, onSubmit, onCancel }: { asset?: SoftwareAsse
     );
 }
 
-function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText: string, title: string }) {
-    const [open, setOpen] = useState(false);
+function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, onOpenChange: (open: boolean) => void, title: string }) {
     const { toast } = useToast();
 
     const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
@@ -775,8 +782,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     };
     
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button>{triggerButtonText}</Button></DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-6xl">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
@@ -937,11 +943,10 @@ function AuditOrderDialog({ order, onUpdate, children }: { order: Order; onUpdat
     );
 }
 
-function TransactionManagementDialog({ buttonText, title, description }: { buttonText: string, title: string, description: string }) {
+function TransactionManagementDialog({ open, onOpenChange, title, description }: {  open: boolean, onOpenChange: (open: boolean) => void, title: string, description: string }) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
-    const [open, setOpen] = useState(false);
 
     const fetchOrders = useCallback(async () => {
         setIsLoading(true);
@@ -973,10 +978,7 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>{buttonText}</Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-5xl">
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
@@ -1037,6 +1039,12 @@ export function AdminDashboard() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isTenantDialogOpen, setIsTenantDialogOpen] = useState(false);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
+  const [isAssetDialogOpen, setIsAssetDialogOpen] = useState(false);
+
+
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -1062,13 +1070,14 @@ export function AdminDashboard() {
   const recentActivity = [...tenants, ...users]
     .sort((a, b) => new Date(b.registeredDate).getTime() - new Date(a.registeredDate).getTime())
     .slice(0, 5);
-
+    
   const kpiData = [
-    { title: "总收入", value: `¥${totalRevenue.toLocaleString()}`, change: "", icon: BarChart3, isLoading: isLoading },
-    { title: "活跃租户", value: tenants.filter(t => t.status === '活跃').length, change: "", icon: Building, isLoading },
-    { title: "活跃工程师", value: users.filter(u => u.role === '技术工程师' && u.status === '活跃').length, change: "", icon: Code, isLoading },
-    { title: "个人用户", value: users.filter(u => u.role === '个人用户' && u.status === '活跃').length, change: "", icon: User, isLoading },
+    { id: "revenue", title: "总收入", value: `¥${totalRevenue.toLocaleString()}`, icon: BarChart3, onClick: () => setIsTransactionDialogOpen(true) },
+    { id: "tenants", title: "活跃租户", value: tenants.filter(t => t.status === '活跃').length, icon: Building, onClick: () => setIsTenantDialogOpen(true) },
+    { id: "engineers", title: "活跃工程师", value: users.filter(u => u.role === '技术工程师' && u.status === '活跃').length, icon: Code, onClick: () => setIsUserDialogOpen(true) },
+    { id: "users", title: "个人用户", value: users.filter(u => u.role === '个人用户' && u.status === '活跃').length, icon: User, onClick: () => setIsUserDialogOpen(true) },
   ];
+
 
   const managementPanels = [
     { 
@@ -1077,6 +1086,7 @@ export function AdminDashboard() {
         description: "管理平台上的所有企业租户账户。",
         icon: Building,
         buttonText: "管理企业用户",
+        onClick: () => setIsTenantDialogOpen(true),
     },
     {
         id: "users",
@@ -1084,6 +1094,7 @@ export function AdminDashboard() {
         description: "查看和管理所有个人用户与技术工程师。",
         icon: User,
         buttonText: "管理个人用户",
+        onClick: () => setIsUserDialogOpen(true),
     },
      {
         id: "transactions",
@@ -1091,6 +1102,7 @@ export function AdminDashboard() {
         description: "审核订单、管理集采商品。",
         icon: FileText,
         buttonText: "管理交易",
+        onClick: () => setIsTransactionDialogOpen(true),
     },
     {
         id: "permissions",
@@ -1098,6 +1110,7 @@ export function AdminDashboard() {
         description: "平台级权限分配，软件资源配置和管理。",
         icon: ShieldCheck,
         buttonText: "配置资产",
+        onClick: () => setIsAssetDialogOpen(true),
     },
     {
         id: "maintenance",
@@ -1114,14 +1127,14 @@ export function AdminDashboard() {
         
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {kpiData.map((item, index) => (
-                <Card key={index}>
+            {kpiData.map((item) => (
+                <Card key={item.id} onClick={item.onClick} className="cursor-pointer hover:bg-muted/50 transition-colors">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{item.title}</CardTitle>
                         <item.icon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        {item.isLoading ? (
+                        {isLoading ? (
                             <>
                                 <Skeleton className="h-8 w-3/4 mt-1" />
                                 <Skeleton className="h-4 w-1/2 mt-2" />
@@ -1129,7 +1142,6 @@ export function AdminDashboard() {
                         ) : (
                             <>
                                 <div className="text-2xl font-bold">{typeof item.value === 'number' ? item.value.toLocaleString() : item.value}</div>
-                                {item.change && <p className="text-xs text-muted-foreground">{item.change}</p>}
                             </>
                         )}
                     </CardContent>
@@ -1147,40 +1159,14 @@ export function AdminDashboard() {
                             <CardDescription>{panel.description}</CardDescription>
                         </CardHeader>
                         <CardFooter>
-                            {panel.id === 'tenants' ? (
-                                <TenantManagementDialog 
-                                    tenants={tenants}
-                                    setTenants={setTenants}
-                                    onRefresh={fetchData}
-                                    buttonText={panel.buttonText}
-                                    title={panel.title}
-                                    description={panel.description}
-                                />
-                            ) : panel.id === 'users' ? (
-                                <UserManagementDialog 
-                                    users={users}
-                                    onRefresh={fetchData}
-                                    buttonText={panel.buttonText}
-                                    title={panel.title}
-                                    description={panel.description}
-                                />
-                            ) : panel.id === 'transactions' ? (
-                                <TransactionManagementDialog
-                                    buttonText={panel.buttonText}
-                                    title={panel.title}
-                                    description={panel.description}
-                                />
-                            ) : panel.id === 'maintenance' ? (
+                            {panel.id === 'maintenance' ? (
                                 <DatabaseMaintenanceDialog
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
                                 />
                             ) : (
-                                <AssetManagementDialog
-                                    triggerButtonText={panel.buttonText}
-                                    title={panel.title}
-                                />
+                                <Button onClick={panel.onClick}>{panel.buttonText}</Button>
                             )}
                         </CardFooter>
                     </Card>
@@ -1231,6 +1217,35 @@ export function AdminDashboard() {
                 </Card>
             </div>
         </div>
+        
+        <TenantManagementDialog
+            open={isTenantDialogOpen}
+            onOpenChange={setIsTenantDialogOpen}
+            tenants={tenants}
+            onRefresh={fetchData}
+            title="多租户企业管理"
+            description="管理平台上的所有企业租户账户。"
+        />
+         <UserManagementDialog
+            open={isUserDialogOpen}
+            onOpenChange={setIsUserDialogOpen}
+            users={users}
+            onRefresh={fetchData}
+            title="用户与工程师管理"
+            description="查看和管理所有个人用户与技术工程师。"
+        />
+        <TransactionManagementDialog
+            open={isTransactionDialogOpen}
+            onOpenChange={setIsTransactionDialogOpen}
+            title="交易管理"
+            description="审核订单、管理集采商品。"
+        />
+        <AssetManagementDialog
+            open={isAssetDialogOpen}
+            onOpenChange={setIsAssetDialogOpen}
+            title="权限与资产管理"
+        />
+
     </div>
   );
 }
