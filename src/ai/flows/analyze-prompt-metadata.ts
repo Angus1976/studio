@@ -79,13 +79,25 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
         const jsonMatch = result.response.match(/```json\n([\s\S]*?)\n```/);
         const jsonString = jsonMatch ? jsonMatch[1] : result.response;
         const parsedJson = JSON.parse(jsonString);
-        return AnalyzePromptMetadataOutputSchema.parse(parsedJson);
+
+        // Use safeParse for robust parsing
+        const safeParsed = AnalyzePromptMetadataOutputSchema.safeParse(parsedJson);
+
+        if (safeParsed.success) {
+            return safeParsed.data;
+        } else {
+             console.warn("AI metadata response did not match schema:", safeParsed.error);
+             // Fallback: manually construct the object to prevent crash
+             return {
+                scope: parsedJson.scope || 'AI未提供范围',
+                recommendedModel: parsedJson.recommendedModel || 'AI未推荐模型',
+                constraints: parsedJson.constraints || 'AI未提供约束',
+                scenario: parsedJson.scenario || 'AI未提供场景',
+             }
+        }
     } catch (error) {
         console.error("Failed to parse AI metadata response:", error);
         console.error("Raw AI response:", result.response);
-        // Fallback to a default error structure if parsing fails, but the schema is strict.
-        // A better approach would be a more lenient parsing or manual object construction.
-        // For now, we throw an error to make it clear that the AI response was invalid.
         throw new Error("AI返回的元数据格式无效，无法解析。");
     }
 }
