@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -232,12 +233,14 @@ export function PromptEditor({ prompt, onPromptChange, onSave, isSaving }: Promp
                                         ))}
                                     </SelectGroup>
                                     <SelectSeparator />
-                                    <SelectItem value="manage-domains" className="focus:bg-accent/50">
-                                        <span className="flex items-center gap-2 text-accent">
-                                            <Settings className="h-4 w-4"/>
-                                            管理领域...
-                                        </span>
-                                    </SelectItem>
+                                    <DialogTrigger asChild>
+                                        <SelectItem value="manage-domains" className="focus:bg-accent/50">
+                                            <span className="flex items-center gap-2 text-accent">
+                                                <Settings className="h-4 w-4"/>
+                                                管理领域...
+                                            </span>
+                                        </SelectItem>
+                                    </DialogTrigger>
                                 </SelectContent>
                             </Select>
                         </div>
