@@ -27,8 +27,8 @@ export function TaskCard({ task, onExecute, isExecuting }: TaskCardProps) {
   return (
     <div className="flex items-start gap-4">
       <div className="flex flex-col items-center">
-         <div className={cn("flex h-10 w-10 items-center justify-center rounded-full text-white", color)}>
-            <Icon className={cn("h-6 w-6", task.status === 'in_progress' && 'animate-spin')} />
+         <div className={cn("flex h-10 w-10 items-center justify-center rounded-full text-white", color, task.status === 'in_progress' && 'animate-spin')}>
+            <Icon className={cn("h-6 w-6")} />
         </div>
       </div>
       <Card className="flex-1">
@@ -55,7 +55,7 @@ export function TaskCard({ task, onExecute, isExecuting }: TaskCardProps) {
 export function TaskDependencyArrow() {
     return (
         <div className="h-8 flex justify-center ml-5 w-0">
-            <ArrowRight className="h-6 w-6 text-muted-foreground/50 rotate-90" />
+            <div className="w-px h-full bg-border" />
         </div>
     )
 }
