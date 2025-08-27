@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap, Star } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap, Star, ArrowUpDown } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -683,11 +683,16 @@ function SoftwareAssetForm({ asset, onSubmit, onCancel }: { asset?: SoftwareAsse
 function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, onOpenChange: (open: boolean) => void, title: string }) {
     const { toast } = useToast();
 
+    type SortKey = keyof LlmConnection;
+    type SortDirection = "asc" | "desc";
+
     const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
     const [llmProviders, setLlmProviders] = useState<LlmProvider[]>([]);
     const [editingLlmConnection, setEditingLlmConnection] = useState<LlmConnection | null>(null);
     const [isLlmFormOpen, setIsLlmFormOpen] = useState(false);
     const [isLlmLoading, setIsLlmLoading] = useState(true);
+    const [sortKey, setSortKey] = useState<SortKey>("priority");
+    const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
     const [softwareAssets, setSoftwareAssets] = useState<SoftwareAsset[]>([]);
     const [editingSoftwareAsset, setEditingSoftwareAsset] = useState<SoftwareAsset | null>(null);
@@ -710,6 +715,30 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
             setIsSoftwareLoading(false);
         }
     }, [toast]);
+    
+    const handleSort = (key: SortKey) => {
+        if (sortKey === key) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortKey(key);
+            setSortDirection('asc');
+        }
+    };
+    
+    const sortedLlmConnections = useMemo(() => {
+        return [...llmConnections].sort((a, b) => {
+            const aValue = a[sortKey];
+            const bValue = b[sortKey];
+            
+            if (aValue === undefined || aValue === null) return 1;
+            if (bValue === undefined || bValue === null) return -1;
+
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [llmConnections, sortKey, sortDirection]);
+
 
     useEffect(() => {
         if (open) {
@@ -790,6 +819,11 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
         }
     };
     
+    const renderSortArrow = (key: SortKey) => {
+        if (sortKey !== key) return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground/50" />;
+        return sortDirection === 'asc' ? '▲' : '▼';
+    };
+    
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-6xl">
@@ -812,9 +846,17 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
                                     <CardHeader className="flex-row items-center justify-between"><CardTitle className="text-lg">已配置模型</CardTitle><Button size="sm" onClick={() => { setEditingLlmConnection(null); setIsLlmFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/>添加新连接</Button></CardHeader>
                                     <CardContent><ScrollArea className="h-[400px]">
                                         {isLlmLoading ? <Skeleton className="h-full w-full"/> : <Table>
-                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>优先级</TableHead><TableHead>类型</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead><Button variant="ghost" onClick={() => handleSort('modelName')} className="px-0">模型 {renderSortArrow('modelName')}</Button></TableHead>
+                                                    <TableHead><Button variant="ghost" onClick={() => handleSort('priority')} className="px-0">优先级 {renderSortArrow('priority')}</Button></TableHead>
+                                                    <TableHead><Button variant="ghost" onClick={() => handleSort('type')} className="px-0">类型 {renderSortArrow('type')}</Button></TableHead>
+                                                    <TableHead><Button variant="ghost" onClick={() => handleSort('status')} className="px-0">状态 {renderSortArrow('status')}</Button></TableHead>
+                                                    <TableHead className="text-right">操作</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
                                             <TableBody>
-                                                {llmConnections.map(c => <TableRow key={c.id}>
+                                                {sortedLlmConnections.map(c => <TableRow key={c.id}>
                                                     <TableCell><div className="font-medium">{c.modelName}</div><div className="text-xs text-muted-foreground">{c.provider}</div></TableCell>
                                                     <TableCell><Badge variant="outline" className="flex items-center gap-1 w-fit"><Star className="h-3 w-3"/>{c.priority || 'N/A'}</Badge></TableCell>
                                                     <TableCell><Badge variant="outline">{c.type}</Badge></TableCell>
@@ -1259,3 +1301,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
+    
