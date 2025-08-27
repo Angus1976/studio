@@ -41,8 +41,6 @@ import {
 } from "@/ai/flows/admin-management-flows";
 
 
-const MOCK_TENANT_ID = 'mock-tenant-id-123'; // In a real app, this would come from the user's session
-
 const chartConfig = {
   tokens: {
     label: "Tokens",
@@ -551,7 +549,7 @@ function CreateApiKeyForm({ onSave, isLoading }: { onSave: (values: z.infer<type
   )
 }
 
-function ApiKeyManagementDialog() {
+function ApiKeyManagementDialog({ tenantId }: { tenantId: string }) {
   const { toast } = useToast();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<ApiKey | null>(null);
@@ -562,23 +560,24 @@ function ApiKeyManagementDialog() {
   const fetchKeys = React.useCallback(async () => {
     setIsLoading(true);
     try {
-        const keys = await getApiKeys({ tenantId: MOCK_TENANT_ID });
+        const keys = await getApiKeys({ tenantId });
         setApiKeys(keys);
     } catch (e: any) {
         toast({ title: "加载密钥失败", description: e.message, variant: "destructive" });
     } finally {
         setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, tenantId]);
   
-  useEffect(() => {
-    fetchKeys();
-  }, [fetchKeys]);
+  const handleOpenChange = (open: boolean) => {
+      if(open) fetchKeys();
+      else setIsCreating(false);
+  }
 
   const handleCreateKey = async (values: z.infer<typeof apiKeySchema>) => {
       setIsSubmitting(true);
       try {
-        const result = await createApiKey({ tenantId: MOCK_TENANT_ID, name: values.name });
+        const result = await createApiKey({ tenantId: tenantId, name: values.name });
         if (result.success) {
             setNewlyCreatedKey(result.key);
             setApiKeys(prev => [result.key, ...prev]);
@@ -593,7 +592,7 @@ function ApiKeyManagementDialog() {
   
   const handleRevokeKey = async (keyId: string) => {
     try {
-        await revokeApiKey({ tenantId: MOCK_TENANT_ID, keyId });
+        await revokeApiKey({ tenantId: tenantId, keyId });
         setApiKeys(prev => prev.map(key => key.id === keyId ? {...key, status: "已撤销"} : key));
         toast({ title: "API 密钥已撤销" });
     } catch (e: any) {
@@ -636,7 +635,7 @@ function ApiKeyManagementDialog() {
   }
 
   return (
-    <Dialog onOpenChange={(open) => { if(!open) setIsCreating(false)}}>
+    <Dialog onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>管理 API 密钥</Button>
       </DialogTrigger>
@@ -824,7 +823,7 @@ function RoleForm({ role, onSubmit, onCancel }: { role?: Role | null; onSubmit: 
 }
 
 
-function RoleManagementDialog({ roles, onSave, onDelete, children, triggerAsChild }: { roles: Role[]; onSave: (role: Role) => void; onDelete: (roleId: string) => void; children: React.ReactNode; triggerAsChild?: boolean }) {
+function RoleManagementDialog({ tenantId, roles, onSave, onDelete, children, triggerAsChild }: { tenantId: string, roles: Role[]; onSave: (role: Role) => void; onDelete: (roleId: string) => void; children: React.ReactNode; triggerAsChild?: boolean }) {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -1011,7 +1010,7 @@ function BatchImportDialog({ roles, onImport }: { roles: Role[], onImport: (user
   )
 }
 
-export function TenantDashboard() {
+export function TenantDashboard({ tenantId }: { tenantId: string }) {
   const { toast } = useToast();
   const [users, setUsers] = useState<IndividualUser[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -1024,7 +1023,7 @@ export function TenantDashboard() {
   const fetchData = React.useCallback(async () => {
     setIsLoading(prev => ({ ...prev, data: true }));
     try {
-        const data = await getTenantData({ tenantId: MOCK_TENANT_ID });
+        const data = await getTenantData({ tenantId });
         setUsers(data.users);
         setOrders(data.orders);
         setRoles(data.roles);
@@ -1034,7 +1033,7 @@ export function TenantDashboard() {
     } finally {
         setIsLoading(prev => ({...prev, data: false }));
     }
-  }, [toast]);
+  }, [toast, tenantId]);
   
   const fetchProcurementItems = React.useCallback(async () => {
     setIsLoading(prev => ({ ...prev, procurement: true }));
@@ -1057,7 +1056,7 @@ export function TenantDashboard() {
 
   const handleCreatePreOrder = async (item: ProcurementItem, values: z.infer<typeof preOrderSchema>) => {
       try {
-        await createPreOrder({ tenantId: MOCK_TENANT_ID, item, quantity: values.quantity, notes: values.notes });
+        await createPreOrder({ tenantId: tenantId, item, quantity: values.quantity, notes: values.notes });
         toast({
             title: "预购单已提交",
             description: `您的 “${item.title}” 采购请求已提交，请在“我的订单”中查看状态。`,
@@ -1080,7 +1079,7 @@ export function TenantDashboard() {
 
   const handleInviteUser = async (values: z.infer<typeof inviteUserSchema>) => {
     try {
-      await inviteUsers({ tenantId: MOCK_TENANT_ID, users: [{ ...values, name: "新成员", status: "待审核" }] });
+      await inviteUsers({ tenantId: tenantId, users: [{ ...values, name: "新成员", status: "待审核" }] });
       toast({ title: "邀请已发送", description: `已成功向 ${values.email} 发送邀请。` });
       await fetchData();
     } catch (e: any) {
@@ -1090,7 +1089,7 @@ export function TenantDashboard() {
 
   const handleUpdateUser = async (values: z.infer<typeof editUserSchema>) => {
     try {
-      await updateTenantUser({ tenantId: MOCK_TENANT_ID, userId: values.id, role: values.role });
+      await updateTenantUser({ tenantId: tenantId, userId: values.id, role: values.role });
       toast({ title: "成员已更新", description: `成员 ${values.name} 的信息已更新。` });
       await fetchData();
     } catch (e: any) {
@@ -1100,7 +1099,7 @@ export function TenantDashboard() {
   
   const handleBatchImport = async (newUsers: any[]) => {
     try {
-        await inviteUsers({ tenantId: MOCK_TENANT_ID, users: newUsers });
+        await inviteUsers({ tenantId: tenantId, users: newUsers });
         toast({ title: "导入成功", description: `成功导入 ${newUsers.length} 名新成员。` });
         await fetchData();
     } catch (e: any) {
@@ -1131,7 +1130,7 @@ export function TenantDashboard() {
 
   const handleSaveRole = async (role: Role) => {
     try {
-        await saveTenantRole({ tenantId: MOCK_TENANT_ID, role });
+        await saveTenantRole({ tenantId: tenantId, role });
         toast({ title: "角色已保存" });
         await fetchData();
     } catch(e: any) {
@@ -1145,7 +1144,7 @@ export function TenantDashboard() {
             toast({ title: "删除失败", description: "至少需要保留一个角色。", variant: "destructive" });
             return;
         }
-        await deleteTenantRole({ tenantId: MOCK_TENANT_ID, roleId });
+        await deleteTenantRole({ tenantId: tenantId, roleId });
         toast({ title: "角色已删除" });
         await fetchData();
       } catch(e: any) {
@@ -1419,7 +1418,7 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、吊销和管理您的 API 密钥。</p>
-                            <ApiKeyManagementDialog />
+                            <ApiKeyManagementDialog tenantId={tenantId} />
                         </CardContent>
                     </Card>
                      <Card>
@@ -1429,7 +1428,7 @@ export function TenantDashboard() {
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground mb-4">创建、编辑和删除角色，并为他们分配权限。</p>
-                            <RoleManagementDialog roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole}>
+                            <RoleManagementDialog tenantId={tenantId} roles={roles} onSave={handleSaveRole} onDelete={handleDeleteRole}>
                                 <Button>配置角色</Button>
                             </RoleManagementDialog>
                         </CardContent>

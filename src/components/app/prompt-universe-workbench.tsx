@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -18,7 +17,7 @@ import type { Prompt } from '@/lib/data-types';
 import { BookCopy, Sparkles, TestTube2 } from 'lucide-react';
 
 
-export function PromptUniverseWorkbench() {
+export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null }) {
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -32,7 +31,7 @@ export function PromptUniverseWorkbench() {
         context: '',
         negativePrompt: '',
         scope: '专属', // Default to tenant-specific
-        tenantId: 'mock-tenant-id-123', // In a real app, this would come from user session
+        tenantId: tenantId || undefined,
     });
     
     // Prompt Library State
@@ -105,7 +104,7 @@ export function PromptUniverseWorkbench() {
                 negativePrompt: promptToSave.negativePrompt,
                 metadata: metadata,
                 scope: saveAs === 'universal' ? '通用' : '专属',
-                tenantId: saveAs === 'tenant' ? 'mock-tenant-id-123' : undefined
+                tenantId: saveAs === 'tenant' ? tenantId || undefined : undefined
             });
 
             if (result.success) {
@@ -137,7 +136,7 @@ export function PromptUniverseWorkbench() {
                     setActivePrompt({
                         id: null, name: '新的提示词', expertId: 'general-expert',
                         systemPrompt: '', userPrompt: '', context: '', negativePrompt: '',
-                        scope: '专属', tenantId: 'mock-tenant-id-123'
+                        scope: '专属', tenantId: tenantId || undefined
                     });
                 }
             } else {

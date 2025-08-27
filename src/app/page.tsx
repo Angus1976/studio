@@ -19,22 +19,27 @@ const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
+    const [tenantId, setTenantId] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 const storedRole = localStorage.getItem('userRole');
                 const storedName = localStorage.getItem('userName');
+                const storedTenantId = localStorage.getItem('tenantId');
                 setIsAuthenticated(true);
                 setUserRole(storedRole);
                 setUserName(storedName);
+                setTenantId(storedTenantId);
             } else {
                 localStorage.removeItem('isAuthenticated');
                 localStorage.removeItem('userRole');
                 localStorage.removeItem('userName');
+                localStorage.removeItem('tenantId');
                 setIsAuthenticated(false);
                 setUserRole(null);
                 setUserName(null);
+                setTenantId(null);
             }
         });
 
@@ -43,13 +48,16 @@ const useAuth = () => {
         if (!auth.currentUser && localAuth) {
             const localRole = localStorage.getItem('userRole');
             const localName = localStorage.getItem('userName');
+            const localTenantId = localStorage.getItem('tenantId');
             setIsAuthenticated(true);
             setUserRole(localRole);
             setUserName(localName);
+            setTenantId(localTenantId);
         } else if (!auth.currentUser && !localAuth) {
              setIsAuthenticated(false);
              setUserRole(null);
              setUserName(null);
+             setTenantId(null);
         }
 
 
@@ -58,21 +66,26 @@ const useAuth = () => {
 
     const logout = async () => {
         await signOut(auth);
+        // Clear local storage on logout
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
         localStorage.removeItem('userName');
+        localStorage.removeItem('tenantId');
+        
         setIsAuthenticated(false);
         setUserRole(null);
         setUserName(null);
-        window.location.href = '/login';
+        setTenantId(null);
+        // Redirect to login to ensure clean state
+        window.location.href = '/login'; 
     };
 
-    return { isAuthenticated, userRole, userName, isLoading: isAuthenticated === null, logout };
+    return { isAuthenticated, userRole, userName, tenantId, isLoading: isAuthenticated === null, logout };
 };
 
 
 export default function Home() {
-  const { isAuthenticated, userRole, userName, isLoading: isAuthLoading, logout } = useAuth();
+  const { isAuthenticated, userRole, userName, tenantId, isLoading: isAuthLoading, logout } = useAuth();
   
   if (isAuthLoading) {
       return (
@@ -113,9 +126,9 @@ export default function Home() {
         case 'Platform Admin':
             return <AdminDashboard />;
         case 'Tenant Admin':
-             return <TenantDashboard />;
+             return <TenantDashboard tenantId={tenantId!} />;
         case 'Prompt Engineer/Developer':
-            return <PromptUniverseWorkbench />;
+            return <PromptUniverseWorkbench tenantId={tenantId} />;
         case 'Individual User':
              return <AIWorkbench userName={userName} />;
         default:

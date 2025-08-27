@@ -50,7 +50,12 @@ export default function LoginPage() {
         // Step 3: Store session info and navigate
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', result.role);
-        localStorage.setItem('userName', result.name); // Store user name
+        localStorage.setItem('userName', result.name);
+        if (result.tenantId) {
+            localStorage.setItem('tenantId', result.tenantId);
+        } else {
+            localStorage.removeItem('tenantId');
+        }
         
         toast({
             title: "登录成功",
@@ -66,8 +71,6 @@ export default function LoginPage() {
         switch (error.code) {
             case "auth/user-not-found":
             case "auth/wrong-password":
-                description = "用户不存在或密码错误。";
-                break;
             case "auth/invalid-credential":
                  description = "用户不存在或密码错误。";
                 break;
@@ -115,9 +118,9 @@ export default function LoginPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>管理员登录说明</AlertDialogTitle>
                             <AlertDialogDescription>
-                              平台管理员账户拥有最高权限，为安全起见，账户由系统超级管理员在后台直接创建和分配，不支持公开注册或从该入口登录。
+                              平台管理员账户拥有最高权限，为安全起见，此账户由系统在后台为第一位注册的用户自动创建，不提供单独的登录入口。
                               <br/><br/>
-                              如果您是平台管理员且无法登录，请联系您的系统或技术支持团队获取帮助。
+                              如果您是平台的第一个用户并希望以管理员身份登录，请使用您注册时的邮箱和密码从下方的用户方入口登录。
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
