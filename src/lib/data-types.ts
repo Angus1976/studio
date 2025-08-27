@@ -268,7 +268,7 @@ export type LlmConnection = z.infer<typeof LlmConnectionSchema>;
 export const LlmProviderSchema = z.object({
   id: z.string(),
   providerName: z.string(),
-  apiUrl: z.string().optional(),
+  apiUrl: z.string().url().optional().or(z.literal('')),
   apiKeyInstructions: z.string(),
   models: z.array(z.string()),
 });

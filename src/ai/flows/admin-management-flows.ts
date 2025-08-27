@@ -675,11 +675,11 @@ async function seedInitialLlmProviders() {
     }
 
     const defaultProviders = [
-        { providerName: 'OpenAI', apiUrl: 'https://api.openai.com/v1/chat/completions', apiKeyInstructions: '从 OpenAI 官方平台注册获取。', models: ['gpt-4o', 'gpt-4-turbo'] },
         { providerName: 'Google', apiUrl: 'https://generativelanguage.googleapis.com/v1beta', apiKeyInstructions: '从 Google AI Studio 获取。', models: ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'] },
-        { providerName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1/chat/completions', apiKeyInstructions: '从 DeepSeek 控制台获取。', models: ['deepseek-v2', 'deepseek-chat'] },
+        { providerName: 'OpenAI', apiUrl: 'https://api.openai.com/v1/chat/completions', apiKeyInstructions: '从 OpenAI 官方平台注册获取。', models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+        { providerName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1/chat/completions', apiKeyInstructions: '从 DeepSeek 控制台获取。', models: ['deepseek-chat', 'deepseek-coder'] },
         { providerName: '阿里云', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKeyInstructions: '从阿里百炼控制台获取。', models: ['qwen-max', 'qwen-long'] },
-        { providerName: 'Anthropic', apiUrl: 'https://api.anthropic.com/v1/messages', apiKeyInstructions: '从官方平台注册获取。', models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229'] },
+        { providerName: 'Anthropic', apiUrl: 'https://api.anthropic.com/v1/messages', apiKeyInstructions: '从官方平台注册获取。', models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'] },
         { providerName: '字节跳动', apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', apiKeyInstructions: '从火山方舟控制台获取。', models: ['ep-20240520111308-4k2s2', 'ep-20240520111258-7yifg'] },
         { providerName: '自定义', apiUrl: '', apiKeyInstructions: '输入您的自定义API地址和密钥。', models: [] },
     ];
@@ -711,7 +711,7 @@ const SaveLlmProviderSchema = z.object({
   id: z.string().optional(),
   providerName: z.string().min(1, "厂商名称不能为空"),
   apiUrl: z.string().url("请输入有效的URL").optional().or(z.literal('')),
-  apiKeyInstructions: z.string(),
+  apiKeyInstructions: z.string().min(1, "API Key 获取说明不能为空"),
   models: z.array(z.string()),
 });
 export async function saveLlmProvider(input: z.infer<typeof SaveLlmProviderSchema>): Promise<{ success: boolean; message: string; id?: string }> {

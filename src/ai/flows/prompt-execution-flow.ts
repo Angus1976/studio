@@ -113,6 +113,7 @@ export async function executePrompt(
             case 'deepseek':
             case '阿里云':
             case '字节跳动':
+            case '自定义':
             default: // Default to OpenAI compatible structure
                  requestUrl = `${apiUrl}`;
                  requestHeaders['Authorization'] = `Bearer ${apiKey}`;
