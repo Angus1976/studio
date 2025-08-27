@@ -1034,14 +1034,16 @@ export function AdminDashboard() {
   const { toast } = useToast();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<IndividualUser[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-        const { tenants: fetchedTenants, users: fetchedUsers } = await getTenantsAndUsers();
+        const { tenants: fetchedTenants, users: fetchedUsers, totalRevenue: fetchedRevenue } = await getTenantsAndUsers();
         setTenants(fetchedTenants);
         setUsers(fetchedUsers);
+        setTotalRevenue(fetchedRevenue);
     } catch (error: any) {
         toast({
             variant: "destructive",
@@ -1062,7 +1064,7 @@ export function AdminDashboard() {
     .slice(0, 5);
 
   const kpiData = [
-    { title: "总收入", value: "¥0", change: "N/A", icon: BarChart3, isLoading: isLoading }, // Placeholder until transactions are real
+    { title: "总收入", value: `¥${totalRevenue.toLocaleString()}`, change: "", icon: BarChart3, isLoading: isLoading },
     { title: "活跃租户", value: tenants.filter(t => t.status === '活跃').length, change: "", icon: Building, isLoading },
     { title: "活跃工程师", value: users.filter(u => u.role === '技术工程师' && u.status === '活跃').length, change: "", icon: Code, isLoading },
     { title: "个人用户", value: users.filter(u => u.role === '个人用户' && u.status === '活跃').length, change: "", icon: User, isLoading },

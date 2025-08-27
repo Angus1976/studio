@@ -9,11 +9,12 @@ import admin from '@/lib/firebase-admin';
 import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, LlmProvider, Order, OrderStatus, ExpertDomain } from '@/lib/data-types';
 
 // --- Get All Data for Admin Dashboard ---
-export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[] }> {
+export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[], totalRevenue: number }> {
     const db = admin.firestore();
     try {
         const tenantsSnapshot = await db.collection('tenants').get();
         const usersSnapshot = await db.collection('users').get();
+        const ordersSnapshot = await db.collection('orders').where('status', '==', '已完成').get();
 
         const tenants: Tenant[] = tenantsSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -48,7 +49,12 @@ export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: 
             };
         });
 
-        return { tenants, users };
+        const totalRevenue = ordersSnapshot.docs.reduce((acc, doc) => {
+            return acc + (doc.data().totalAmount || 0);
+        }, 0);
+        
+
+        return { tenants, users, totalRevenue };
 
     } catch (error) {
         console.error("Error fetching tenants and users:", error);
