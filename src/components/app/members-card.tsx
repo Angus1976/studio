@@ -30,8 +30,8 @@ const editUserSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   role: z.string().min(1, { message: "请为用户选择一个角色。" }),
-  departmentId: z.string().optional(),
-  positionId: z.string().optional(),
+  departmentId: z.string().nullable().optional(),
+  positionId: z.string().nullable().optional(),
 });
 
 function InviteUserDialog({ roles, onInvite, children }: { roles: Role[]; onInvite: (values: z.infer<typeof inviteUserSchema>) => void, children: React.ReactNode }) {
@@ -112,8 +112,8 @@ function EditUserDialog({ user, roles, departments, positions, onUpdate, childre
         name: user.name,
         email: user.email,
         role: user.role,
-        departmentId: user.departmentId,
-        positionId: user.positionId,
+        departmentId: user.departmentId || undefined,
+        positionId: user.positionId || undefined,
     },
   });
   const [open, setOpen] = useState(false);
@@ -126,8 +126,8 @@ function EditUserDialog({ user, roles, departments, positions, onUpdate, childre
         name: user.name,
         email: user.email,
         role: user.role,
-        departmentId: user.departmentId,
-        positionId: user.positionId,
+        departmentId: user.departmentId || undefined,
+        positionId: user.positionId || undefined,
       });
     }
   }, [open, user, form]);
@@ -145,7 +145,7 @@ function EditUserDialog({ user, roles, departments, positions, onUpdate, childre
     setOpen(false);
   };
   
-  const filteredPositions = positions.filter(p => p.departmentId === selectedDepartmentId);
+  const filteredPositions = selectedDepartmentId ? positions.filter(p => p.departmentId === selectedDepartmentId) : [];
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -177,7 +177,7 @@ function EditUserDialog({ user, roles, departments, positions, onUpdate, childre
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>部门</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined}>
                         <FormControl><SelectTrigger><SelectValue placeholder="选择部门" /></SelectTrigger></FormControl>
                         <SelectContent>
                             <SelectItem value="none">无</SelectItem>
@@ -194,7 +194,7 @@ function EditUserDialog({ user, roles, departments, positions, onUpdate, childre
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>岗位</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedDepartmentId || filteredPositions.length === 0}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value ?? undefined} disabled={!selectedDepartmentId || filteredPositions.length === 0}>
                         <FormControl><SelectTrigger><SelectValue placeholder="选择岗位" /></SelectTrigger></FormControl>
                         <SelectContent>
                              <SelectItem value="none">无</SelectItem>

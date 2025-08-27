@@ -402,6 +402,7 @@ export function TenantDashboard({ tenantId }: { tenantId: string }) {
                  />
                  <OrganizationAndRolesCard 
                     tenantId={tenantId}
+                    isLoading={isLoading.data}
                     roles={roles}
                     departments={departments}
                     positions={positions}

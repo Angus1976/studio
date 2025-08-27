@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { PlusCircle, Trash2, Pencil, Briefcase, ShieldCheck, Upload, Building, Users, ChevronDown, ChevronRight, LoaderCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Role, Department, Position } from "@/lib/data-types";
-import { getOrganizationStructure, saveDepartment, deleteDepartment, savePosition, deletePosition } from "@/ai/flows/tenant-management-flows";
+import { saveDepartment, deleteDepartment, savePosition, deletePosition } from "@/ai/flows/tenant-management-flows";
 
 const permissionsList = [
   { id: 'view_dashboard', label: '查看仪表盘' },
@@ -313,10 +313,20 @@ function OrgEditDialog({ item, itemType, departments, onSave, onCancel }: { item
                         )}/>
                         {itemType === 'department' && (
                              <FormField control={form.control} name="parentId" render={({ field }) => (
-                                // A real implementation might use a Select component here.
                                 <FormItem>
                                     <FormLabel>上级部门 (可选)</FormLabel>
-                                    <FormControl><Input placeholder="留空则为顶级部门" {...field} /></FormControl>
+                                     <FormControl>
+                                        <select
+                                            {...field}
+                                            value={field.value ?? ''}
+                                            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                        >
+                                            <option value="">无 (设为顶级部门)</option>
+                                            {departments.filter(d => d.id !== item?.id).map(d => (
+                                                <option key={d.id} value={d.id}>{d.name}</option>
+                                            ))}
+                                        </select>
+                                    </FormControl>
                                     <FormMessage />
                                 </FormItem>
                              )}/>
@@ -332,9 +342,8 @@ function OrgEditDialog({ item, itemType, departments, onSave, onCancel }: { item
     )
 }
 
-export function OrganizationAndRolesCard({ tenantId, roles, departments, positions, onSaveRole, onDeleteRole, onOrgChange }: { tenantId: string, roles: Role[], departments: Department[], positions: Position[], onSaveRole: (role: Role) => void, onDeleteRole: (roleId: string) => void, onOrgChange: () => void }) {
+export function OrganizationAndRolesCard({ tenantId, isLoading, roles, departments, positions, onSaveRole, onDeleteRole, onOrgChange }: { tenantId: string, isLoading: boolean, roles: Role[], departments: Department[], positions: Position[], onSaveRole: (role: Role) => void, onDeleteRole: (roleId: string) => void, onOrgChange: () => void }) {
     const { toast } = useToast();
-    const [isLoading, setIsLoading] = useState(false);
 
     const [editingItem, setEditingItem] = useState<Department | Position | null>(null);
     const [editingItemType, setEditingItemType] = useState<'department' | 'position'>('department');

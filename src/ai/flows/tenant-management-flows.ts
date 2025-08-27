@@ -17,10 +17,18 @@ export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Prom
         const usersSnapshot = await db.collection('users').where('tenantId', '==', input.tenantId).get();
         const ordersSnapshot = await db.collection('orders').where('tenantId', '==', input.tenantId).orderBy('createdAt', 'desc').get();
         const rolesSnapshot = await tenantRef.collection('roles').get();
-        const departmentsSnapshot = await tenantRef.collection('departments').get();
-        const positionsSnapshot = await tenantRef.collection('positions').get();
+        const departmentsSnapshot = await tenantRef.collection('departments').orderBy('name').get();
+        const positionsSnapshot = await tenantRef.collection('positions').orderBy('name').get();
 
-        const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as IndividualUser));
+        const users = usersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                registeredDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            } as IndividualUser;
+        });
+
         const orders = ordersSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -146,19 +154,6 @@ export async function deleteTenantRole(input: z.infer<typeof deleteTenantRoleSch
 }
 
 // --- Organization Structure Management ---
-export async function getOrganizationStructure(input: { tenantId: string }): Promise<{ departments: Department[], positions: Position[] }> {
-    const db = admin.firestore();
-    const tenantRef = db.collection('tenants').doc(input.tenantId);
-
-    const departmentsSnapshot = await tenantRef.collection('departments').get();
-    const positionsSnapshot = await tenantRef.collection('positions').get();
-
-    const departments = departmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Department));
-    const positions = positionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Position));
-    
-    return { departments, positions };
-}
-
 const saveDepartmentSchema = z.object({
     tenantId: z.string(),
     department: z.object({
