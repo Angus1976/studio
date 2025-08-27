@@ -18,18 +18,23 @@ import { AIWorkbench } from "@/components/app/ai-workbench";
 const useAuth = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [userName, setUserName] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
                 const storedRole = localStorage.getItem('userRole');
+                const storedName = localStorage.getItem('userName');
                 setIsAuthenticated(true);
                 setUserRole(storedRole);
+                setUserName(storedName);
             } else {
                 localStorage.removeItem('isAuthenticated');
                 localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
                 setIsAuthenticated(false);
                 setUserRole(null);
+                setUserName(null);
             }
         });
 
@@ -37,11 +42,14 @@ const useAuth = () => {
         const localAuth = localStorage.getItem('isAuthenticated') === 'true';
         if (!auth.currentUser && localAuth) {
             const localRole = localStorage.getItem('userRole');
+            const localName = localStorage.getItem('userName');
             setIsAuthenticated(true);
             setUserRole(localRole);
+            setUserName(localName);
         } else if (!auth.currentUser && !localAuth) {
              setIsAuthenticated(false);
              setUserRole(null);
+             setUserName(null);
         }
 
 
@@ -52,17 +60,19 @@ const useAuth = () => {
         await signOut(auth);
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
         setIsAuthenticated(false);
         setUserRole(null);
+        setUserName(null);
         window.location.href = '/login';
     };
 
-    return { isAuthenticated, userRole, isLoading: isAuthenticated === null, logout };
+    return { isAuthenticated, userRole, userName, isLoading: isAuthenticated === null, logout };
 };
 
 
 export default function Home() {
-  const { isAuthenticated, userRole, isLoading: isAuthLoading, logout } = useAuth();
+  const { isAuthenticated, userRole, userName, isLoading: isAuthLoading, logout } = useAuth();
   
   if (isAuthLoading) {
       return (
@@ -107,10 +117,10 @@ export default function Home() {
         case 'Prompt Engineer/Developer':
             return <PromptUniverseWorkbench />;
         case 'Individual User':
-             return <AIWorkbench />;
+             return <AIWorkbench userName={userName} />;
         default:
             // Fallback for any other user role or if role is not defined
-            return <AIWorkbench />;
+            return <AIWorkbench userName={userName} />;
     }
   };
 

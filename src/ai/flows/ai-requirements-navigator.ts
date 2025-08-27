@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI flow to guide a user through a requirements gathering conversation.
@@ -42,6 +43,9 @@ async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
 
 export async function aiRequirementsNavigator(input: RequirementsNavigatorInput): Promise<RequirementsNavigatorOutput> {
     
+    const userName = input.userName ? `, ${input.userName}` : '';
+    const initialGreeting = `您好${userName}！我是您的AI需求导航器。为了给您推荐最合适的AI能力，我需要先了解一些您的基本信息。请问，您所在的企业主要从事哪个行业呢？`;
+
     const systemPrompt = `你是一个“AI需求导航器”，你的角色是通过一次友好、专业的对话，引导用户明确他们的业务需求。你的最终目标是构建一个精准的用户画像。
 
 你的目标是收集以下关键信息，并通过多轮对话逐步深入：
@@ -62,11 +66,11 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
     - \`sales-expert\`: 用于销售话术、邮件模板、客户分析等。
     - \`code-expert\`: 用于代码生成、解释、调试、重构等。
     - \`copywriting-expert\`: 用于通用文案写作、文章生成、摘要总结等。
-- **默认开场白**: 如果对话历史为空，你的第一句话必须是：“您好！我是您的AI需求导航器。为了给您推荐最合适的AI能力，我需要先了解一些您的基本信息。请问，您所在的企业主要从事哪个行业呢？”`;
+- **默认开场白**: 如果对话历史为空，你的第一句话必须是：“${initialGreeting}”`;
 
     if (input.conversationHistory.length === 0) {
         return {
-            response: "您好！我是您的AI需求导航器。为了给您推荐最合适的AI能力，我需要先了解一些您的基本信息。请问，您所在的企业主要从事哪个行业呢？",
+            response: initialGreeting,
             isFinished: false,
         }
     }

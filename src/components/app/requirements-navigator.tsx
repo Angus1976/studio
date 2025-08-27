@@ -19,7 +19,7 @@ type Message = {
 };
 
 
-export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: string) => void }) {
+export function RequirementsNavigator({ userName, onFinish }: { userName: string | null; onFinish: (expertId: string) => void }) {
     const { toast } = useToast();
     const [conversation, setConversation] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -38,7 +38,8 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
     useEffect(() => {
         if (conversation.length === 0 && !isLoading) {
             setIsLoading(true);
-            aiRequirementsNavigator({ conversationHistory: [] })
+            const initialInput: RequirementsNavigatorInput = { conversationHistory: [], userName };
+            aiRequirementsNavigator(initialInput)
                 .then(result => {
                     setConversation([{ role: 'model', parts: [{ text: result.response }] }]);
                 })
@@ -47,7 +48,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                 })
                 .finally(() => setIsLoading(false));
         }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [userName]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -61,7 +62,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
         setIsLoading(true);
 
         try {
-            const result = await aiRequirementsNavigator({ conversationHistory: newConversation });
+            const result = await aiRequirementsNavigator({ conversationHistory: newConversation, userName });
             setConversation(prev => [...prev, { role: 'model', parts: [{ text: result.response }] }]);
             
             if(result.isFinished && result.suggestedPromptId) {
@@ -114,7 +115,7 @@ export function RequirementsNavigator({ onFinish }: { onFinish: (expertId: strin
                                 </div>
                                 {msg.role === 'user' && (
                                      <Avatar className="h-8 w-8">
-                                        <AvatarFallback><User size={18}/></AvatarFallback>
+                                        <AvatarFallback>{userName ? userName.charAt(0) : <User size={18} />}</AvatarFallback>
                                     </Avatar>
                                 )}
                            </div>

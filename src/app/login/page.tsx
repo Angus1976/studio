@@ -27,12 +27,13 @@ export default function LoginPage() {
         // Step 1: Sign in on the client using Firebase Auth SDK
         const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
         
-        // Step 2: Call the server action to get additional user data (like role)
+        // Step 2: Call the server action to get additional user data (like role and name)
         const result = await loginUser({ uid: userCredential.user.uid });
 
         // Step 3: Store session info and navigate
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', result.role);
+        localStorage.setItem('userName', result.name); // Store user name
         
         toast({
             title: "登录成功",

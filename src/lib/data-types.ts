@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -45,6 +46,7 @@ export const RequirementsNavigatorInputSchema = z.object({
         text: z.string(),
     })),
   })).describe("The history of the conversation so far."),
+  userName: z.string().nullable().optional().describe("The name of the current user, if available."),
 });
 export type RequirementsNavigatorInput = z.infer<typeof RequirementsNavigatorInputSchema>;
 
@@ -234,7 +236,7 @@ export const PreOrderSchema = OrderSchema.omit({id: true, createdAt: true, updat
     createdAt: z.any(),
     updatedAt: z.any(),
 });
-export type PreOrder = z.infer<typeof PreOrder>;
+export type PreOrder = z.infer<typeof PreOrderSchema>;
 
 
 // --- API Keys ---

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -28,7 +27,7 @@ export interface Scenario {
 
 type WorkbenchMode = 'guide' | 'expert';
 
-export function AIWorkbench() {
+export function AIWorkbench({ userName }: { userName: string | null }) {
     const { toast } = useToast();
     const [allScenarios, setAllScenarios] = useState<Scenario[]>([]);
     const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
@@ -127,7 +126,7 @@ export function AIWorkbench() {
         if (workbenchMode === 'expert') {
             return <TaskDispatchCenter />;
         }
-        return <RequirementsNavigator onFinish={handleNavigationFinish} />;
+        return <RequirementsNavigator userName={userName} onFinish={handleNavigationFinish} />;
     };
     
     const LeftPanelHeader = () => (
