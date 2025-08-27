@@ -14,8 +14,8 @@ export async function getTenantData(input: z.infer<typeof tenantIdSchema>): Prom
     try {
         const tenantRef = db.collection('tenants').doc(input.tenantId);
 
-        const usersSnapshot = await tenantRef.collection('users').get();
-        const ordersSnapshot = await tenantRef.collection('orders').orderBy('createdAt', 'desc').get();
+        const usersSnapshot = await db.collection('users').where('tenantId', '==', input.tenantId).get();
+        const ordersSnapshot = await db.collection('orders').where('tenantId', '==', input.tenantId).orderBy('createdAt', 'desc').get();
         const rolesSnapshot = await tenantRef.collection('roles').get();
         const departmentsSnapshot = await tenantRef.collection('departments').get();
         const positionsSnapshot = await tenantRef.collection('positions').get();
@@ -65,11 +65,11 @@ const inviteUsersSchema = z.object({
 export async function inviteUsers(input: z.infer<typeof inviteUsersSchema>): Promise<{ success: boolean }> {
     const db = admin.firestore();
     const batch = db.batch();
-    const tenantUsersRef = db.collection('tenants').doc(input.tenantId).collection('users');
+    const usersRef = db.collection('users');
 
     input.users.forEach(user => {
-        const newUserRef = tenantUsersRef.doc();
-        batch.set(newUserRef, user);
+        const newUserRef = usersRef.doc();
+        batch.set(newUserRef, { ...user, tenantId: input.tenantId });
     });
 
     await batch.commit();
@@ -86,8 +86,6 @@ const updateTenantUserSchema = z.object({
 export async function updateTenantUser(input: z.infer<typeof updateTenantUserSchema>): Promise<{ success: boolean }> {
     const { tenantId, userId, role, departmentId, positionId } = input;
     await admin.firestore()
-        .collection('tenants')
-        .doc(tenantId)
         .collection('users')
         .doc(userId)
         .update({ 
@@ -100,25 +98,19 @@ export async function updateTenantUser(input: z.infer<typeof updateTenantUserSch
 
 // --- Role & Permission Management ---
 
-const roleSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    description: z.string(),
-    permissions: z.array(z.string()),
-});
-
 const saveTenantRoleSchema = z.object({
     tenantId: z.string(),
-    role: roleSchema,
+    role: z.custom<Role>(),
 });
 
 export async function saveTenantRole(input: z.infer<typeof saveTenantRoleSchema>): Promise<{ success: boolean }> {
+    const { id, ...roleData } = input.role;
     await admin.firestore()
         .collection('tenants')
         .doc(input.tenantId)
         .collection('roles')
-        .doc(input.role.id)
-        .set(input.role, { merge: true });
+        .doc(id)
+        .set(roleData, { merge: true });
     return { success: true };
 }
 
@@ -224,6 +216,11 @@ const createPreOrderSchema = z.object({
 });
 export async function createPreOrder(input: z.infer<typeof createPreOrderSchema>): Promise<{ success: boolean }> {
     const { tenantId, item, quantity, notes } = input;
+    
+    if (!tenantId) {
+        throw new Error("无法创建订单，因为租户ID丢失。请重新登录后重试。");
+    }
+
     const orderData = {
         tenantId,
         items: [{ ...item, quantity }],
@@ -233,8 +230,10 @@ export async function createPreOrder(input: z.infer<typeof createPreOrderSchema>
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
-    await admin.firestore().collection('tenants').doc(tenantId).collection('orders').add(orderData);
-    await admin.firestore().collection('orders').add(orderData); // Also add to global orders for admin view
+    
+    // Also add to global orders for admin view
+    await admin.firestore().collection('orders').add(orderData); 
+    
     return { success: true };
 }
 
