@@ -327,3 +327,78 @@ export async function updateOrderStatus(input: { orderId: string, status: OrderS
         return { success: false, message: '更新订单状态时出错。' };
     }
 }
+
+
+// --- Database Maintenance Flows ---
+export async function findOrphanedUsers(): Promise<IndividualUser[]> {
+    const db = admin.firestore();
+    const usersRef = db.collection('users');
+    const tenantsRef = db.collection('tenants');
+
+    const usersSnapshot = await usersRef.where('tenantId', '!=', null).get();
+    if (usersSnapshot.empty) return [];
+
+    const tenantIds = new Set<string>();
+    const tenantsSnapshot = await tenantsRef.select().get();
+    tenantsSnapshot.forEach(doc => tenantIds.add(doc.id));
+
+    const orphanedUsers: IndividualUser[] = [];
+    usersSnapshot.forEach(doc => {
+        const user = doc.data() as IndividualUser;
+        user.id = doc.id;
+        if (user.tenantId && !tenantIds.has(user.tenantId)) {
+            orphanedUsers.push(user);
+        }
+    });
+
+    return orphanedUsers;
+}
+
+export async function findIncompleteOrders(): Promise<Order[]> {
+    const db = admin.firestore();
+    const ordersSnapshot = await db.collection('orders').get();
+    const incompleteOrders: Order[] = [];
+
+    ordersSnapshot.forEach(doc => {
+        const order = doc.data() as Order;
+        order.id = doc.id;
+        // Example check: an order is incomplete if it has no items or no tenantId
+        if (!order.items || order.items.length === 0 || !order.tenantId) {
+            incompleteOrders.push(order);
+        }
+    });
+    return incompleteOrders;
+}
+
+
+const CleanDatabaseInputSchema = z.object({
+    ids: z.array(z.string()),
+    type: z.enum(['Orphaned User', 'Incomplete Order']),
+});
+type CleanDatabaseInput = z.infer<typeof CleanDatabaseInputSchema>;
+
+export async function cleanDatabase(input: CleanDatabaseInput): Promise<{ success: boolean, message: string }> {
+    const db = admin.firestore();
+    const batch = db.batch();
+    
+    let collectionName = '';
+    if (input.type === 'Orphaned User') {
+        collectionName = 'users';
+    } else if (input.type === 'Incomplete Order') {
+        collectionName = 'orders';
+    } else {
+        throw new Error('Invalid cleanup type specified.');
+    }
+
+    try {
+        input.ids.forEach(id => {
+            const docRef = db.collection(collectionName).doc(id);
+            batch.delete(docRef);
+        });
+        await batch.commit();
+        return { success: true, message: `成功删除了 ${input.ids.length} 个 ${input.type} 记录。` };
+    } catch (error: any) {
+        console.error(`Error cleaning ${input.type}:`, error);
+        return { success: false, message: `清理 ${input.type} 时发生错误。` };
+    }
+}

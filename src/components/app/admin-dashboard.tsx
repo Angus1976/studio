@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -43,6 +43,7 @@ import {
     getAllOrders, updateOrderStatus
 } from '@/ai/flows/admin-management-flows';
 import { Label } from "../ui/label";
+import { DatabaseMaintenanceDialog } from "./database-maintenance-dialog";
 
 
 // --- Tenant Management ---
@@ -1095,6 +1096,13 @@ export function AdminDashboard() {
         description: "平台级权限分配，软件资源配置和管理。",
         icon: ShieldCheck,
         buttonText: "配置资产",
+    },
+    {
+        id: "maintenance",
+        title: "数据库维护",
+        description: "检查数据一致性、清理无效数据、执行备份。",
+        icon: DatabaseZap,
+        buttonText: "开始维护",
     }
 ];
 
@@ -1129,7 +1137,7 @@ export function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Management Panels */}
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                  {managementPanels.map((panel) => (
                     <Card key={panel.id}>
                         <CardHeader>
@@ -1156,6 +1164,12 @@ export function AdminDashboard() {
                                 />
                             ) : panel.id === 'transactions' ? (
                                 <TransactionManagementDialog
+                                    buttonText={panel.buttonText}
+                                    title={panel.title}
+                                    description={panel.description}
+                                />
+                            ) : panel.id === 'maintenance' ? (
+                                <DatabaseMaintenanceDialog
                                     buttonText={panel.buttonText}
                                     title={panel.title}
                                     description={panel.description}
