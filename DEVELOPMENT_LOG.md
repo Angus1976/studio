@@ -4,6 +4,41 @@
 
 ---
 
+## 2025-08-26: `ReferenceError: Component is not defined`
+
+### 1. 问题描述
+
+在实现新功能（如“交易管理”对话框）时，应用在运行时崩溃，浏览器控制台或 Next.js 终端中显示 `ReferenceError: Label is not defined` (或其他组件名)。错误指向代码中一个看起来完全合法的 JSX 标签，例如 `<Label>...</Label>`。
+
+### 2. 根本原因分析
+
+这是一个纯粹的 JavaScript 作用域问题，比之前遇到的 `Element type is invalid` 错误更直接。
+
+*   **错误本质**: `ReferenceError` 的意思是，当代码执行到 `<Label />` 这一行时，JavaScript 引擎在当前文件的作用域中找不到一个叫做 `Label` 的变量或函数。
+*   **根本原因**: 几乎总是因为**忘记在文件顶部添加对应的 `import` 语句**。虽然 JSX 看起来像 HTML，但每个组件标签（如 `<Label>`、`<Button>`、`<Card>`）在被编译后，实际上都是对一个 JavaScript 对象或函数的引用。如果这个对象或函数没有被 `import` 进来，它在当前作用域中就是未定义的，从而导致引用错误。
+
+### 3. 与 `Element type is invalid` 的区别
+
+| 错误类型 | `ReferenceError: X is not defined` | `Error: Element type is invalid... got: undefined` |
+| :--- | :--- | :--- |
+| **问题本质** | **变量未定义** (Not Defined) | **变量已定义，但其值为 `undefined`** (Is Undefined) |
+| **常见原因** | 忘记 `import` 组件。 | 1. 错误的导入/导出语法（`default` vs. 命名）。<br>2. 循环依赖（Circular Dependency）。<br>3. 异步导入问题。 |
+| **排查难度** | **低**。错误信息直接，解决方案单一。 | **高**。根源通常更隐晦，需要检查依赖链。 |
+| **解决方案** | 在文件顶部添加正确的 `import` 语句。 | 重构代码以打破循环依赖，或修正导入/导出语法。 |
+
+### 4. 解决方案与规避措施
+
+1.  **直接解决**: 定位到报错的组件名（如 `Label`），然后在该文件的顶部添加正确的导入语句。
+    ```javascript
+    import { Label } from "@/components/ui/label";
+    ```
+2.  **依赖开发工具**:
+    *   **自动导入**: 充分利用现代IDE（如VS Code）的自动导入功能。当你输入一个组件名时，通常会有弹窗提示你自动添加 `import`。
+    *   **Linter警告**: 配置好 Linter (ESLint) 会在你使用未定义变量时立即给出警告或错误，应将其视为必须解决的问题。
+3.  **代码审查**: 在提交代码前，快速浏览一下文件的 `import` 部分，确认所有在 JSX 中使用的组件都已被导入。
+
+---
+
 ## 2025-08-25: `useEffect` 语法错误导致构建失败
 
 ### 1. 问题描述
