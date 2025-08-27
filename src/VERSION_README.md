@@ -64,7 +64,7 @@
 ### 4.2. 仪表盘 (Dashboards) - 已完成
 
 *   **管理员仪表盘 (`AdminDashboard`)**:
-    *   **数据获取**: 通过 `getTenantsAndUsers` 流程**真实地**从 Firestore 加载所有租户和用户信息。
+    *   **数据获取**: 通过 `getTenantsAndUsers` 流程**真实地**从 Firestore 加载所有租户和用户信息，并聚合已完成订单的总收入。
     *   **核心功能**: 提供对租户、用户、订单、集采商品和平台资产（LLM连接等）的完整增删改查 (CRUD) 操作，所有操作均通过独立的后端流程与数据库交互，保证了数据的持久化。
 *   **企业租户仪表盘 (`TenantDashboard`)**:
     *   **数据获取**: 通过 `getTenantData` 流程**真实地**从 Firestore 加载特定租户的用户、订单和角色数据。该流程还包含**后端聚合逻辑**，用于计算真实的 Token 使用量，为统计图表提供数据。
@@ -105,6 +105,11 @@
     *   **背景**: 鉴于 `genkit` 库与 `next@14.x` 的不兼容性，我们采取了“模型解耦”的核心架构策略。
     *   **实现**: 我们没有绑定任何特定的 AI SDK。相反，我们在 `prompt-execution-flow.ts` 中创建了一个通用的执行器。该执行器根据传入的 `modelId` 从 Firestore 查询模型的提供商 (`provider`) 和密钥 (`apiKey`)，然后使用原生的 `fetch` API，构建符合目标厂商（如 Google AI, DeepSeek）规范的请求，实现对任意模型的调用。
     *   **优势**: 此架构**极其灵活且可扩展**。未来要支持新的大模型（如 OpenAI, Anthropic, 阿里云通义千问等），只需在 `executePrompt` 流程中增加一个新的 `case` 分支，并实现其对应的原生 API 请求即可，无需更改任何前端代码或核心业务逻辑。
+
+*   **模型动态查找与优先级机制**:
+    *   **设计思想**: 为了在“确保核心AI功能有可靠的默认模型”和“保留未来接入更多模型的灵活性”之间取得平衡，我们为LLM连接引入了优先级机制。
+    *   **实现方式**: 在`LlmConnection`数据结构中增加了`priority`字段（1-100，数字越小优先级越高）。平台内部需要调用通用AI能力的后端流程（如`aiRequirementsNavigator`）会按`priority`升序查询所有状态为“活跃”的“通用”模型，并自动选用优先级最高的一个。
+    *   **管理员操作**: 平台管理员可以通过在后台设置LLM连接的优先级，来精确控制平台默认使用哪个AI模型，从而保证了核心AI能力的稳定性、可预测性和可扩展性。
 
 *   **高级可复用布局系统**:
     *   创建了 `ThreeColumnLayout` (`/src/components/app/layouts/three-column-layout.tsx`) 和 `CollapsiblePanel` (`/src/components/app/layouts/collapsible-panel.tsx`) 两个高级布局组件。
