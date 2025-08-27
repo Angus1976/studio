@@ -85,27 +85,35 @@ export async function executePrompt(
             case 'google':
                 // Google's API needs the model name prefixed in the URL and the key as a query param.
                 const finalModelName = modelName.startsWith('models/') ? modelName : `models/${modelName}`;
-                requestUrl = `${apiUrl}${finalModelName}:generateContent?key=${apiKey}`;
+                requestUrl = `${apiUrl}/${finalModelName}:generateContent?key=${apiKey}`;
                 requestBody = {
                     contents: [{ parts: [{ text: fullPrompt }] }],
                     generationConfig: { temperature },
                 };
                 responsePath = ['candidates', 0, 'content', 'parts', 0, 'text'];
                 break;
-
-            case 'deepseek':
-                requestUrl = `${apiUrl}`;
-                requestHeaders['Authorization'] = `Bearer ${apiKey}`;
-                requestBody = {
+            
+            case 'anthropic':
+                 requestUrl = `${apiUrl}`;
+                 requestHeaders = {
+                    ...requestHeaders,
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                 };
+                 requestBody = {
                     model: modelName,
+                    max_tokens: 1024,
                     messages: [{ role: 'user', content: fullPrompt }],
                     temperature,
-                };
-                responsePath = ['choices', 0, 'message', 'content'];
-                break;
-                
+                 };
+                 responsePath = ['content', 0, 'text'];
+                 break;
+
             case 'openai':
+            case 'deepseek':
             case '阿里云':
+            case '字节跳动':
+            default: // Default to OpenAI compatible structure
                  requestUrl = `${apiUrl}`;
                  requestHeaders['Authorization'] = `Bearer ${apiKey}`;
                  requestBody = {
@@ -116,9 +124,6 @@ export async function executePrompt(
                  };
                  responsePath = ['choices', 0, 'message', 'content'];
                  break;
-
-            default:
-                throw new Error(`不支持的模型提供商: ${provider}`);
         }
 
         // 4. Make the API call.

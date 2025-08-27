@@ -668,12 +668,12 @@ async function seedInitialLlmProviders() {
     }
 
     const defaultProviders = [
-        { providerName: 'OpenAI', apiUrl: 'https://api.openai.com/v1', apiKeyInstructions: '从 OpenAI 官方平台注册获取。', models: ['gpt-4o', 'gpt-4-turbo'] },
-        { providerName: 'Google', apiUrl: 'https://generativelanguage.googleapis.com/v1beta/', apiKeyInstructions: '从 Google AI Studio 获取。', models: ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'] },
-        { providerName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1', apiKeyInstructions: '从 DeepSeek 控制台获取。', models: ['deepseek-v2', 'deepseek-chat'] },
+        { providerName: 'OpenAI', apiUrl: 'https://api.openai.com/v1/chat/completions', apiKeyInstructions: '从 OpenAI 官方平台注册获取。', models: ['gpt-4o', 'gpt-4-turbo'] },
+        { providerName: 'Google', apiUrl: 'https://generativelanguage.googleapis.com/v1beta', apiKeyInstructions: '从 Google AI Studio 获取。', models: ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'] },
+        { providerName: 'DeepSeek', apiUrl: 'https://api.deepseek.com/v1/chat/completions', apiKeyInstructions: '从 DeepSeek 控制台获取。', models: ['deepseek-v2', 'deepseek-chat'] },
         { providerName: '阿里云', apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKeyInstructions: '从阿里百炼控制台获取。', models: ['qwen-max', 'qwen-long'] },
-        { providerName: 'Anthropic', apiUrl: 'https://api.anthropic.com/v1', apiKeyInstructions: '从官方平台注册获取。', models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229'] },
-        { providerName: '字节跳动', apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/', apiKeyInstructions: '从火山方舟控制台获取。', models: ['ep-20240520111308-4k2s2', 'ep-20240520111258-7yifg'] },
+        { providerName: 'Anthropic', apiUrl: 'https://api.anthropic.com/v1/messages', apiKeyInstructions: '从官方平台注册获取。', models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229'] },
+        { providerName: '字节跳动', apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions', apiKeyInstructions: '从火山方舟控制台获取。', models: ['ep-20240520111308-4k2s2', 'ep-20240520111258-7yifg'] },
         { providerName: '自定义', apiUrl: '', apiKeyInstructions: '输入您的自定义API地址和密钥。', models: [] },
     ];
     
