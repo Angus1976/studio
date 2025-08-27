@@ -1392,44 +1392,6 @@ function TransactionManagementDialog({ buttonText, title, description }: { butto
     );
 }
 
-const kpiData = [
-    { title: "总收入", value: "¥1,250,345", change: "+12.5%", icon: BarChart3 },
-    { title: "活跃租户", value: "1,402", change: "+30", icon: Building },
-    { title: "活跃工程师", value: "89", change: "+4", icon: Code },
-    { title: "个人用户", value: "15,723", change: "+201", icon: User },
-];
-
-const managementPanels = [
-    { 
-        id: "tenants",
-        title: "多租户企业管理",
-        description: "管理平台上的所有企业租户账户。",
-        icon: Building,
-        buttonText: "管理企业用户",
-    },
-    {
-        id: "users",
-        title: "用户与工程师管理",
-        description: "查看和管理所有个人用户与技术工程师。",
-        icon: User,
-        buttonText: "管理个人用户",
-    },
-     {
-        id: "transactions",
-        title: "交易管理",
-        description: "审核订单、管理集采商品。",
-        icon: FileText,
-        buttonText: "管理交易",
-    },
-    {
-        id: "permissions",
-        title: "权限与资产管理",
-        description: "平台级权限分配，软件资源配置和管理。",
-        icon: ShieldCheck,
-        buttonText: "配置资产",
-    }
-];
-
 export function AdminDashboard() {
   const { toast } = useToast();
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -1461,6 +1423,44 @@ export function AdminDashboard() {
     .sort((a, b) => new Date(b.registeredDate).getTime() - new Date(a.registeredDate).getTime())
     .slice(0, 5);
 
+  const kpiData = [
+    { title: "总收入", value: "¥1,250,345", change: "+12.5%", icon: BarChart3, isLoading: true },
+    { title: "活跃租户", value: tenants.filter(t => t.status === '活跃').length, change: "+30", icon: Building, isLoading },
+    { title: "活跃工程师", value: users.filter(u => u.role === '技术工程师' && u.status === '活跃').length, change: "+4", icon: Code, isLoading },
+    { title: "个人用户", value: users.filter(u => u.role === '个人用户' && u.status === '活跃').length, change: "+201", icon: User, isLoading },
+  ];
+
+  const managementPanels = [
+    { 
+        id: "tenants",
+        title: "多租户企业管理",
+        description: "管理平台上的所有企业租户账户。",
+        icon: Building,
+        buttonText: "管理企业用户",
+    },
+    {
+        id: "users",
+        title: "用户与工程师管理",
+        description: "查看和管理所有个人用户与技术工程师。",
+        icon: User,
+        buttonText: "管理个人用户",
+    },
+     {
+        id: "transactions",
+        title: "交易管理",
+        description: "审核订单、管理集采商品。",
+        icon: FileText,
+        buttonText: "管理交易",
+    },
+    {
+        id: "permissions",
+        title: "权限与资产管理",
+        description: "平台级权限分配，软件资源配置和管理。",
+        icon: ShieldCheck,
+        buttonText: "配置资产",
+    }
+];
+
   return (
     <div className="flex flex-col gap-6 max-w-screen-2xl mx-auto h-full overflow-y-auto p-4 md:p-6 lg:p-8">
         <h1 className="text-3xl font-bold font-headline">管理员仪表盘</h1>
@@ -1474,8 +1474,17 @@ export function AdminDashboard() {
                         <item.icon className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{item.value}</div>
-                        <p className="text-xs text-muted-foreground">{item.change} from last month</p>
+                        {item.isLoading ? (
+                            <>
+                                <Skeleton className="h-8 w-3/4 mt-1" />
+                                <Skeleton className="h-4 w-1/2 mt-2" />
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-2xl font-bold">{typeof item.value === 'number' ? item.value.toLocaleString() : item.value}</div>
+                                <p className="text-xs text-muted-foreground">{item.change} from last month</p>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
             ))}
@@ -1573,4 +1582,5 @@ export function AdminDashboard() {
     </div>
   );
 }
+
 
