@@ -22,7 +22,7 @@ export const IndividualUserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   role: z.string(),
-  status: z.enum(["活跃", "待审核", "已禁用", "邀请中"]),
+  status: z.enum(["活跃", "待审核", "已禁用"]),
   tenantId: z.string().optional(),
   registeredDate: z.string(),
 });

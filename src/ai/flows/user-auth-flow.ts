@@ -19,7 +19,7 @@ export async function createUserRecord(input: { uid: string, email: string, role
       email: input.email,
       role: input.role,
       name: input.name,
-      status: '活跃', // Set default status to Active for better user experience
+      status: '待审核', // Set default status to Pending for review
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
@@ -41,6 +41,7 @@ export type LoginUserOutput = {
     email: string | null;
     role: string;
     name: string;
+    status: string;
     message: string;
 };
 
@@ -48,7 +49,7 @@ export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput>
   try {
     const userDoc = await admin.firestore().collection('users').doc(input.uid).get();
     if (!userDoc.exists) {
-      throw new Error('User data not found in Firestore.');
+      throw new Error('用户数据不存在。');
     }
     const userData = userDoc.data()!;
     
@@ -57,6 +58,7 @@ export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput>
       email: userData.email || null,
       role: userData.role,
       name: userData.name || 'N/A',
+      status: userData.status || '待审核',
       message: 'Login successful',
     };
 
@@ -79,6 +81,7 @@ export async function registerUser(input: RegisterUserInput): Promise<{ uid: str
       email: input.email,
       role: input.role,
       name: input.name,
+      status: '待审核',
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     

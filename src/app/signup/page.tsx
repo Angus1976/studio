@@ -67,7 +67,7 @@ export default function SignupPage() {
 
         toast({
             title: "注册成功",
-            description: "已为您创建账户，请登录。",
+            description: "您的账户已提交审核，请等待管理员批准后登录。",
         });
         router.push('/login');
 
@@ -128,7 +128,7 @@ export default function SignupPage() {
                     {registrationOptions.map(opt => (
                         <button key={opt.role} onClick={() => setSelectedRole(opt.role)} className="w-full text-left">
                             <Card className="hover:bg-accent/10 hover:border-accent transition-colors">
-                                <CardHeader className="flex flex-row items-center justify-between">
+                                <CardHeader className="flex flex-row items-center justify-between p-4">
                                     <div className="flex items-center gap-4">
                                         <opt.icon className="h-6 w-6 text-accent" />
                                         <div>

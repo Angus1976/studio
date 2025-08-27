@@ -29,6 +29,23 @@ export default function LoginPage() {
         
         // Step 2: Call the server action to get additional user data (like role and name)
         const result = await loginUser({ uid: userCredential.user.uid });
+        
+        if (result.status !== '活跃') {
+             let statusMessage = `您的账户当前状态为“${result.status}”。`;
+             if(result.status === '待审核') {
+                statusMessage += '请等待平台管理员审核通过。';
+             } else if (result.status === '已禁用') {
+                 statusMessage += '请联系平台管理员。';
+             }
+            await auth.signOut(); // Sign out the user
+            toast({
+                variant: "destructive",
+                title: "登录被拒绝",
+                description: statusMessage,
+            });
+            setIsLoading(false);
+            return;
+        }
 
         // Step 3: Store session info and navigate
         localStorage.setItem('isAuthenticated', 'true');
@@ -67,12 +84,6 @@ export default function LoginPage() {
         setIsLoading(false);
     }
   };
-  
-  const loginOptions = [
-    { role: 'tenant', icon: Building, title: '企业租户登录' },
-    { role: 'engineer', icon: Code, title: '技术工程师登录' },
-    { role: 'user', icon: User, title: '个人用户登录' },
-  ];
 
   return (
     <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 bg-background">
@@ -104,7 +115,7 @@ export default function LoginPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>管理员登录说明</AlertDialogTitle>
                             <AlertDialogDescription>
-                              平台管理员账户拥有最高权限，为安全起见，账户由系统超级管理员在后台直接创建和分配，不支持公开注册或登录入口。
+                              平台管理员账户拥有最高权限，为安全起见，账户由系统超级管理员在后台直接创建和分配，不支持公开注册或从该入口登录。
                               <br/><br/>
                               如果您是平台管理员且无法登录，请联系您的系统或技术支持团队获取帮助。
                             </AlertDialogDescription>
@@ -118,7 +129,7 @@ export default function LoginPage() {
                 
                 <div className="flex items-center">
                     <Separator className="flex-1" />
-                    <span className="mx-4 text-xs text-muted-foreground">或</span>
+                    <span className="mx-4 text-xs text-muted-foreground">用户方</span>
                     <Separator className="flex-1" />
                 </div>
                 
