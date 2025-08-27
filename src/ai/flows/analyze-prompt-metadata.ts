@@ -17,22 +17,21 @@ import admin from '@/lib/firebase-admin';
 import type { LlmConnection } from '@/lib/data-types';
 
 
-// Helper function to find the first available general-purpose LLM connection
+// Helper function to find the highest-priority, general-purpose LLM connection
 async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
      try {
-        const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
+        const snapshot = await db.collection('llm_connections')
+            .where('type', '==', '通用')
+            .where('status', '==', '活跃')
+            .orderBy('priority', 'asc')
+            .limit(1)
+            .get();
+            
         if (!snapshot.empty) {
             const doc = snapshot.docs[0];
             return { id: doc.id, ...doc.data() } as LlmConnection;
         }
-        // Fallback to any model if no general one is found.
-        const anySnapshot = await db.collection('llm_connections').limit(1).get();
-        if (!anySnapshot.empty) {
-            const doc = anySnapshot.docs[0];
-            return { id: doc.id, ...doc.data() } as LlmConnection;
-        }
-        // Return null if no models are configured at all.
         return null;
     } catch (error) {
         console.error("Error fetching LLM connection from database:", error);
@@ -64,7 +63,6 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
       throw new Error("无法分析元数据，因为平台当前没有配置可用的AI模型。请联系管理员。");
     }
     
-    // We need to ask the model to produce JSON. A good way is to add it to the prompt.
     const finalUserPrompt = `${systemInstruction}\n\n${userPromptContent}\n\n请严格以JSON格式返回你的分析结果。`;
 
     const result = await executePrompt({
@@ -75,19 +73,16 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     });
     
     try {
-        // The model might return the JSON inside a markdown block, so we need to extract it.
         const jsonMatch = result.response.match(/```json\n([\s\S]*?)\n```/);
         const jsonString = jsonMatch ? jsonMatch[1] : result.response;
         const parsedJson = JSON.parse(jsonString);
 
-        // Use safeParse for robust parsing
         const safeParsed = AnalyzePromptMetadataOutputSchema.safeParse(parsedJson);
 
         if (safeParsed.success) {
             return safeParsed.data;
         } else {
              console.warn("AI metadata response did not match schema:", safeParsed.error);
-             // Fallback: manually construct the object to prevent crash
              return {
                 scope: parsedJson.scope || 'AI未提供范围',
                 recommendedModel: parsedJson.recommendedModel || 'AI未推荐模型',

@@ -209,17 +209,23 @@ const llmConnectionSchema = z.object({
     apiKey: z.string().min(10),
     type: z.enum(["通用", "专属"]),
     status: z.enum(["活跃", "已禁用"]),
+    priority: z.number().min(1).max(100).optional(),
 });
 
 export async function saveLlmConnection(input: z.infer<typeof llmConnectionSchema>): Promise<{ success: boolean; message: string }> {
     const db = admin.firestore();
     try {
         const { id, ...data } = input;
+        const dataToSave = { ...data };
+        if (!dataToSave.priority) {
+            dataToSave.priority = 99; // Default priority
+        }
+
         if (id) {
-            await db.collection('llm_connections').doc(id).set(data, { merge: true });
+            await db.collection('llm_connections').doc(id).set(dataToSave, { merge: true });
             return { success: true, message: 'LLM 连接已更新。' };
         } else {
-            await db.collection('llm_connections').add({ ...data, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+            await db.collection('llm_connections').add({ ...dataToSave, createdAt: admin.firestore.FieldValue.serverTimestamp() });
             return { success: true, message: 'LLM 连接已创建。' };
         }
     } catch (error: any) {
@@ -239,7 +245,6 @@ export async function deleteLlmConnection(input: { id: string }): Promise<{ succ
 
 export async function testLlmConnection(input: { id: string }): Promise<{ success: boolean; message: string }> {
     try {
-        // Dynamically import to avoid circular dependency issues at module load time
         const { executePrompt } = await import('./prompt-execution-flow');
         const result = await executePrompt({
             modelId: input.id,

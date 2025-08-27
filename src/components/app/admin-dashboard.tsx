@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap, Star } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -569,16 +569,17 @@ const llmConnectionSchema = z.object({
     apiKey: z.string().min(10, "API Key不合法"),
     type: z.enum(["通用", "专属"]),
     status: z.enum(["活跃", "已禁用"]),
+    priority: z.coerce.number().min(1).max(100).optional(),
 });
 
 function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { connection?: LlmConnection | null, providers: LlmProvider[], onSubmit: (values: z.infer<typeof llmConnectionSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof llmConnectionSchema>>({
         resolver: zodResolver(llmConnectionSchema),
-        defaultValues: connection || { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃" },
+        defaultValues: connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃", priority: 99 },
     });
     
     useEffect(() => {
-        form.reset(connection || { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃" });
+        form.reset(connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃", priority: 99 });
     }, [connection, form]);
     
     return (
@@ -628,6 +629,9 @@ function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { conn
                         </FormItem>
                     )}/>
                 </div>
+                 <FormField control={form.control} name="priority" render={({ field }) => (
+                    <FormItem><FormLabel>优先级 (1-100, 数字越小优先级越高)</FormLabel><FormControl><Input type="number" placeholder="99" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
                     <Button type="submit">保存连接</Button>
@@ -710,6 +714,11 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
     useEffect(() => {
         if (open) {
             fetchData();
+        } else {
+            setIsLlmFormOpen(false);
+            setEditingLlmConnection(null);
+            setIsSoftwareFormOpen(false);
+            setEditingSoftwareAsset(null);
         }
     }, [open, fetchData]);
 
@@ -803,10 +812,11 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
                                     <CardHeader className="flex-row items-center justify-between"><CardTitle className="text-lg">已配置模型</CardTitle><Button size="sm" onClick={() => { setEditingLlmConnection(null); setIsLlmFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4"/>添加新连接</Button></CardHeader>
                                     <CardContent><ScrollArea className="h-[400px]">
                                         {isLlmLoading ? <Skeleton className="h-full w-full"/> : <Table>
-                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>类型</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>模型</TableHead><TableHead>优先级</TableHead><TableHead>类型</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {llmConnections.map(c => <TableRow key={c.id}>
                                                     <TableCell><div className="font-medium">{c.modelName}</div><div className="text-xs text-muted-foreground">{c.provider}</div></TableCell>
+                                                    <TableCell><Badge variant="outline" className="flex items-center gap-1 w-fit"><Star className="h-3 w-3"/>{c.priority || 'N/A'}</Badge></TableCell>
                                                     <TableCell><Badge variant="outline">{c.type}</Badge></TableCell>
                                                     <TableCell><Badge variant={c.status === '活跃' ? 'default' : 'destructive'}>{c.status}</Badge></TableCell>
                                                     <TableCell className="text-right">

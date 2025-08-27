@@ -18,22 +18,21 @@ import admin from '@/lib/firebase-admin';
 import type { LlmConnection } from '@/lib/data-types';
 
 
-// Helper function to find the first available general-purpose LLM connection
+// Helper function to find the highest-priority, general-purpose LLM connection
 async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
     try {
-        const snapshot = await db.collection('llm_connections').where('type', '==', '通用').limit(1).get();
+        const snapshot = await db.collection('llm_connections')
+            .where('type', '==', '通用')
+            .where('status', '==', '活跃')
+            .orderBy('priority', 'asc')
+            .limit(1)
+            .get();
+            
         if (!snapshot.empty) {
             const doc = snapshot.docs[0];
             return { id: doc.id, ...doc.data() } as LlmConnection;
         }
-        // Fallback to any model if no general one is found.
-        const anySnapshot = await db.collection('llm_connections').limit(1).get();
-        if (!anySnapshot.empty) {
-            const doc = anySnapshot.docs[0];
-            return { id: doc.id, ...doc.data() } as LlmConnection;
-        }
-        // Return null if no models are configured at all.
         return null;
     } catch (error) {
         console.error("Error fetching LLM connection from database:", error);
@@ -90,6 +89,7 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
         modelId: llmConnection.id,
         userPrompt: fullPrompt,
         temperature: 0.3,
+        responseFormat: 'json_object',
     });
     
     try {

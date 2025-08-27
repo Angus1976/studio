@@ -238,6 +238,7 @@ export const LlmConnectionSchema = z.object({
   type: z.enum(["通用", "专属"]),
   tenantId: z.string().optional(),
   status: z.enum(["活跃", "已禁用"]),
+  priority: z.number().min(1).max(100).optional(),
   lastChecked: z.string().optional(),
   createdAt: z.string(),
 });
