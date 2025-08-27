@@ -23,7 +23,7 @@ export const IndividualUserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   role: z.string(),
-  status: z.enum(["活跃", "待审核", "已禁用"]),
+  status: z.enum(["活跃", "待审核", "已禁用", "邀请中"]),
   tenantId: z.string().optional(),
   registeredDate: z.string(),
   department: z.string().optional(),
@@ -53,6 +53,12 @@ export const PositionSchema = z.object({
 });
 export type Position = z.infer<typeof PositionSchema>;
 
+export const ExpertDomainSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    domainId: z.string(),
+});
+export type ExpertDomain = z.infer<typeof ExpertDomainSchema>;
 
 // --- AI Requirements Navigator ---
 
@@ -222,8 +228,6 @@ export const LlmProviderSchema = z.object({
     id: z.string(),
     providerName: z.string(),
     apiUrl: z.string(),
-    apiKeyHeader: z.string(),
-    apiKeyPrefix: z.string().optional(),
 });
 export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 

@@ -36,12 +36,13 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Skeleton } from "../ui/skeleton";
-import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, Order, OrderStatus } from '@/lib/data-types';
+import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, Order, OrderStatus, LlmProvider } from '@/lib/data-types';
 import { 
     getTenantsAndUsers, saveTenant, deleteTenant, saveUser, deleteUser,
     getPlatformAssets, saveLlmConnection, deleteLlmConnection, testLlmConnection, saveSoftwareAsset, deleteSoftwareAsset,
     getAllOrders, updateOrderStatus
 } from '@/ai/flows/admin-management-flows';
+import { Label } from "../ui/label";
 
 
 // --- Tenant Management ---
@@ -550,8 +551,6 @@ const llmProviderSchema = z.object({
     id: z.string().optional(),
     providerName: z.string().min(1, "厂商名称不能为空"),
     apiUrl: z.string().url("请输入有效的API URL"),
-    apiKeyHeader: z.string().min(1, "认证头不能为空"),
-    apiKeyPrefix: z.string().optional(),
 });
 
 const llmConnectionSchema = z.object({
@@ -563,7 +562,7 @@ const llmConnectionSchema = z.object({
     status: z.enum(["活跃", "已禁用"]),
 });
 
-function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { connection?: LlmConnection | null, providers: z.infer<typeof llmProviderSchema>[], onSubmit: (values: z.infer<typeof llmConnectionSchema>) => void, onCancel: () => void }) {
+function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { connection?: LlmConnection | null, providers: LlmProvider[], onSubmit: (values: z.infer<typeof llmConnectionSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof llmConnectionSchema>>({
         resolver: zodResolver(llmConnectionSchema),
         defaultValues: connection || { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃" },
@@ -673,7 +672,7 @@ function AssetManagementDialog({ triggerButtonText, title }: { triggerButtonText
     const { toast } = useToast();
 
     const [llmConnections, setLlmConnections] = useState<LlmConnection[]>([]);
-    const [llmProviders, setLlmProviders] = useState<z.infer<typeof llmProviderSchema>[]>([]);
+    const [llmProviders, setLlmProviders] = useState<LlmProvider[]>([]);
     const [editingLlmConnection, setEditingLlmConnection] = useState<LlmConnection | null>(null);
     const [isLlmFormOpen, setIsLlmFormOpen] = useState(false);
     const [isLlmLoading, setIsLlmLoading] = useState(true);
