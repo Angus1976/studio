@@ -17,26 +17,33 @@ export async function createUserRecord(input: { uid: string, email: string, role
   try {
     const db = admin.firestore();
     const usersRef = db.collection('users');
-    const snapshot = await usersRef.limit(1).get();
+    
+    // Use a transaction to ensure atomicity, although a simple check is likely fine for this use case.
+    return await db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(usersRef.limit(1));
+        
+        let finalRole = input.role;
+        let finalStatus = '待审核';
 
-    let finalRole = input.role;
-    let finalStatus = '待审核';
+        // Check if this is the very first user being created.
+        if (snapshot.empty) {
+          finalRole = 'Platform Admin';
+          finalStatus = '活跃'; // The first user (super admin) should be active immediately.
+        }
+        
+        const userDocRef = usersRef.doc(input.uid);
+        transaction.set(userDocRef, {
+          email: input.email,
+          role: finalRole,
+          name: input.name,
+          status: finalStatus,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
 
-    // Check if this is the very first user being created.
-    if (snapshot.empty) {
-      finalRole = 'Platform Admin';
-      finalStatus = '活跃'; // The first user (super admin) should be active immediately.
-    }
-
-    await usersRef.doc(input.uid).set({
-      email: input.email,
-      role: finalRole,
-      name: input.name,
-      status: finalStatus,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        return { success: true };
     });
     
-    return { success: true };
   } catch (error: any) {
     console.error("Error in createUserRecord flow: ", error);
     throw new Error('无法在数据库中创建用户记录。');
@@ -49,36 +56,25 @@ const LoginUserSchema = z.object({
 });
 export type LoginUserInput = z.infer<typeof LoginUserSchema>;
 
-export type LoginUserOutput = {
-    uid: string;
-    email: string | null;
-    role: string;
-    name: string;
-    status: string;
-    message: string;
-    tenantId?: string;
-};
+export async function loginUser(input: LoginUserInput) {
+    try {
+        const userDoc = await admin.firestore().collection('users').doc(input.uid).get();
+        if (!userDoc.exists) {
+            throw new Error('用户数据不存在。');
+        }
+        const userData = userDoc.data();
+        if (!userData) {
+            throw new Error('无法加载用户数据。');
+        }
 
-export async function loginUser(input: LoginUserInput): Promise<LoginUserOutput> {
-  try {
-    const userDoc = await admin.firestore().collection('users').doc(input.uid).get();
-    if (!userDoc.exists) {
-      throw new Error('用户数据不存在。');
+        return {
+            role: userData.role,
+            name: userData.name,
+            status: userData.status,
+            tenantId: userData.tenantId,
+        };
+    } catch (error: any) {
+        console.error("Error in loginUser flow: ", error);
+        throw new Error('无法从数据库加载用户角色。');
     }
-    const userData = userDoc.data()!;
-    
-    return {
-      uid: input.uid,
-      email: userData.email || null,
-      role: userData.role,
-      name: userData.name || 'N/A',
-      status: userData.status || '待审核',
-      message: 'Login successful',
-      tenantId: userData.tenantId,
-    };
-
-  } catch (error: any) {
-    console.error('Error in loginUser flow:', error.code, error.message);
-    throw new Error(error.message || '登录时发生未知错误。');
-  }
 }
