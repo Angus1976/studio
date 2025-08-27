@@ -1080,7 +1080,7 @@ export function TenantDashboard() {
 
   const handleInviteUser = async (values: z.infer<typeof inviteUserSchema>) => {
     try {
-      await inviteUsers({ tenantId: MOCK_TENANT_ID, users: [{ ...values, name: "新成员", status: "邀请中" }] });
+      await inviteUsers({ tenantId: MOCK_TENANT_ID, users: [{ ...values, name: "新成员", status: "待审核" }] });
       toast({ title: "邀请已发送", description: `已成功向 ${values.email} 发送邀请。` });
       await fetchData();
     } catch (e: any) {
@@ -1388,7 +1388,7 @@ export function TenantDashboard() {
                                         <TableCell><Badge variant="outline">{user.role}</Badge></TableCell>
                                         <TableCell>
                                           <Badge 
-                                            variant={user.status === '活跃' ? 'default' : user.status === '邀请中' ? 'secondary' : 'destructive'}
+                                            variant={user.status === '活跃' ? 'default' : user.status === '待审核' ? 'secondary' : 'destructive'}
                                           >
                                             {user.status}
                                           </Badge>
