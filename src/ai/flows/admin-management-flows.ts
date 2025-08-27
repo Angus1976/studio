@@ -495,7 +495,7 @@ export async function testLlmConnection(connection: LlmConnection): Promise<{ su
       }, { merge: true });
       return { success: true, message: `连接成功！模型回复：${result.response.substring(0, 50)}...` };
     } else {
-      return { success: false, message: `连接失败。${result.response}` };
+      return { success: false, message: result.response || '连接测试失败，模型未返回有效响应。' };
     }
   } catch (e: any) {
     console.error('LLM Connection test failed:', e);
