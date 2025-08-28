@@ -11,16 +11,16 @@ import { getPrompts } from "./get-prompts-flow";
 import { 
     type DigitalEmployeeInput,
 } from "@/lib/data-types";
-
+import type { Message } from '@/lib/data-types';
 
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<PromptExecutionOutput> {
   const { modelId, promptId, variables, temperature, userPrompt } = input;
 
-    let finalUserPrompt: string | undefined = userPrompt;
     let finalSystemPrompt: string | undefined;
-
+    let finalUserPrompt: string;
+    
     if (promptId) {
         // Fetch all prompts and find the one with the matching ID
         const allPrompts = await getPrompts();
@@ -32,25 +32,35 @@ export async function digitalEmployee(
         
         finalUserPrompt = scenario.userPrompt;
         finalSystemPrompt = scenario.systemPrompt;
-    }
-    
-    if(!finalUserPrompt) {
-        throw new Error("A user prompt is required to execute the flow.");
+    } else if (userPrompt) {
+        finalUserPrompt = userPrompt;
+    } else {
+         throw new Error("A user prompt is required to execute the flow.");
     }
     
     if (!modelId) {
         throw new Error("A modelId is required to execute the flow. The client must provide one.");
     }
+
+    // Interpolate variables into the user prompt.
+    if (variables) {
+        finalUserPrompt = Object.entries(variables).reduce(
+            (prompt, [key, value]) => prompt.replace(new RegExp(`{{${key}}}`, 'g'), String(value)),
+            finalUserPrompt
+        );
+    }
+    
+    const messages: Message[] = [];
+    if (finalSystemPrompt) {
+        messages.push({ role: 'system', content: finalSystemPrompt });
+    }
+    messages.push({ role: 'user', content: finalUserPrompt });
     
     const result = await executePrompt({
         modelId,
-        systemPrompt: finalSystemPrompt,
-        userPrompt: finalUserPrompt,
-        variables,
+        messages,
         temperature
     });
 
     return result;
 }
-
-    

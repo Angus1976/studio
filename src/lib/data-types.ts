@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -58,15 +59,18 @@ export const ExpertDomainSchema = z.object({
 });
 export type ExpertDomain = z.infer<typeof ExpertDomainSchema>;
 
+// --- Message format for AI models ---
+export const MessageSchema = z.object({
+    role: z.enum(['system', 'user', 'model', 'assistant']),
+    content: z.string(),
+});
+export type Message = z.infer<typeof MessageSchema>;
+
+
 // --- AI Requirements Navigator ---
 
 export const RequirementsNavigatorInputSchema = z.object({
-  conversationHistory: z.array(z.object({
-    role: z.enum(['user', 'model']),
-    parts: z.array(z.object({
-        text: z.string(),
-    })),
-  })).describe("The history of the conversation so far."),
+  conversationHistory: z.array(MessageSchema).describe("The history of the conversation so far."),
   userName: z.string().nullable().optional().describe("The name of the current user, if available."),
 });
 export type RequirementsNavigatorInput = z.infer<typeof RequirementsNavigatorInputSchema>;
@@ -131,13 +135,11 @@ export const DeletePromptOutputSchema = z.object({
 export type DeletePromptOutput = z.infer<typeof DeletePromptOutputSchema>;
 
 
-// --- Prompt Execution ---
+// --- Prompt Execution (The Unified Gateway) ---
 
 export const PromptExecutionInputSchema = z.object({
   modelId: z.string().describe('The ID of the LLM connection to use.'),
-  systemPrompt: z.string().optional().describe('The system prompt to guide the AI.'),
-  userPrompt: z.string().describe('The main user prompt, which can contain Handlebars variables like {{variable}}.'),
-  variables: z.record(z.string()).optional().describe('A key-value object for replacing variables in the user prompt.'),
+  messages: z.array(MessageSchema).describe('A list of messages conforming to the OpenAI API structure.'),
   temperature: z.number().min(0).max(1).optional().describe('The temperature for the model.'),
   responseFormat: z.enum(['text', 'json_object']).optional().describe('The desired response format from the model.'),
 });
@@ -155,7 +157,7 @@ export type PromptExecutionOutput = z.infer<typeof PromptExecutionOutputSchema>;
 export const DigitalEmployeeInputSchema = z.object({
   promptId: z.string().optional().describe("The ID of the prompt scenario to execute from the library."),
   modelId: z.string().optional().describe("The ID of the LLM connection to use for execution."),
-  variables: z.record(z.string()).optional().describe("Key-value pairs for variables in the prompt."),
+  variables: z.record(z.any()).optional().describe("Key-value pairs for variables in the prompt."),
   temperature: z.number().min(0).max(1).optional().describe("The temperature for the model."),
   // The following are used for testing prompts that haven't been saved yet.
   userPrompt: z.string().optional(),
@@ -198,11 +200,9 @@ export type Task = z.infer<typeof TaskSchema>;
 
 export const TaskDispatchInputSchema = z.object({
   userCommand: z.string().describe("用户的原始自然语言指令。"),
-  conversationHistory: z.array(z_object({
+  conversationHistory: z.array(z.object({
     role: z.enum(['user', 'model']),
-    parts: z.array(z.object({
-        text: z.string(),
-    })),
+    content: z.string(),
   })).optional().describe("如果需要，可以提供之前的对话历史。"),
 });
 export type TaskDispatchInput = z.infer<typeof TaskDispatchInputSchema>;

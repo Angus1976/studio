@@ -10,7 +10,8 @@ import {
     RequirementsNavigatorInputSchema, 
     RequirementsNavigatorOutputSchema,
     type RequirementsNavigatorInput,
-    type RequirementsNavigatorOutput 
+    type RequirementsNavigatorOutput,
+    type Message
 } from '@/lib/data-types';
 import { executePrompt } from './prompt-execution-flow';
 import admin from '@/lib/firebase-admin';
@@ -88,7 +89,7 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
     // In a real app, the model itself should determine when the conversation is finished.
     // This is a simplified "override" to ensure the flow can complete for demonstration purposes.
     const lastMessage = input.conversationHistory[input.conversationHistory.length - 1];
-    if (lastMessage?.parts[0]?.text.toLowerCase().includes("确认")) {
+    if (lastMessage?.content.toLowerCase().includes("确认")) {
          return {
           response: "我的理解完全正确。很高兴能帮助您！现在我将为您推荐最适合的AI能力场景。",
           isFinished: true,
@@ -96,13 +97,14 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
       };
     }
 
-    // Construct the user prompt including history. The system prompt is passed separately.
-    const userPrompt = `Conversation History:\n${input.conversationHistory.map(m => `${m.role}: ${m.parts[0].text}`).join('\n')}\nmodel:`;
+    const messages: Message[] = [
+        { role: 'system', content: systemPrompt },
+        ...input.conversationHistory,
+    ];
 
     const result = await executePrompt({
         modelId: llmConnection.id, // Use the highest-priority model found.
-        systemPrompt: systemPrompt,
-        userPrompt: userPrompt,
+        messages: messages,
         temperature: 0.5,
     });
     

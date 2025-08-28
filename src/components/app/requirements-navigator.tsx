@@ -11,12 +11,8 @@ import { aiRequirementsNavigator } from '@/ai/flows/ai-requirements-navigator';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import type { RequirementsNavigatorInput } from '@/lib/data-types';
+import type { RequirementsNavigatorInput, Message } from '@/lib/data-types';
 
-type Message = {
-    role: 'user' | 'model';
-    parts: { text: string }[];
-};
 
 
 export function RequirementsNavigator({ userName, onFinish }: { userName: string | null; onFinish: (expertId: string) => void }) {
@@ -41,7 +37,7 @@ export function RequirementsNavigator({ userName, onFinish }: { userName: string
             const initialInput: RequirementsNavigatorInput = { conversationHistory: [], userName };
             aiRequirementsNavigator(initialInput)
                 .then(result => {
-                    setConversation([{ role: 'model', parts: [{ text: result.response }] }]);
+                    setConversation([{ role: 'model', content: result.response }]);
                 })
                 .catch(error => {
                      toast({ variant: 'destructive', title: 'AI初始化失败', description: error.message });
@@ -55,7 +51,7 @@ export function RequirementsNavigator({ userName, onFinish }: { userName: string
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
-        const userMessage: Message = { role: 'user', parts: [{ text: input }] };
+        const userMessage: Message = { role: 'user', content: input };
         const newConversation = [...conversation, userMessage];
         setConversation(newConversation);
         setInput('');
@@ -63,7 +59,7 @@ export function RequirementsNavigator({ userName, onFinish }: { userName: string
 
         try {
             const result = await aiRequirementsNavigator({ conversationHistory: newConversation, userName });
-            setConversation(prev => [...prev, { role: 'model', parts: [{ text: result.response }] }]);
+            setConversation(prev => [...prev, { role: 'model', content: result.response }]);
             
             if(result.isFinished && result.suggestedPromptId) {
                  setIsFinished(true);
@@ -111,7 +107,7 @@ export function RequirementsNavigator({ userName, onFinish }: { userName: string
                                         ? "bg-primary text-primary-foreground rounded-br-none"
                                         : "bg-muted text-muted-foreground rounded-bl-none"
                                     )}>
-                                    {msg.parts[0].text}
+                                    {msg.content}
                                 </div>
                                 {msg.role === 'user' && (
                                      <Avatar className="h-8 w-8">

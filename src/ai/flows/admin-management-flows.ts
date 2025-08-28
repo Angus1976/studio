@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, LlmProvider, Order, OrderStatus, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, Order, OrderStatus, ExpertDomain, LlmProvider } from '@/lib/data-types';
 import { executePrompt } from './prompt-execution-flow';
 
 
@@ -250,7 +250,7 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
     try {
         const result = await executePrompt({
             modelId: input.id,
-            userPrompt: "你好",
+            messages: [{ role: 'user', content: '你好' }],
             temperature: 0.1,
         });
         return { success: true, message: `连接成功，模型返回: "${result.response.substring(0, 50)}..."` };
@@ -470,5 +470,3 @@ export async function deleteExpertDomain(input: { id: string }): Promise<{ succe
         return { success: false, message: error.message };
     }
 }
-
-    

@@ -6,8 +6,10 @@
  * This flow is the heart of the AI execution engine. It dynamically constructs
  * API requests based on provider information stored in Firestore, allowing the
  * platform to connect to any LLM with a native API without code changes.
+ * This flow acts as a lightweight, built-in "LiteLLM" style gateway.
  *
- * - executePrompt - A function that takes prompt components and variables to generate a response.
+ * - executePrompt - A function that takes a standard, OpenAI-like request and
+ *   adapts it for various backend models.
  */
 
 import admin from '@/lib/firebase-admin';
@@ -60,44 +62,42 @@ export async function executePrompt(
     // 1. Fetch all necessary model and provider details from Firestore.
     const modelDetails = await getModelDetails(input.modelId);
     const { provider, modelName, apiKey, apiUrl } = modelDetails;
-
-    // 2. Interpolate variables into the user prompt.
-    let finalUserPrompt = input.userPrompt || '';
-    if (input.variables) {
-        finalUserPrompt = Object.entries(input.variables).reduce(
-            (prompt, [key, value]) => prompt.replace(new RegExp(`{{${key}}}`, 'g'), value),
-            finalUserPrompt
-        );
-    }
     
-    const temperature = input.temperature || 0.7;
+    const { messages, temperature = 0.7, responseFormat } = input;
     
-    // 3. Prepare provider-specific request payload.
+    // Find the system prompt and user prompts from the messages array
+    const systemPrompt = messages.find(m => m.role === 'system')?.content;
+    const userPrompts = messages.filter(m => m.role === 'user').map(m => m.content).join('\n');
+    
+    // 2. Prepare provider-specific request payload.
     let requestUrl = '';
     let requestBody: any;
     let requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     let responsePath: (string | number)[];
 
     // This is the model-agnostic adapter.
-    // To support a new provider, just add a new case here.
+    // It converts the standard OpenAI-like `messages` input into the format
+    // required by the target provider.
     switch (provider.toLowerCase()) {
         case 'google':
             requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
-            const contents = [{ role: "user", parts: [{ text: finalUserPrompt }] }];
+            const contents = messages
+                .filter(m => m.role === 'user' || m.role === 'model') // Gemini uses 'model' for assistant role
+                .map(m => ({ role: m.role, parts: [{ text: m.content }] }));
             
             requestBody = {
                 contents: contents,
                 generationConfig: { temperature },
             };
 
-            if(input.systemPrompt) {
+            if(systemPrompt) {
                 requestBody.systemInstruction = {
                     role: "system",
-                    parts: [{ text: input.systemPrompt }]
+                    parts: [{ text: systemPrompt }]
                 }
             }
             
-            if (input.responseFormat === 'json_object') {
+            if (responseFormat === 'json_object') {
                 requestBody.generationConfig.responseMimeType = 'application/json';
             }
             responsePath = ['candidates', 0, 'content', 'parts', 0, 'text'];
@@ -110,13 +110,12 @@ export async function executePrompt(
                 'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01',
              };
-             const anthropicMessages = [{ role: 'user', content: finalUserPrompt }];
              
              requestBody = {
                 model: modelName,
-                max_tokens: 1024,
-                messages: anthropicMessages,
-                system: input.systemPrompt, // Anthropic has a dedicated system prompt field
+                max_tokens: 4096, // Anthropic requires max_tokens
+                messages: messages.filter(m => m.role === 'user' || m.role === 'assistant'),
+                system: systemPrompt, // Anthropic has a dedicated system prompt field
                 temperature,
              };
              responsePath = ['content', 0, 'text'];
@@ -131,19 +130,13 @@ export async function executePrompt(
              requestUrl = `${apiUrl}/v1/chat/completions`;
              requestHeaders['Authorization'] = `Bearer ${apiKey}`;
              
-             const messages = [];
-             if (input.systemPrompt) {
-                 messages.push({ role: 'system', content: input.systemPrompt });
-             }
-             messages.push({ role: 'user', content: finalUserPrompt });
-
              requestBody = {
                 model: modelName,
                 messages: messages,
                 temperature,
                 stream: false,
              };
-             if (input.responseFormat === 'json_object') {
+             if (responseFormat === 'json_object') {
                 requestBody.response_format = { type: 'json_object' };
             }
              responsePath = ['choices', 0, 'message', 'content'];
@@ -151,7 +144,7 @@ export async function executePrompt(
     }
 
     try {
-      // 4. Make the API call.
+      // 3. Make the API call.
       const response = await fetch(requestUrl, {
           method: 'POST',
           headers: requestHeaders,
@@ -163,16 +156,17 @@ export async function executePrompt(
       if (!response.ok) {
           console.error(`Error from ${provider} (${response.status}):`, responseData);
           const errorMessage = responseData?.error?.message || response.statusText;
-          throw new Error(`API request failed with status ${response.status}: ${errorMessage}`);
+          // IMPORTANT: Throw an error to be caught by the calling function.
+          throw new Error(`API请求失败，状态码 ${response.status}: ${errorMessage}`);
       }
       
-      // 5. Extract the response text using the provider-specific path.
+      // 4. Extract the response text using the provider-specific path.
       const responseText = responsePath.reduce((acc, key) => (acc as any)?.[key], responseData) as string | undefined;
 
       if (typeof responseText !== 'string') {
           console.error('Could not find response text at expected path:', responsePath.join('.'));
           console.error('Full AI response:', JSON.stringify(responseData, null, 2));
-          throw new Error(`Failed to extract text from ${provider}'s response.`);
+          throw new Error(`未能从 ${provider} 的响应中提取文本。`);
       }
       
       return { response: responseText };
@@ -180,6 +174,7 @@ export async function executePrompt(
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
         // Re-throw the error to be caught by the calling function (e.g., testLlmConnection)
+        // This ensures the caller knows the exact reason for failure.
         throw error;
     }
 }

@@ -88,8 +88,10 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
 
     const result = await executePrompt({
         modelId: llmConnection.id, // Use the highest-priority model found.
-        systemPrompt: systemPrompt,
-        userPrompt: finalUserPrompt,
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: finalUserPrompt }
+        ],
         temperature: 0.3,
         responseFormat: 'json_object', // Request JSON output explicitly.
     });

@@ -63,7 +63,7 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
         async function fetchModels() {
             try {
                 const { llmConnections } = await getPlatformAssets();
-                const generalPurposeModels = llmConnections.filter(m => m.type === '通用');
+                const generalPurposeModels = llmConnections.filter(m => m.scope === '通用');
                 setModels(generalPurposeModels);
                 if (generalPurposeModels.length > 0) {
                     setSelectedModel(generalPurposeModels[0].id);
