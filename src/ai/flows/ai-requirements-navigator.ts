@@ -32,7 +32,7 @@ async function getGeneralTextLlmConnection(): Promise<LlmConnection | null> {
         
         const connections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
         
-        // Sort by priority in the code to ensure correct ordering, as Firestore's multi-field ordering requires specific indexes.
+        // Sort by priority in the code to ensure correct ordering.
         connections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
         return connections[0];
@@ -79,19 +79,19 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         }
     }
     
-    // Find the highest priority, available, general-purpose text LLM.
-    const llmConnection = await getGeneralTextLlmConnection();
-    if (!llmConnection) {
-        // Gracefully handle no available model. Throw an error to be caught by the client UI.
-        throw new Error("抱歉，当前平台没有配置可用的AI对话模型。请联系管理员进行配置后重试。");
-    }
-    
-    const messages: Message[] = [
-        { role: 'system', content: systemPrompt },
-        ...input.conversationHistory,
-    ];
-
     try {
+        // Find the highest priority, available, general-purpose text LLM.
+        const llmConnection = await getGeneralTextLlmConnection();
+        if (!llmConnection) {
+            // Gracefully handle no available model. Throw an error to be caught by the client UI.
+            throw new Error("抱歉，当前平台没有配置可用的AI对话模型。请联系管理员进行配置后重试。");
+        }
+        
+        const messages: Message[] = [
+            { role: 'system', content: systemPrompt },
+            ...input.conversationHistory,
+        ];
+
         const result = await executePrompt({
             modelId: llmConnection.id, // Use the highest-priority model found.
             messages: messages,
