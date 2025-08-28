@@ -222,8 +222,6 @@ export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 export const LlmProviderSchema = z.object({
     id: z.string(),
     providerName: z.string(),
-    apiKeyEnvVar: z.string(),
-    apiKeyHelpText: z.string(),
     models: z.array(z.string()),
 });
 export type LlmProvider = z.infer<typeof LlmProviderSchema>;

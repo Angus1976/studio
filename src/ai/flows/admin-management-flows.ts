@@ -211,9 +211,9 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
 
 const llmConnectionSchema = z.object({
     id: z.string().optional(),
-    modelName: z.string().min(1, "模型名称不能为空"),
-    provider: z.string().min(1, "请选择一个厂商"),
-    apiKey: z.string().min(10, "API Key不合法"),
+    modelName: z.string().min(1, "必须选择一个模型名称"),
+    provider: z.string().min(1, "必须选择一个厂商"),
+    apiKey: z.string().min(10, "API Key不合法或过短"),
     scope: z.enum(["通用", "专属"]),
     category: z.enum(["文本", "图像", "推理", "多模态"]),
     status: z.enum(["活跃", "已禁用"]),
