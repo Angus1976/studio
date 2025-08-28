@@ -66,10 +66,10 @@ export function AIWorkbench({ userName }: { userName: string | null }) {
     
     useEffect(() => {
         if(expertId) {
-            const filtered = allScenarios.filter(s => s.expertId === expertId);
+            const filtered = allScenarios.filter(s => s.expertId === expertId && s.scope !== '专属');
             setRecommendedScenarios(filtered);
         } else {
-            setRecommendedScenarios([]); // Or show all as default
+            setRecommendedScenarios([]);
         }
     }, [expertId, allScenarios]);
 
