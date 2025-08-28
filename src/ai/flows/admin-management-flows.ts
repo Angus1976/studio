@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
-import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, Order, OrderStatus, ExpertDomain } from '@/lib/data-types';
+import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, Order, OrderStatus, ExpertDomain, LlmProvider } from '@/lib/data-types';
 import { executePrompt } from './prompt-execution-flow';
 
 
@@ -165,11 +165,14 @@ export async function deleteUser(input: { id: string }): Promise<{ success: bool
 
 // --- Asset Management Flows ---
 
-export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], softwareAssets: SoftwareAsset[] }> {
+export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], softwareAssets: SoftwareAsset[], llmProviders: LlmProvider[] }> {
     const db = admin.firestore();
     try {
-        const llmSnapshot = await db.collection('llm_connections').get();
-        const softwareSnapshot = await db.collection('software_assets').get();
+        const [llmSnapshot, softwareSnapshot, providersSnapshot] = await Promise.all([
+            db.collection('llm_connections').get(),
+            db.collection('software_assets').get(),
+            db.collection('llm_providers').get()
+        ]);
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -190,8 +193,15 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
                 createdAt: createdAt,
             } as SoftwareAsset;
         });
+
+        const llmProviders: LlmProvider[] = providersSnapshot.docs.map(doc => {
+            return {
+                id: doc.id,
+                ...doc.data(),
+            } as LlmProvider;
+        });
         
-        return { llmConnections, softwareAssets };
+        return { llmConnections, softwareAssets, llmProviders };
     } catch (error: any) {
         console.error("Error fetching platform assets:", error);
         throw new Error('无法从数据库加载平台资产。');

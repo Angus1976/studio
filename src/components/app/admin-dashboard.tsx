@@ -599,7 +599,7 @@ function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { conn
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {providers.map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
+                          {(providers || []).map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -723,7 +723,7 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
             const { llmConnections, softwareAssets, llmProviders } = await getPlatformAssets();
             setLlmConnections(llmConnections);
             setSoftwareAssets(softwareAssets);
-            setLlmProviders(llmProviders);
+            setLlmProviders(llmProviders || []);
         } catch (error: any) {
             toast({ variant: "destructive", title: "资产加载失败", description: error.message });
         } finally {
@@ -1323,7 +1323,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-
-    
-
-    
