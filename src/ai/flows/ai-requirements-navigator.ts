@@ -126,7 +126,7 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         };
     } catch (error: any) {
         console.error("Error in aiRequirementsNavigator:", error);
-        // Re-throw the error so the client-side can display a toast.
-        throw new Error(`抱歉，我在与AI沟通时遇到了一个问题：${error.message}`);
+        // Re-throw the original error so the client-side can display a more accurate message.
+        throw error;
     }
 }

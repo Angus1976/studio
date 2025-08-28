@@ -94,7 +94,7 @@ export async function executePrompt(
             
             if (systemPrompt) {
                  requestBody.systemInstruction = {
-                    role: "system",
+                    role: "system", // This should just be 'system' but Google's type seems to expect a Part object.
                     parts: [{ text: systemPrompt }]
                 };
             }
