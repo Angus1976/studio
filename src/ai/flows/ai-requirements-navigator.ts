@@ -7,8 +7,6 @@
  */
 
 import { 
-    RequirementsNavigatorInputSchema, 
-    RequirementsNavigatorOutputSchema,
     type RequirementsNavigatorInput,
     type RequirementsNavigatorOutput,
     type Message
@@ -86,30 +84,41 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         };
     }
     
-    // In a real app, the model itself should determine when the conversation is finished.
-    // This is a simplified "override" to ensure the flow can complete for demonstration purposes.
-    const lastMessage = input.conversationHistory[input.conversationHistory.length - 1];
-    if (lastMessage?.content.toLowerCase().includes("确认")) {
-         return {
-          response: "我的理解完全正确。很高兴能帮助您！现在我将为您推荐最适合的AI能力场景。",
-          isFinished: true,
-          suggestedPromptId: 'recruitment-expert' // Default to one for demonstration.
-      };
-    }
-
     const messages: Message[] = [
         { role: 'system', content: systemPrompt },
         ...input.conversationHistory,
     ];
 
-    const result = await executePrompt({
-        modelId: llmConnection.id, // Use the highest-priority model found.
-        messages: messages,
-        temperature: 0.5,
-    });
-    
-    return {
-        response: result.response,
-        isFinished: false, // Let the conversation continue.
-    };
+    try {
+        const result = await executePrompt({
+            modelId: llmConnection.id, // Use the highest-priority model found.
+            messages: messages,
+            temperature: 0.5,
+        });
+
+        // Simple check to see if the conversation might be over.
+        // A more robust solution would involve the AI returning structured data.
+        const responseText = result.response.toLowerCase();
+        if (responseText.includes("我的理解对吗") || responseText.includes("为您推荐")) {
+            const lastUserMessage = input.conversationHistory[input.conversationHistory.length - 1];
+            if(lastUserMessage.content.toLowerCase().includes("确认")){
+                 return {
+                    response: result.response,
+                    isFinished: true,
+                    suggestedPromptId: 'recruitment-expert' // Default to one for demonstration.
+                };
+            }
+        }
+        
+        return {
+            response: result.response,
+            isFinished: false,
+        };
+    } catch (error: any) {
+        console.error("Error in aiRequirementsNavigator:", error);
+        return {
+            response: `抱歉，我在与AI沟通时遇到了一个问题：${error.message}`,
+            isFinished: true, // End conversation on error
+        };
+    }
 }

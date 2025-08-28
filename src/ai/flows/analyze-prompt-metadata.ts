@@ -7,10 +7,9 @@
  */
 
 import { 
-    AnalyzePromptMetadataInputSchema,
-    AnalyzePromptMetadataOutputSchema,
     type AnalyzePromptMetadataInput,
-    type AnalyzePromptMetadataOutput
+    type AnalyzePromptMetadataOutput,
+    AnalyzePromptMetadataOutputSchema,
 } from '@/lib/data-types';
 import { executePrompt } from './prompt-execution-flow';
 import admin from '@/lib/firebase-admin';
@@ -46,10 +45,10 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
 
     请严格按照以下要求，并遵循JSON输出格式：
 
-    1.  **适用范围 (scope)**: 总结这个提示词主要适用于哪个领域或哪一类任务。
-    2.  **推荐模型 (recommendedModel)**: 根据提示词的复杂度、语言和任务类型，推荐最合适的Google Gemini模型（例如：gemini-1.5-flash适用于简单、快速的任务；gemini-1.5-pro适用于复杂的推理和多语言任务）。
-    3.  **约束条件 (constraints)**: 指出使用此提示词时需要注意的潜在问题、限制或前提条件。例如，它是否依赖特定格式的输入变量。
-    4.  **适用场景 (scenario)**: 描述1-2个这个提示词可以被有效利用的具体业务场景。`;
+    1.  **scope**: 总结这个提示词主要适用于哪个领域或哪一类任务。
+    2.  **recommendedModel**: 根据提示词的复杂度、语言和任务类型，推荐最合适的Google Gemini模型（例如：gemini-1.5-flash适用于简单、快速的任务；gemini-1.5-pro适用于复杂的推理和多语言任务）。
+    3.  **constraints**: 指出使用此提示词时需要注意的潜在问题、限制或前提条件。例如，它是否依赖特定格式的输入变量。
+    4.  **scenario**: 描述1-2个这个提示词可以被有效利用的具体业务场景。`;
     
     let userPromptContent = `[User Prompt]:\n${input.userPrompt}`;
     if (input.context) userPromptContent += `\n\n[Context/Examples]:\n${input.context}`;

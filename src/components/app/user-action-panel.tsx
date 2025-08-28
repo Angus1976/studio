@@ -122,7 +122,8 @@ export function UserActionPanel({ scenario }: UserActionPanelProps) {
 
             const result = await digitalEmployee({
                 promptId: scenario.id ? scenario.id : undefined,
-                userPrompt: scenario.prompt,
+                userPrompt: scenario.prompt, // Always pass the latest prompt content
+                systemPrompt: undefined, // Let the backend handle the system prompt from the saved scenario if it exists
                 modelId: selectedModel,
                 variables: varsAsObject,
             });

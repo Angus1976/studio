@@ -16,10 +16,10 @@ import type { Message } from '@/lib/data-types';
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<PromptExecutionOutput> {
-  const { modelId, promptId, variables, temperature, userPrompt } = input;
+  const { modelId, promptId, variables, temperature, userPrompt, systemPrompt } = input;
 
     let finalUserPrompt: string;
-    let finalSystemPrompt: string | undefined;
+    let finalSystemPrompt: string | undefined = systemPrompt;
     
     if (promptId) {
         // Fetch all prompts and find the one with the matching ID
@@ -31,7 +31,10 @@ export async function digitalEmployee(
         }
         
         finalUserPrompt = scenario.userPrompt;
-        finalSystemPrompt = scenario.systemPrompt;
+        // If a system prompt is associated with the saved scenario, it should take precedence
+        if (scenario.systemPrompt) {
+            finalSystemPrompt = scenario.systemPrompt;
+        }
     } else if (userPrompt) {
         finalUserPrompt = userPrompt;
     } else {
