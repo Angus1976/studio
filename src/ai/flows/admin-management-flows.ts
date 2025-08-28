@@ -253,11 +253,9 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
             userPrompt: "你好",
             temperature: 0.1,
         });
-        // The most reliable way to check for success is to see if executePrompt completes without throwing an error.
         return { success: true, message: `连接成功，模型返回: "${result.response.substring(0, 50)}..."` };
 
     } catch (error: any) {
-        // executePrompt now throws a detailed error, so we catch it here.
         return { success: false, message: `连接失败: ${error.message}` };
     }
 }

@@ -167,7 +167,6 @@ export async function executePrompt(
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`Error from ${provider} (${response.status}):`, errorBody);
-            // THIS IS THE CRITICAL CHANGE: Throw a detailed error instead of returning a string.
             throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
         }
 
@@ -186,7 +185,6 @@ export async function executePrompt(
 
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
-        // This is the crucial change: Re-throw the error to be caught by the calling function.
         throw error;
     }
 }
