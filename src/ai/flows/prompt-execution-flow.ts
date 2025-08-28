@@ -94,7 +94,7 @@ export async function executePrompt(
             
             if (systemPrompt) {
                  requestBody.systemInstruction = {
-                    role: "system", // This should just be 'system' but Google's type seems to expect a Part object.
+                    // role: "system", // This is incorrect for Google's API, the role is implicit
                     parts: [{ text: systemPrompt }]
                 };
             }
@@ -155,7 +155,7 @@ export async function executePrompt(
       });
       
       if (!response.ok) {
-          // If the response is not OK, read the body as text, as it could be anything.
+          // If the response is not OK, robustly read the body as text.
           const errorText = await response.text();
           console.error(`Error from ${provider} (${response.status}):`, errorText);
           // IMPORTANT: Throw an error with the raw text to be caught by the calling function.
@@ -177,7 +177,7 @@ export async function executePrompt(
 
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
-        // Re-throw the error to be caught by the calling function (e.g., testLlmConnection)
+        // Re-throw the error to be caught by the calling function.
         // This ensures the caller knows the exact reason for failure.
         throw error;
     }

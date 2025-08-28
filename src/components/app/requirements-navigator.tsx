@@ -71,9 +71,9 @@ export function RequirementsNavigator({ userName, onFinish }: { userName: string
             toast({
                 variant: 'destructive',
                 title: '对话出错',
-                description: error.message,
+                description: error.message, // Display the clean error message from the backend.
             });
-            // Restore conversation on error
+            // Restore conversation on error by removing the user's last message that failed.
             setConversation(prev => prev.slice(0, -1));
         } finally {
             setIsLoading(false);
