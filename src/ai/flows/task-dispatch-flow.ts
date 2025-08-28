@@ -24,7 +24,7 @@ async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
     try {
         const snapshot = await db.collection('llm_connections')
-            .where('type', '==', '通用')
+            .where('scope', '==', '通用')
             .where('status', '==', '活跃')
             .orderBy('priority', 'asc')
             .limit(1)
@@ -84,11 +84,12 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
        }
     }
     
-    const fullPrompt = `${systemPrompt}\n\nUser command: "${input.userCommand}"\n\nPlease provide your response as a single JSON object.`;
+    const finalUserPrompt = `User command: "${input.userCommand}"\n\nPlease provide your response as a single JSON object.`;
 
     const result = await executePrompt({
         modelId: llmConnection.id, // Use the highest-priority model found.
-        userPrompt: fullPrompt,
+        systemPrompt: systemPrompt,
+        userPrompt: finalUserPrompt,
         temperature: 0.3,
         responseFormat: 'json_object', // Request JSON output explicitly.
     });

@@ -22,7 +22,7 @@ async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
     try {
         const snapshot = await db.collection('llm_connections')
-            .where('type', '==', '通用')
+            .where('scope', '==', '通用')
             .where('status', '==', '活跃')
             .orderBy('priority', 'asc')
             .limit(1)
@@ -96,12 +96,13 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
       };
     }
 
-    // Construct the full prompt including history and system instructions.
-    const fullPrompt = `${systemPrompt}\n\nConversation History:\n${input.conversationHistory.map(m => `${m.role}: ${m.parts[0].text}`).join('\n')}\nmodel:`;
+    // Construct the user prompt including history. The system prompt is passed separately.
+    const userPrompt = `Conversation History:\n${input.conversationHistory.map(m => `${m.role}: ${m.parts[0].text}`).join('\n')}\nmodel:`;
 
     const result = await executePrompt({
         modelId: llmConnection.id, // Use the highest-priority model found.
-        userPrompt: fullPrompt, // We are stuffing everything into the user prompt for this conversational model.
+        systemPrompt: systemPrompt,
+        userPrompt: userPrompt,
         temperature: 0.5,
     });
     

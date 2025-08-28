@@ -22,7 +22,7 @@ async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
      try {
         const snapshot = await db.collection('llm_connections')
-            .where('type', '==', '通用')
+            .where('scope', '==', '通用')
             .where('status', '==', '活跃')
             .orderBy('priority', 'asc')
             .limit(1)
@@ -64,10 +64,11 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
       throw new Error("无法分析元数据，因为平台当前没有配置可用的AI模型。请联系管理员。");
     }
     
-    const finalUserPrompt = `${systemInstruction}\n\n${userPromptContent}\n\n请严格以JSON格式返回你的分析结果。`;
+    const finalUserPrompt = `${userPromptContent}\n\n请严格以JSON格式返回你的分析结果。`;
 
     const result = await executePrompt({
       modelId: llmConnection.id, // Use the highest-priority model found.
+      systemPrompt: systemInstruction,
       userPrompt: finalUserPrompt,
       temperature: 0.2,
       responseFormat: 'json_object', // Request JSON output explicitly.
