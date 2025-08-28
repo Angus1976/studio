@@ -16,32 +16,28 @@ import admin from '@/lib/firebase-admin';
 import type { LlmConnection } from '@/lib/data-types';
 
 
-// Helper function to find the highest-priority, general-purpose LLM connection
-async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
+// Helper function to find the highest-priority, general-purpose TEXT model connection
+async function getGeneralTextLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
     try {
-        // Firestore composite indexes can be tricky. A more robust way is to fetch all active,
-        // general-purpose models and then sort them in code. This avoids needing to create
-        // a specific index in the Firebase console for the query.
         const snapshot = await db.collection('llm_connections')
             .where('scope', '==', '通用')
             .where('status', '==', '活跃')
+            .where('category', 'in', ['文本', '多模态']) // Text or Multimodal models are fine for this
             .get();
             
         if (snapshot.empty) {
-            console.warn("No active, general-purpose LLM connection found in database.");
+            console.warn("No active, general-purpose Text/Multimodal LLM connection found in database.");
             return null;
         }
         
         const connections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
-        
-        // Sort by priority in ascending order (lower number is higher priority)
         connections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
         return connections[0];
 
     } catch (error) {
-        console.error("Error fetching highest priority LLM connection from database:", error);
+        console.error("Error fetching highest priority Text LLM connection from database:", error);
         return null;
     }
 }
@@ -82,11 +78,12 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         }
     }
     
-    // Find the highest priority, available, general-purpose LLM.
-    const llmConnection = await getGeneralLlmConnection();
+    // Find the highest priority, available, general-purpose text LLM.
+    const llmConnection = await getGeneralTextLlmConnection();
     if (!llmConnection) {
+        // Gracefully handle no available model
         return {
-            response: "抱歉，当前平台没有配置可用的AI模型。请联系管理员进行配置后重试。",
+            response: "抱歉，当前平台没有配置可用的AI对话模型。请联系管理员进行配置后重试。",
             isFinished: true, // End the conversation as no action can be taken.
         };
     }
@@ -101,6 +98,7 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
             modelId: llmConnection.id, // Use the highest-priority model found.
             messages: messages,
             temperature: 0.5,
+            // DO NOT request json_object for a text conversation
         });
 
         // Simple check to see if the conversation might be over.

@@ -17,32 +17,43 @@ import admin from '@/lib/firebase-admin';
 import type { LlmConnection } from '@/lib/data-types';
 
 
-// Helper function to find the highest-priority, general-purpose LLM connection
-async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
+// Helper function to find the highest-priority, general-purpose LLM that supports JSON output.
+async function getJsonCapableLlmConnection(): Promise<{ model: LlmConnection, requiresManualParse: boolean } | null> {
     const db = admin.firestore();
     try {
-        // Firestore composite indexes can be tricky. A more robust way is to fetch all active,
-        // general-purpose models and then sort them in code. This avoids needing to create
-        // a specific index in the Firebase console for the query.
-        const snapshot = await db.collection('llm_connections')
+        // Priority 1: Look for "Reasoning" or "Multimodal" models first, as they are more likely to support JSON mode.
+        const reasoningSnapshot = await db.collection('llm_connections')
             .where('scope', '==', '通用')
             .where('status', '==', '活跃')
+            .where('category', 'in', ['推理', '多模态'])
             .get();
-            
-        if (snapshot.empty) {
-            console.warn("No active, general-purpose LLM connection found in database.");
-            return null;
+        
+        let connections = reasoningSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
+        
+        if (connections.length > 0) {
+            connections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
+            return { model: connections[0], requiresManualParse: false }; // These models should handle JSON mode well.
         }
-        
-        const connections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
-        
-        // Sort by priority in ascending order (lower number is higher priority)
+
+        // Priority 2: Fallback to a general "Text" model if no specialized ones are found.
+        const textSnapshot = await db.collection('llm_connections')
+            .where('scope', '==', '通用')
+            .where('status', '==', '活跃')
+            .where('category', '==', '文本')
+            .get();
+
+        if (textSnapshot.empty) {
+             console.warn("No active, general-purpose LLM connection of any category found in database.");
+             return null;
+        }
+
+        connections = textSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
         connections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
-        return connections[0];
+        return { model: connections[0], requiresManualParse: true }; // A standard text model will require us to parse its output.
 
     } catch (error) {
-        console.error("Error fetching highest priority LLM connection from database:", error);
+        console.error("Error fetching a JSON-capable LLM connection from database:", error);
         return null;
     }
 }
@@ -80,9 +91,8 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
 \`\`\`
 `;
     
-    // Find the highest priority, available, general-purpose LLM.
-    const llmConnection = await getGeneralLlmConnection();
-    if (!llmConnection) {
+    const llmInfo = await getJsonCapableLlmConnection();
+    if (!llmInfo) {
        return {
             planSummary: "抱歉，当前平台没有配置可用的AI模型，无法为您规划任务。请联系管理员。",
             tasks: [],
@@ -93,18 +103,19 @@ export async function taskDispatch(input: TaskDispatchInput): Promise<TaskDispat
     const finalUserPrompt = `User command: "${input.userCommand}"\n\nPlease provide your response as a single JSON object.`;
 
     const result = await executePrompt({
-        modelId: llmConnection.id, // Use the highest-priority model found.
+        modelId: llmInfo.model.id,
         messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: finalUserPrompt }
         ],
         temperature: 0.3,
-        responseFormat: 'json_object', // Request JSON output explicitly.
+        // Only request JSON format if the model is likely to support it.
+        responseFormat: llmInfo.requiresManualParse ? undefined : 'json_object',
     });
     
     try {
         // The model might return the JSON inside a markdown block, so we need to extract it.
-        const jsonMatch = result.response.match(/```json\n([\s\S]*?)\n```/);
+        const jsonMatch = result.response.match(/```(?:json)?\n([\s\S]*?)\n```/);
         const jsonString = jsonMatch ? jsonMatch[1] : result.response;
         const parsedJson = JSON.parse(jsonString);
         return TaskDispatchOutputSchema.parse(parsedJson);
