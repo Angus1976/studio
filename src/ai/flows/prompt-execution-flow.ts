@@ -81,15 +81,17 @@ export async function executePrompt(
     switch (provider.toLowerCase()) {
         case 'google':
             requestUrl = `${apiBaseUrl}/${modelName}:generateContent?key=${apiKey}`;
-            // Correctly map roles for Google's API. 'assistant' and 'model' from our side become 'model' for Google.
-            const contents = messages
-                .filter(m => m.role === 'user' || m.role === 'model' || m.role === 'assistant')
+            
+            // Correctly separate system prompt from the rest of the conversation.
+            const systemPrompt = messages.find(m => m.role === 'system')?.content;
+            const conversationMessages = messages.filter(m => m.role !== 'system');
+            
+            // Correctly map roles for Google's API. 'assistant' becomes 'model'.
+            const contents = conversationMessages
                 .map(m => ({
                     role: m.role === 'user' ? 'user' : 'model', 
                     parts: [{ text: m.content }]
                 }));
-            
-            const systemPrompt = messages.find(m => m.role === 'system')?.content;
 
             requestBody = {
                 contents: contents,
@@ -98,6 +100,7 @@ export async function executePrompt(
             
             if (systemPrompt) {
                  requestBody.systemInstruction = {
+                    role: 'system', // Although the API shows 'system' is not a role for contents, it might be for systemInstruction
                     parts: [{ text: systemPrompt }]
                 };
             }
@@ -158,10 +161,8 @@ export async function executePrompt(
       });
       
       if (!response.ok) {
-          // If the response is not OK, robustly read the body as text.
           const errorText = await response.text();
           console.error(`Error from ${provider} (${response.status}):`, errorText);
-          // IMPORTANT: Throw an error with the raw text to be caught by the calling function.
           throw new Error(`API请求失败，状态码 ${response.status}: ${errorText}`);
       }
       
@@ -180,8 +181,6 @@ export async function executePrompt(
 
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
-        // Re-throw the error to be caught by the calling function.
-        // This ensures the caller knows the exact reason for failure.
         throw error;
     }
 }
