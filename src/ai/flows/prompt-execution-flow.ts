@@ -135,7 +135,7 @@ export async function executePrompt(
             case '字节跳动':
             case '自定义':
             default: // Default to OpenAI compatible structure
-                 requestUrl = `${apiUrl}`;
+                 requestUrl = `${apiUrl}/v1/chat/completions`;
                  requestHeaders['Authorization'] = `Bearer ${apiKey}`;
                  
                  const messages = [];
