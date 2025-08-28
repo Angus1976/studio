@@ -137,8 +137,6 @@ export const PromptExecutionInputSchema = z.object({
   modelId: z.string().describe('The ID of the LLM connection to use.'),
   systemPrompt: z.string().optional().describe('The system prompt to guide the AI.'),
   userPrompt: z.string().describe('The main user prompt, which can contain Handlebars variables like {{variable}}.'),
-  context: z.string().optional().describe('Additional context or examples for the AI.'),
-  negativePrompt: z.string().optional().describe('Content that the model should avoid generating.'),
   variables: z.record(z.string()).optional().describe('A key-value object for replacing variables in the user prompt.'),
   temperature: z.number().min(0).max(1).optional().describe('The temperature for the model.'),
   responseFormat: z.enum(['text', 'json_object']).optional().describe('The desired response format from the model.'),
@@ -160,10 +158,7 @@ export const DigitalEmployeeInputSchema = z.object({
   variables: z.record(z.string()).optional().describe("Key-value pairs for variables in the prompt."),
   temperature: z.number().min(0).max(1).optional().describe("The temperature for the model."),
   // The following are used for testing prompts that haven't been saved yet.
-  systemPrompt: z.string().optional(),
   userPrompt: z.string().optional(),
-  context: z.string().optional(),
-  negativePrompt: z.string().optional(),
 }).refine(data => data.promptId || data.userPrompt, {
     message: "Either promptId or userPrompt must be provided.",
 });
@@ -203,7 +198,7 @@ export type Task = z.infer<typeof TaskSchema>;
 
 export const TaskDispatchInputSchema = z.object({
   userCommand: z.string().describe("用户的原始自然语言指令。"),
-  conversationHistory: z.array(z.object({
+  conversationHistory: z.array(z_object({
     role: z.enum(['user', 'model']),
     parts: z.array(z.object({
         text: z.string(),
@@ -226,7 +221,7 @@ export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 export const LlmProviderSchema = z.object({
     id: z.string(),
     providerName: z.string(),
-    apiUrl: z.string(),
+    apiUrl: z.string().url(),
 });
 export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 
