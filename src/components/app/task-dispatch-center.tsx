@@ -48,22 +48,24 @@ export function TaskDispatchCenter({}: TaskDispatchCenterProps) {
 
         try {
             const result = await taskDispatch({ userCommand: userInput });
-            if (result.isClarificationNeeded) {
-                // For now, just show the clarification question. A real implementation would handle this in a chat format.
+            
+            // Check if the backend returned an error structure
+            if (result.isClarificationNeeded && result.tasks.length === 0) {
                  toast({
                     variant: 'default',
-                    title: 'AI 需要更多信息',
-                    description: result.planSummary,
+                    title: 'AI反馈',
+                    description: result.planSummary, // This will contain the error or clarification question
                 });
             } else {
                 setTaskPlan(result);
                 setTasks(result.tasks);
             }
         } catch (error: any) {
+            // This is a fallback for unexpected client-side errors
             toast({
                 variant: 'destructive',
-                title: '任务规划出错',
-                description: error.message,
+                title: '客户端出错',
+                description: "在发送任务时发生未知错误。",
             });
         } finally {
             setIsLoading(false);

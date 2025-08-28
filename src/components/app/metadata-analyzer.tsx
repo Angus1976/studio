@@ -32,17 +32,29 @@ export function MetadataAnalyzer({ prompt, onApply }: MetadataAnalyzerProps) {
                 context: prompt.context,
                 negativePrompt: prompt.negativePrompt
             });
-            setMetadata(result);
-            toast({
-                title: "元数据分析完成",
-                description: "AI 已成功为您的提示词生成元数据。"
-            });
+
+            // Check if the returned data is an error structure
+            if (result.scope === '错误') {
+                 toast({
+                    variant: "destructive",
+                    title: "分析失败",
+                    description: result.constraints, // Error message is placed here
+                });
+                setMetadata(null);
+            } else {
+                setMetadata(result);
+                toast({
+                    title: "元数据分析完成",
+                    description: "AI 已成功为您的提示词生成元数据。"
+                });
+            }
         } catch (error: any) {
+            // This catch block is a fallback, but the flow should ideally not throw.
             console.error("Error analyzing metadata:", error);
             toast({
                 variant: "destructive",
-                title: "分析失败",
-                description: error.message || "AI 分析元数据时发生错误。",
+                title: "分析时发生未知错误",
+                description: error.message || "无法连接到AI服务。",
             });
         } finally {
             setIsAnalyzing(false);
