@@ -17,11 +17,24 @@ import {
     type PromptExecutionInput,
     type PromptExecutionOutput,
     LlmConnectionSchema,
-    LlmProviderSchema,
 } from '@/lib/data-types';
 
 
-// Fetches the details for a specific LLM connection and its provider.
+// --- Hardcoded Provider Configurations (API Base URLs) ---
+// In a more advanced system, this could also come from a database collection.
+const providerEndpoints: Record<string, string> = {
+    google: 'https://generativelanguage.googleapis.com/v1beta/models',
+    openai: 'https://api.openai.com/v1',
+    deepseek: 'https://api.deepseek.com/v1',
+    anthropic: 'https://api.anthropic.com/v1',
+    aliyun: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    tencent: 'https://hunyuan.tencent.com/v1',
+    baidu: 'https://aip.baidubce.com/rpc/2.0/ai_custom/v1',
+    // Add other providers here
+};
+
+
+// Fetches the details for a specific LLM connection.
 async function getModelDetails(modelId: string) {
     const db = admin.firestore();
     const modelRef = db.collection('llm_connections').doc(modelId);
@@ -32,22 +45,13 @@ async function getModelDetails(modelId: string) {
     }
     const modelData = LlmConnectionSchema.omit({createdAt: true, id: true}).parse(modelDoc.data());
 
-    // Fetch all providers and find the matching one in a case-insensitive way
-    const providersSnapshot = await db.collection('llm_providers').get();
-    const providers = providersSnapshot.docs.map(doc => LlmProviderSchema.parse({ id: doc.id, ...doc.data() }));
-    
-    const modelProviderLower = modelData.provider.toLowerCase();
-    const providerData = providers.find(p => p.providerName.toLowerCase() === modelProviderLower);
+    const apiBaseUrl = providerEndpoints[modelData.provider.toLowerCase()];
 
-    if (!providerData) {
-        throw new Error(`无法找到厂商'${modelData.provider}'的配置信息。请在后台管理中添加该厂商。`);
-    }
-    
-    if (!providerData.apiUrl) {
-         throw new Error(`厂商'${modelData.provider}'的API地址未配置。`);
+    if (!apiBaseUrl) {
+         throw new Error(`厂商'${modelData.provider}'的API地址未在系统中配置。`);
     }
 
-    return { ...modelData, ...providerData };
+    return { ...modelData, apiBaseUrl };
 }
 
 
@@ -61,7 +65,7 @@ export async function executePrompt(
     
     // 1. Fetch all necessary model and provider details from Firestore.
     const modelDetails = await getModelDetails(input.modelId);
-    const { provider, modelName, apiKey, apiUrl } = modelDetails;
+    const { provider, modelName, apiKey, apiBaseUrl } = modelDetails;
     
     const { messages, temperature = 0.7, responseFormat } = input;
     
@@ -71,12 +75,12 @@ export async function executePrompt(
     let requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     let responsePath: (string | number)[];
 
-    // This is the model-agnostic adapter.
+    // This is the model-agnostic adapter (The "LiteLLM" logic).
     // It converts the standard OpenAI-like `messages` input into the format
     // required by the target provider.
     switch (provider.toLowerCase()) {
         case 'google':
-            requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
+            requestUrl = `${apiBaseUrl}/${modelName}:generateContent?key=${apiKey}`;
             const contents = messages
                 .filter(m => m.role === 'user' || m.role === 'model' || m.role === 'assistant')
                 .map(m => ({ role: m.role === 'assistant' ? 'model' : m.role, parts: [{ text: m.content }] }));
@@ -102,7 +106,7 @@ export async function executePrompt(
             break;
         
         case 'anthropic':
-             requestUrl = `${apiUrl}`;
+             requestUrl = `${apiBaseUrl}/messages`;
              requestHeaders = {
                 ...requestHeaders,
                 'x-api-key': apiKey,
@@ -121,12 +125,12 @@ export async function executePrompt(
 
         case 'openai':
         case 'deepseek':
-        case 'aliyun': // Assuming compatible names from config
+        case 'aliyun': 
         case 'tencent':
         case 'baidu':
         case 'custom':
         default: // Default to OpenAI compatible structure
-             requestUrl = `${apiUrl}/v1/chat/completions`;
+             requestUrl = `${apiBaseUrl}/chat/completions`;
              requestHeaders['Authorization'] = `Bearer ${apiKey}`;
              
              requestBody = {

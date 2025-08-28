@@ -217,14 +217,6 @@ export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 
 // --- Platform Asset Management ---
 
-// This schema defines the structure for LLM provider configurations in the database.
-export const LlmProviderSchema = z.object({
-    id: z.string(),
-    providerName: z.string(),
-    apiUrl: z.string().url(),
-});
-export type LlmProvider = z.infer<typeof LlmProviderSchema>;
-
 export const LlmConnectionSchema = z.object({
   id: z.string(),
   modelName: z.string(),

@@ -51,8 +51,7 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     3.  **约束条件 (constraints)**: 指出使用此提示词时需要注意的潜在问题、限制或前提条件。例如，它是否依赖特定格式的输入变量。
     4.  **适用场景 (scenario)**: 描述1-2个这个提示词可以被有效利用的具体业务场景。`;
     
-    let userPromptContent = `[System Prompt]:\n${input.systemPrompt || 'N/A'}`;
-    userPromptContent += `\n\n[User Prompt]:\n${input.userPrompt}`;
+    let userPromptContent = `[User Prompt]:\n${input.userPrompt}`;
     if (input.context) userPromptContent += `\n\n[Context/Examples]:\n${input.context}`;
     if (input.negativePrompt) userPromptContent += `\n\n[Negative Prompt]:\n${input.negativePrompt}`;
     
@@ -67,7 +66,7 @@ export async function analyzePromptMetadata(input: AnalyzePromptMetadataInput): 
     const result = await executePrompt({
       modelId: llmConnection.id, // Use the highest-priority model found.
       messages: [
-          { role: 'system', content: systemInstruction },
+          { role: 'system', content: input.systemPrompt || systemInstruction },
           { role: 'user', content: finalUserPrompt }
       ],
       temperature: 0.2,
