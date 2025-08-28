@@ -87,9 +87,17 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
             throw new Error("抱歉，当前平台没有配置可用的AI对话模型。请联系管理员进行配置后重试。");
         }
         
+        // **FIX**: Sanitize the roles before sending to the execution flow.
+        // The frontend uses 'model' for AI responses, but the backend execution expects 'assistant'.
+        const sanitizedHistory = input.conversationHistory.map(msg => ({
+            ...msg,
+            role: msg.role === 'model' ? 'assistant' : msg.role,
+        }));
+
+
         const messages: Message[] = [
             { role: 'system', content: systemPrompt },
-            ...input.conversationHistory,
+            ...sanitizedHistory,
         ];
 
         const result = await executePrompt({
