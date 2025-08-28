@@ -7,6 +7,8 @@
 import { z } from 'zod';
 import admin from '@/lib/firebase-admin';
 import type { Tenant, IndividualUser, LlmConnection, SoftwareAsset, LlmProvider, Order, OrderStatus, ExpertDomain } from '@/lib/data-types';
+import { executePrompt } from './prompt-execution-flow';
+
 
 // --- Get All Data for Admin Dashboard ---
 export async function getTenantsAndUsers(): Promise<{ tenants: Tenant[], users: IndividualUser[], totalRevenue: number }> {
@@ -245,14 +247,16 @@ export async function deleteLlmConnection(input: { id: string }): Promise<{ succ
 
 export async function testLlmConnection(input: { id: string }): Promise<{ success: boolean; message: string }> {
     try {
-        const { executePrompt } = await import('./prompt-execution-flow');
         const result = await executePrompt({
             modelId: input.id,
             userPrompt: "你好",
             temperature: 0.1,
         });
 
-        if (result && result.response && !result.response.startsWith("调用模型")) {
+        // The most reliable way to check for success is to see if the known error message is NOT present.
+        const isError = result.response?.includes("调用模型时发生错误");
+
+        if (result && result.response && !isError) {
             return { success: true, message: `连接成功，模型返回: "${result.response.substring(0, 50)}..."` };
         }
         
