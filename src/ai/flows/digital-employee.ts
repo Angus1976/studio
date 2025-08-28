@@ -18,8 +18,8 @@ export async function digitalEmployee(
 ): Promise<PromptExecutionOutput> {
   const { modelId, promptId, variables, temperature, userPrompt } = input;
 
-    let finalSystemPrompt: string | undefined;
     let finalUserPrompt: string;
+    let finalSystemPrompt: string | undefined;
     
     if (promptId) {
         // Fetch all prompts and find the one with the matching ID

@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -59,7 +58,7 @@ export const ExpertDomainSchema = z.object({
 });
 export type ExpertDomain = z.infer<typeof ExpertDomainSchema>;
 
-// --- Message format for AI models ---
+// --- Message format for AI models (OpenAI compatible) ---
 export const MessageSchema = z.object({
     role: z.enum(['system', 'user', 'model', 'assistant']),
     content: z.string(),
@@ -209,7 +208,7 @@ export type TaskDispatchInput = z.infer<typeof TaskDispatchInputSchema>;
 
 
 export const TaskDispatchOutputSchema = z.object({
-  planSummary: z.string().describe('对整个任务计划的自然语言总结，用于和用户确认。例如：“好的，我将首先...然后...最后...您确认后立即执行。”'),
+  planSummary: z.string().describe('对整个任务计划的总结，用于和用户确认。例如：“好的，我将首先...然后...最后...您确认后立即执行。”'),
   tasks: z.array(TaskSchema).describe('分解后的任务列表。'),
   isClarificationNeeded: z.boolean().describe('如果用户信息不足以制定计划，则设置为 true，并在 planSummary 中提出澄清问题。'),
 });
@@ -218,6 +217,7 @@ export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 
 // --- Platform Asset Management ---
 
+// This schema defines the structure for LLM provider configurations in the database.
 export const LlmProviderSchema = z.object({
     id: z.string(),
     providerName: z.string(),
@@ -228,7 +228,7 @@ export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 export const LlmConnectionSchema = z.object({
   id: z.string(),
   modelName: z.string(),
-  provider: z.string(),
+  provider: z.string(), // Corresponds to LlmProvider's providerName
   apiKey: z.string(),
   scope: z.enum(["通用", "专属"]),
   category: z.enum(["文本", "图像", "推理", "多模态"]),

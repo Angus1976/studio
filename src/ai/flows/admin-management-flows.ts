@@ -254,8 +254,8 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
             temperature: 0.1,
         });
         return { success: true, message: `连接成功，模型返回: "${result.response.substring(0, 50)}..."` };
-
     } catch (error: any) {
+        console.error(`Connection test failed for ${input.id}:`, error);
         return { success: false, message: `连接失败: ${error.message}` };
     }
 }

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { executePrompt } from '@/ai/flows/prompt-execution-flow';
 import { getPlatformAssets } from '@/ai/flows/admin-management-flows';
 import type { PromptData } from './prompt-editor';
-import type { LlmConnection } from '@/lib/data-types';
+import type { LlmConnection, Message } from '@/lib/data-types';
 
 type Variable = {
     id: string;
@@ -107,11 +107,24 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                 return acc;
             }, {} as Record<string, string>);
 
+            let finalUserPrompt = prompt.userPrompt;
+             if (varsAsObject) {
+                finalUserPrompt = Object.entries(varsAsObject).reduce(
+                    (p, [key, value]) => p.replace(new RegExp(`{{${key}}}`, 'g'), String(value)),
+                    finalUserPrompt
+                );
+            }
+
+            const messages: Message[] = [];
+            if (prompt.systemPrompt) {
+                messages.push({ role: 'system', content: prompt.systemPrompt });
+            }
+            messages.push({ role: 'user', content: finalUserPrompt });
+
+
             const result = await executePrompt({
                 modelId: selectedModel,
-                systemPrompt: prompt.systemPrompt,
-                userPrompt: prompt.userPrompt,
-                variables: varsAsObject,
+                messages: messages,
                 temperature,
             });
             

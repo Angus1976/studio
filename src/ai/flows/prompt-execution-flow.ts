@@ -40,7 +40,7 @@ async function getModelDetails(modelId: string) {
     const providerData = providers.find(p => p.providerName.toLowerCase() === modelProviderLower);
 
     if (!providerData) {
-        throw new Error(`无法找到厂商'${modelData.provider}'的配置信息。`);
+        throw new Error(`无法找到厂商'${modelData.provider}'的配置信息。请在后台管理中添加该厂商。`);
     }
     
     if (!providerData.apiUrl) {
@@ -65,10 +65,6 @@ export async function executePrompt(
     
     const { messages, temperature = 0.7, responseFormat } = input;
     
-    // Find the system prompt and user prompts from the messages array
-    const systemPrompt = messages.find(m => m.role === 'system')?.content;
-    const userPrompts = messages.filter(m => m.role === 'user').map(m => m.content).join('\n');
-    
     // 2. Prepare provider-specific request payload.
     let requestUrl = '';
     let requestBody: any;
@@ -82,19 +78,21 @@ export async function executePrompt(
         case 'google':
             requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
             const contents = messages
-                .filter(m => m.role === 'user' || m.role === 'model') // Gemini uses 'model' for assistant role
-                .map(m => ({ role: m.role, parts: [{ text: m.content }] }));
+                .filter(m => m.role === 'user' || m.role === 'model' || m.role === 'assistant')
+                .map(m => ({ role: m.role === 'assistant' ? 'model' : m.role, parts: [{ text: m.content }] }));
             
+            const systemPrompt = messages.find(m => m.role === 'system')?.content;
+
             requestBody = {
                 contents: contents,
                 generationConfig: { temperature },
             };
-
-            if(systemPrompt) {
-                requestBody.systemInstruction = {
+            
+            if (systemPrompt) {
+                 requestBody.systemInstruction = {
                     role: "system",
                     parts: [{ text: systemPrompt }]
-                }
+                };
             }
             
             if (responseFormat === 'json_object') {
@@ -115,7 +113,7 @@ export async function executePrompt(
                 model: modelName,
                 max_tokens: 4096, // Anthropic requires max_tokens
                 messages: messages.filter(m => m.role === 'user' || m.role === 'assistant'),
-                system: systemPrompt, // Anthropic has a dedicated system prompt field
+                system: messages.find(m => m.role === 'system')?.content,
                 temperature,
              };
              responsePath = ['content', 0, 'text'];
@@ -123,9 +121,10 @@ export async function executePrompt(
 
         case 'openai':
         case 'deepseek':
-        case '阿里云':
-        case '字节跳动':
-        case '自定义':
+        case 'aliyun': // Assuming compatible names from config
+        case 'tencent':
+        case 'baidu':
+        case 'custom':
         default: // Default to OpenAI compatible structure
              requestUrl = `${apiUrl}/v1/chat/completions`;
              requestHeaders['Authorization'] = `Bearer ${apiKey}`;
