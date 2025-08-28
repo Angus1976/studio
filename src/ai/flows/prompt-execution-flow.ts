@@ -54,7 +54,7 @@ export async function executePrompt(
 ): Promise<PromptExecutionOutput> {
     
     if (!input.modelId) {
-        return { response: "抱歉，执行操作所需的模型ID缺失。请在调用时提供一个模型。" };
+        throw new Error("抱歉，执行操作所需的模型ID缺失。请在调用时提供一个模型。");
     }
     
     try {
@@ -167,7 +167,7 @@ export async function executePrompt(
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`Error from ${provider} (${response.status}):`, errorBody);
-            // Throw a more descriptive error.
+            // THIS IS THE CRITICAL CHANGE: Throw a detailed error instead of returning a string.
             throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
         }
 
@@ -186,7 +186,7 @@ export async function executePrompt(
 
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
-        // This is the crucial change: Pass the detailed error.message to the user.
-        return { response: `调用模型'${input.modelId}'时发生错误。错误详情: ${error.message}`};
+        // This is the crucial change: Re-throw the error to be caught by the calling function.
+        throw error;
     }
 }
