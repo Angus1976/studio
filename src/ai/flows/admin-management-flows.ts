@@ -165,13 +165,21 @@ export async function deleteUser(input: { id: string }): Promise<{ success: bool
 
 // --- Asset Management Flows ---
 
+// Hardcoded list of supported providers and their models. This is the single source of truth.
+const SUPPORTED_PROVIDERS: LlmProvider[] = [
+    { id: 'google', providerName: 'Google', models: ['gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'] },
+    { id: 'deepseek', providerName: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder'] },
+    { id: 'openai', providerName: 'OpenAI', models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+    // Add other providers here in the future
+];
+
+
 export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnection[], softwareAssets: SoftwareAsset[], llmProviders: LlmProvider[] }> {
     const db = admin.firestore();
     try {
-        const [llmSnapshot, softwareSnapshot, providersSnapshot] = await Promise.all([
+        const [llmSnapshot, softwareSnapshot] = await Promise.all([
             db.collection('llm_connections').get(),
-            db.collection('software_assets').get(),
-            db.collection('llm_providers').get()
+            db.collection('software_assets').get()
         ]);
 
         const llmConnections: LlmConnection[] = llmSnapshot.docs.map(doc => {
@@ -194,14 +202,7 @@ export async function getPlatformAssets(): Promise<{ llmConnections: LlmConnecti
             } as SoftwareAsset;
         });
 
-        const llmProviders: LlmProvider[] = providersSnapshot.docs.map(doc => {
-            return {
-                id: doc.id,
-                ...doc.data(),
-            } as LlmProvider;
-        });
-        
-        return { llmConnections, softwareAssets, llmProviders };
+        return { llmConnections, softwareAssets, llmProviders: SUPPORTED_PROVIDERS };
     } catch (error: any) {
         console.error("Error fetching platform assets:", error);
         throw new Error('无法从数据库加载平台资产。');
@@ -259,14 +260,11 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
                 { role: 'user', content: 'This is a connection test. Please respond with a short confirmation message.' }
             ],
             temperature: 0.1,
-            // Do NOT request json_object for a simple connectivity test
         });
-        // Truncate the response to avoid showing a very long message in the toast.
         const shortResponse = result.response.substring(0, 80);
         return { success: true, message: `连接成功，模型返回: "${shortResponse}..."` };
     } catch (error: any) {
         console.error(`Connection test failed for ${input.id}:`, error);
-        // Return the specific error message from the underlying API call.
         return { success: false, message: `连接失败: ${error.message}` };
     }
 }
@@ -481,5 +479,3 @@ export async function deleteExpertDomain(input: { id: string }): Promise<{ succe
         return { success: false, message: error.message };
     }
 }
-
-    

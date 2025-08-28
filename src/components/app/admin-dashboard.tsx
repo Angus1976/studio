@@ -556,17 +556,11 @@ function UserManagementDialog({ open, onOpenChange, users, onRefresh, title, des
 
 
 // --- Asset Management ---
-const llmProviderSchema = z.object({
-    id: z.string().optional(),
-    providerName: z.string().min(1, "厂商名称不能为空"),
-    apiUrl: z.string().url("请输入有效的API URL"),
-});
-
 const llmConnectionSchema = z.object({
     id: z.string().optional(),
-    modelName: z.string().min(1, "模型名称不能为空"),
-    provider: z.string().min(1, "请选择一个厂商"),
-    apiKey: z.string().min(10, "API Key不合法"),
+    modelName: z.string().min(1, "必须选择一个模型名称"),
+    provider: z.string().min(1, "必须选择一个厂商"),
+    apiKey: z.string().min(10, "API Key不合法或过短"),
     scope: z.enum(["通用", "专属"]),
     category: z.enum(["文本", "图像", "推理", "多模态"]),
     status: z.enum(["活跃", "已禁用"]),
@@ -579,10 +573,26 @@ function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { conn
         defaultValues: connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", scope: "通用", category: "文本", status: "活跃", priority: 99 },
     });
     
+    const selectedProviderName = form.watch("provider");
+    const availableModels = useMemo(() => {
+        const selectedProvider = providers.find(p => p.providerName === selectedProviderName);
+        return selectedProvider ? selectedProvider.models : [];
+    }, [selectedProviderName, providers]);
+
     useEffect(() => {
         form.reset(connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", scope: "通用", category: "文本", status: "活跃", priority: 99 });
     }, [connection, form]);
     
+    // Reset modelName if provider changes
+    useEffect(() => {
+        if (selectedProviderName) {
+            const currentModelName = form.getValues("modelName");
+            if (!availableModels.includes(currentModelName)) {
+                form.setValue("modelName", "");
+            }
+        }
+    }, [selectedProviderName, availableModels, form]);
+
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -599,16 +609,35 @@ function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { conn
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {(providers || []).map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
+                          {providers.map(p => <SelectItem key={p.id} value={p.providerName}>{p.providerName}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField control={form.control} name="modelName" render={({ field }) => (
-                    <FormItem><FormLabel>模型名称</FormLabel><FormControl><Input placeholder="e.g., gemini-1.5-pro, deepseek-chat" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
+                <FormField
+                    control={form.control}
+                    name="modelName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>模型名称</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedProviderName}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="选择一个模型" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {availableModels.map(model => (
+                                        <SelectItem key={model} value={model}>{model}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField control={form.control} name="apiKey" render={({ field }) => (
                     <FormItem><FormLabel>API Key</FormLabel><FormControl><Input type="password" placeholder="••••••••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
