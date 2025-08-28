@@ -57,134 +57,135 @@ export async function executePrompt(
         throw new Error("抱歉，执行操作所需的模型ID缺失。请在调用时提供一个模型。");
     }
     
-    try {
-        // 1. Fetch all necessary model and provider details from Firestore.
-        const modelDetails = await getModelDetails(input.modelId);
-        const { provider, modelName, apiKey, apiUrl } = modelDetails;
+    // 1. Fetch all necessary model and provider details from Firestore.
+    const modelDetails = await getModelDetails(input.modelId);
+    const { provider, modelName, apiKey, apiUrl } = modelDetails;
 
-        // 2. Interpolate variables into the user prompt.
-        let finalUserPrompt = input.userPrompt || '';
-        if (input.variables) {
-            finalUserPrompt = Object.entries(input.variables).reduce(
-                (prompt, [key, value]) => prompt.replace(new RegExp(`{{${key}}}`, 'g'), value),
-                finalUserPrompt
-            );
-        }
-        
-        const temperature = input.temperature || 0.7;
-        
-        // 3. Prepare provider-specific request payload.
-        let requestUrl = '';
-        let requestBody: any;
-        let requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-        let responsePath: (string | number)[];
+    // 2. Interpolate variables into the user prompt.
+    let finalUserPrompt = input.userPrompt || '';
+    if (input.variables) {
+        finalUserPrompt = Object.entries(input.variables).reduce(
+            (prompt, [key, value]) => prompt.replace(new RegExp(`{{${key}}}`, 'g'), value),
+            finalUserPrompt
+        );
+    }
+    
+    const temperature = input.temperature || 0.7;
+    
+    // 3. Prepare provider-specific request payload.
+    let requestUrl = '';
+    let requestBody: any;
+    let requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    let responsePath: (string | number)[];
 
-        // This is the model-agnostic adapter.
-        // To support a new provider, just add a new case here.
-        switch (provider.toLowerCase()) {
-            case 'google':
-                requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
-                const contents = [];
-                let systemInstructionPart;
-                if(input.systemPrompt) {
-                     systemInstructionPart = { text: input.systemPrompt };
-                }
+    // This is the model-agnostic adapter.
+    // To support a new provider, just add a new case here.
+    switch (provider.toLowerCase()) {
+        case 'google':
+            requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
+            const contents = [];
+            let systemInstructionPart;
+            if(input.systemPrompt) {
+                 systemInstructionPart = { text: input.systemPrompt };
+            }
 
-                contents.push({ role: "user", parts: [{ text: finalUserPrompt }] });
-                
-                requestBody = {
-                    contents: contents,
-                    generationConfig: { temperature },
-                };
-
-                if(systemInstructionPart) {
-                    requestBody.systemInstruction = {
-                        role: "system",
-                        parts: [systemInstructionPart]
-                    }
-                }
-                
-                if (input.responseFormat === 'json_object') {
-                    requestBody.generationConfig.responseMimeType = 'application/json';
-                }
-                responsePath = ['candidates', 0, 'content', 'parts', 0, 'text'];
-                break;
+            contents.push({ role: "user", parts: [{ text: finalUserPrompt }] });
             
-            case 'anthropic':
-                 requestUrl = `${apiUrl}`;
-                 requestHeaders = {
-                    ...requestHeaders,
-                    'x-api-key': apiKey,
-                    'anthropic-version': '2023-06-01',
-                 };
-                 const anthropicMessages = [{ role: 'user', content: finalUserPrompt }];
-                 
-                 requestBody = {
-                    model: modelName,
-                    max_tokens: 1024,
-                    messages: anthropicMessages,
-                    system: input.systemPrompt, // Anthropic has a dedicated system prompt field
-                    temperature,
-                 };
-                 responsePath = ['content', 0, 'text'];
-                 break;
+            requestBody = {
+                contents: contents,
+                generationConfig: { temperature },
+            };
 
-            case 'openai':
-            case 'deepseek':
-            case '阿里云':
-            case '字节跳动':
-            case '自定义':
-            default: // Default to OpenAI compatible structure
-                 requestUrl = `${apiUrl}/v1/chat/completions`;
-                 requestHeaders['Authorization'] = `Bearer ${apiKey}`;
-                 
-                 const messages = [];
-                 if (input.systemPrompt) {
-                     messages.push({ role: 'system', content: input.systemPrompt });
-                 }
-                 messages.push({ role: 'user', content: finalUserPrompt });
-
-                 requestBody = {
-                    model: modelName,
-                    messages: messages,
-                    temperature,
-                    stream: false,
-                 };
-                 if (input.responseFormat === 'json_object') {
-                    requestBody.response_format = { type: 'json_object' };
+            if(systemInstructionPart) {
+                requestBody.systemInstruction = {
+                    role: "system",
+                    parts: [systemInstructionPart]
                 }
-                 responsePath = ['choices', 0, 'message', 'content'];
-                 break;
-        }
-
-        // 4. Make the API call.
-        const response = await fetch(requestUrl, {
-            method: 'POST',
-            headers: requestHeaders,
-            body: JSON.stringify(requestBody),
-        });
+            }
+            
+            if (input.responseFormat === 'json_object') {
+                requestBody.generationConfig.responseMimeType = 'application/json';
+            }
+            responsePath = ['candidates', 0, 'content', 'parts', 0, 'text'];
+            break;
         
-        if (!response.ok) {
-            const errorBody = await response.text();
-            console.error(`Error from ${provider} (${response.status}):`, errorBody);
-            throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
-        }
+        case 'anthropic':
+             requestUrl = `${apiUrl}`;
+             requestHeaders = {
+                ...requestHeaders,
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+             };
+             const anthropicMessages = [{ role: 'user', content: finalUserPrompt }];
+             
+             requestBody = {
+                model: modelName,
+                max_tokens: 1024,
+                messages: anthropicMessages,
+                system: input.systemPrompt, // Anthropic has a dedicated system prompt field
+                temperature,
+             };
+             responsePath = ['content', 0, 'text'];
+             break;
 
-        const data = await response.json();
-        
-        // 5. Extract the response text using the provider-specific path.
-        const responseText = responsePath.reduce((acc, key) => (acc as any)?.[key], data) as string | undefined;
+        case 'openai':
+        case 'deepseek':
+        case '阿里云':
+        case '字节跳动':
+        case '自定义':
+        default: // Default to OpenAI compatible structure
+             requestUrl = `${apiUrl}/v1/chat/completions`;
+             requestHeaders['Authorization'] = `Bearer ${apiKey}`;
+             
+             const messages = [];
+             if (input.systemPrompt) {
+                 messages.push({ role: 'system', content: input.systemPrompt });
+             }
+             messages.push({ role: 'user', content: finalUserPrompt });
 
-        if (typeof responseText !== 'string') {
-            console.error('Could not find response text at expected path:', responsePath.join('.'));
-            console.error('Full AI response:', JSON.stringify(data, null, 2));
-            throw new Error(`Failed to extract text from ${provider}'s response.`);
-        }
-        
-        return { response: responseText };
+             requestBody = {
+                model: modelName,
+                messages: messages,
+                temperature,
+                stream: false,
+             };
+             if (input.responseFormat === 'json_object') {
+                requestBody.response_format = { type: 'json_object' };
+            }
+             responsePath = ['choices', 0, 'message', 'content'];
+             break;
+    }
+
+    try {
+      // 4. Make the API call.
+      const response = await fetch(requestUrl, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+          const errorBody = await response.text();
+          console.error(`Error from ${provider} (${response.status}):`, errorBody);
+          throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+      }
+
+      const data = await response.json();
+      
+      // 5. Extract the response text using the provider-specific path.
+      const responseText = responsePath.reduce((acc, key) => (acc as any)?.[key], data) as string | undefined;
+
+      if (typeof responseText !== 'string') {
+          console.error('Could not find response text at expected path:', responsePath.join('.'));
+          console.error('Full AI response:', JSON.stringify(data, null, 2));
+          throw new Error(`Failed to extract text from ${provider}'s response.`);
+      }
+      
+      return { response: responseText };
 
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
+        // Re-throw the error to be caught by the calling function (e.g., testLlmConnection)
         throw error;
     }
 }

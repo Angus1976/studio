@@ -111,8 +111,6 @@ export function PromptTestbed({ prompt }: PromptTestbedProps) {
                 modelId: selectedModel,
                 systemPrompt: prompt.systemPrompt,
                 userPrompt: prompt.userPrompt,
-                context: prompt.context,
-                negativePrompt: prompt.negativePrompt,
                 variables: varsAsObject,
                 temperature,
             });
