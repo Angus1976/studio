@@ -33,7 +33,7 @@ async function getModelDetails(modelId: string) {
     // Fetch all providers and find the matching one in a case-insensitive way
     const providersSnapshot = await db.collection('llm_providers').get();
     const providers = providersSnapshot.docs.map(doc => LlmProviderSchema.parse({ id: doc.id, ...doc.data() }));
-
+    
     const modelProviderLower = modelData.provider.toLowerCase();
     const providerData = providers.find(p => p.providerName.toLowerCase() === modelProviderLower);
 
@@ -85,19 +85,26 @@ export async function executePrompt(
             case 'google':
                 requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
                 const contents = [];
-                if (input.systemPrompt) {
-                     // Google's new format prefers system instructions at the top level
-                     // but for compatibility we can add it as a separate part for some models.
-                     // The most robust way is to prepend it to the user message.
-                     finalUserPrompt = `${input.systemPrompt}\n\n${finalUserPrompt}`;
+                let systemInstructionPart;
+                if(input.systemPrompt) {
+                     systemInstructionPart = { text: input.systemPrompt };
                 }
+
                 contents.push({ role: "user", parts: [{ text: finalUserPrompt }] });
                 
                 requestBody = {
                     contents: contents,
                     generationConfig: { temperature },
                 };
-                 if (input.responseFormat === 'json_object') {
+
+                if(systemInstructionPart) {
+                    requestBody.systemInstruction = {
+                        role: "system",
+                        parts: [systemInstructionPart]
+                    }
+                }
+                
+                if (input.responseFormat === 'json_object') {
                     requestBody.generationConfig.responseMimeType = 'application/json';
                 }
                 responsePath = ['candidates', 0, 'content', 'parts', 0, 'text'];
@@ -160,7 +167,8 @@ export async function executePrompt(
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`Error from ${provider} (${response.status}):`, errorBody);
-            throw new Error(`${provider} API 请求失败，状态码 ${response.status}: ${errorBody}`);
+            // Throw a more descriptive error.
+            throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
         }
 
         const data = await response.json();
@@ -171,13 +179,14 @@ export async function executePrompt(
         if (typeof responseText !== 'string') {
             console.error('Could not find response text at expected path:', responsePath.join('.'));
             console.error('Full AI response:', JSON.stringify(data, null, 2));
-            throw new Error(`从 ${provider} 的响应中提取文本失败。`);
+            throw new Error(`Failed to extract text from ${provider}'s response.`);
         }
         
         return { response: responseText };
 
     } catch (error: any) {
         console.error(`Error in executePrompt for modelId ${input.modelId}:`, error);
-        return { response: `调用模型'${input.modelId}'时发生错误，请稍后重试或联系管理员。错误详情: ${error.message}`};
+        // This is the crucial change: Pass the detailed error.message to the user.
+        return { response: `调用模型'${input.modelId}'时发生错误。错误详情: ${error.message}`};
     }
 }
