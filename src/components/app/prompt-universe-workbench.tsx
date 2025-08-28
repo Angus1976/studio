@@ -129,7 +129,7 @@ export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null 
         try {
             const result = await deletePrompt({ id: promptId });
             if (result.success) {
-                toast({ title: "提示词已删除" });
+                toast({ title: "提示词已归档" });
                 await fetchPrompts(); // Refresh the list
                  if(activePrompt.id === promptId) {
                     // Clear the editor if the active prompt was deleted
@@ -140,11 +140,11 @@ export function PromptUniverseWorkbench({ tenantId }: { tenantId: string | null 
                     });
                 }
             } else {
-                toast({ variant: "destructive", title: "删除失败", description: result.message });
+                toast({ variant: "destructive", title: "归档失败", description: result.message });
             }
         } catch (error) {
             console.error("Error deleting prompt:", error);
-            toast({ variant: "destructive", title: "删除时发生错误" });
+            toast({ variant: "destructive", title: "归档时发生错误" });
         }
     }
 
