@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap, Star, ArrowUpDown } from "lucide-react";
+import { Building, Code, ShieldCheck, User, BarChart3, PlusCircle, Pencil, Trash2, BrainCircuit, KeyRound, Package, FileText, LoaderCircle, ShoppingBag, BotMessageSquare, GraduationCap, LinkIcon, Edit, DatabaseZap, Star, ArrowUpDown, Globe } from "lucide-react";
 import { UsersRound } from "@/components/app/icons";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "../ui/scroll-area";
@@ -567,7 +567,8 @@ const llmConnectionSchema = z.object({
     modelName: z.string().min(1, "模型名称不能为空"),
     provider: z.string().min(1, "请选择一个厂商"),
     apiKey: z.string().min(10, "API Key不合法"),
-    type: z.enum(["通用", "专属"]),
+    scope: z.enum(["通用", "专属"]),
+    category: z.enum(["文本", "图像", "推理", "多模态"]),
     status: z.enum(["活跃", "已禁用"]),
     priority: z.coerce.number().min(1).max(100).optional(),
 });
@@ -575,11 +576,11 @@ const llmConnectionSchema = z.object({
 function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { connection?: LlmConnection | null, providers: LlmProvider[], onSubmit: (values: z.infer<typeof llmConnectionSchema>) => void, onCancel: () => void }) {
     const form = useForm<z.infer<typeof llmConnectionSchema>>({
         resolver: zodResolver(llmConnectionSchema),
-        defaultValues: connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃", priority: 99 },
+        defaultValues: connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", scope: "通用", category: "文本", status: "活跃", priority: 99 },
     });
     
     useEffect(() => {
-        form.reset(connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", type: "通用", status: "活跃", priority: 99 });
+        form.reset(connection ? { ...connection, priority: connection.priority || 99 } : { modelName: "", provider: "", apiKey: "", scope: "通用", category: "文本", status: "活跃", priority: 99 });
     }, [connection, form]);
     
     return (
@@ -612,14 +613,29 @@ function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { conn
                     <FormItem><FormLabel>API Key</FormLabel><FormControl><Input type="password" placeholder="••••••••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="type" render={({ field }) => (
-                        <FormItem><FormLabel>类型</FormLabel>
+                    <FormField control={form.control} name="scope" render={({ field }) => (
+                        <FormItem><FormLabel>适用范围</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
                                 <SelectContent><SelectItem value="通用">通用</SelectItem><SelectItem value="专属">专属</SelectItem></SelectContent>
                             </Select><FormMessage/>
                         </FormItem>
                     )}/>
+                    <FormField control={form.control} name="category" render={({ field }) => (
+                        <FormItem><FormLabel>模型分类</FormLabel>
+                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="文本">文本</SelectItem>
+                                    <SelectItem value="图像">图像</SelectItem>
+                                    <SelectItem value="推理">推理</SelectItem>
+                                    <SelectItem value="多模态">多模态</SelectItem>
+                                </SelectContent>
+                            </Select><FormMessage/>
+                        </FormItem>
+                    )}/>
+                </div>
+                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="status" render={({ field }) => (
                         <FormItem><FormLabel>状态</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -628,10 +644,10 @@ function LlmConnectionForm({ connection, providers, onSubmit, onCancel }: { conn
                             </Select><FormMessage/>
                         </FormItem>
                     )}/>
+                     <FormField control={form.control} name="priority" render={({ field }) => (
+                        <FormItem><FormLabel>优先级 (1-100)</FormLabel><FormControl><Input type="number" placeholder="99" {...field} /></FormControl><FormMessage /></FormItem>
+                    )}/>
                 </div>
-                 <FormField control={form.control} name="priority" render={({ field }) => (
-                    <FormItem><FormLabel>优先级 (1-100, 数字越小优先级越高)</FormLabel><FormControl><Input type="number" placeholder="99" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="ghost" onClick={onCancel}>取消</Button>
                     <Button type="submit">保存连接</Button>
@@ -850,16 +866,22 @@ function AssetManagementDialog({ open, onOpenChange, title }: { open: boolean, o
                                                 <TableRow>
                                                     <TableHead><Button variant="ghost" onClick={() => handleSort('modelName')} className="px-0">模型 {renderSortArrow('modelName')}</Button></TableHead>
                                                     <TableHead><Button variant="ghost" onClick={() => handleSort('priority')} className="px-0">优先级 {renderSortArrow('priority')}</Button></TableHead>
-                                                    <TableHead><Button variant="ghost" onClick={() => handleSort('type')} className="px-0">类型 {renderSortArrow('type')}</Button></TableHead>
+                                                    <TableHead><Button variant="ghost" onClick={() => handleSort('category')} className="px-0">分类 {renderSortArrow('category')}</Button></TableHead>
                                                     <TableHead><Button variant="ghost" onClick={() => handleSort('status')} className="px-0">状态 {renderSortArrow('status')}</Button></TableHead>
                                                     <TableHead className="text-right">操作</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {sortedLlmConnections.map(c => <TableRow key={c.id}>
-                                                    <TableCell><div className="font-medium">{c.modelName}</div><div className="text-xs text-muted-foreground">{c.provider}</div></TableCell>
+                                                    <TableCell>
+                                                        <div className="font-medium">{c.modelName}</div>
+                                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            {c.scope === '通用' ? <Globe className="h-3 w-3"/> : <Building className="h-3 w-3"/>}
+                                                            {c.provider} / {c.scope}
+                                                        </div>
+                                                    </TableCell>
                                                     <TableCell><Badge variant="outline" className="flex items-center gap-1 w-fit"><Star className="h-3 w-3"/>{c.priority || 'N/A'}</Badge></TableCell>
-                                                    <TableCell><Badge variant="outline">{c.type}</Badge></TableCell>
+                                                    <TableCell><Badge variant="secondary">{c.category}</Badge></TableCell>
                                                     <TableCell><Badge variant={c.status === '活跃' ? 'default' : 'destructive'}>{c.status}</Badge></TableCell>
                                                     <TableCell className="text-right">
                                                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleTestConnection(c.id)}><LinkIcon className="h-4 w-4"/></Button>
