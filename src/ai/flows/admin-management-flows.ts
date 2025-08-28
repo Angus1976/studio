@@ -254,9 +254,12 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
     try {
         const result = await executePrompt({
             modelId: input.id,
-            messages: [{ role: 'user', content: '你好' }],
+            messages: [
+                { role: 'system', content: 'You are a helpful assistant.' },
+                { role: 'user', content: 'This is a connection test. Please respond with a short confirmation message.' }
+            ],
             temperature: 0.1,
-            // DO NOT request json_object for a simple connectivity test
+            // Do NOT request json_object for a simple connectivity test
         });
         // Truncate the response to avoid showing a very long message in the toast.
         const shortResponse = result.response.substring(0, 80);
