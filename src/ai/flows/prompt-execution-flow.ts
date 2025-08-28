@@ -81,9 +81,13 @@ export async function executePrompt(
     switch (provider.toLowerCase()) {
         case 'google':
             requestUrl = `${apiBaseUrl}/${modelName}:generateContent?key=${apiKey}`;
+            // Correctly map roles for Google's API. 'assistant' and 'model' from our side become 'model' for Google.
             const contents = messages
                 .filter(m => m.role === 'user' || m.role === 'model' || m.role === 'assistant')
-                .map(m => ({ role: m.role === 'assistant' ? 'model' : m.role, parts: [{ text: m.content }] }));
+                .map(m => ({
+                    role: m.role === 'user' ? 'user' : 'model', 
+                    parts: [{ text: m.content }]
+                }));
             
             const systemPrompt = messages.find(m => m.role === 'system')?.content;
 
@@ -94,7 +98,6 @@ export async function executePrompt(
             
             if (systemPrompt) {
                  requestBody.systemInstruction = {
-                    // role: "system", // This is incorrect for Google's API, the role is implicit
                     parts: [{ text: systemPrompt }]
                 };
             }
