@@ -256,10 +256,14 @@ export async function testLlmConnection(input: { id: string }): Promise<{ succes
             modelId: input.id,
             messages: [{ role: 'user', content: '你好' }],
             temperature: 0.1,
+            // DO NOT request json_object for a simple connectivity test
         });
-        return { success: true, message: `连接成功，模型返回: "${result.response.substring(0, 50)}..."` };
+        // Truncate the response to avoid showing a very long message in the toast.
+        const shortResponse = result.response.substring(0, 80);
+        return { success: true, message: `连接成功，模型返回: "${shortResponse}..."` };
     } catch (error: any) {
         console.error(`Connection test failed for ${input.id}:`, error);
+        // Return the specific error message from the underlying API call.
         return { success: false, message: `连接失败: ${error.message}` };
     }
 }
@@ -474,3 +478,5 @@ export async function deleteExpertDomain(input: { id: string }): Promise<{ succe
         return { success: false, message: error.message };
     }
 }
+
+    
