@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview This file contains the core data types and Zod schemas used across the application.
  * Separating these from server-side logic files prevents 'use server' directive violations.
@@ -160,6 +161,7 @@ export const DigitalEmployeeInputSchema = z.object({
   temperature: z.number().min(0).max(1).optional().describe("The temperature for the model."),
   // The following are used for testing prompts that haven't been saved yet.
   userPrompt: z.string().optional(),
+  systemPrompt: z.string().optional(),
 }).refine(data => data.promptId || data.userPrompt, {
     message: "Either promptId or userPrompt must be provided.",
 });
@@ -216,6 +218,15 @@ export type TaskDispatchOutput = z.infer<typeof TaskDispatchOutputSchema>;
 
 
 // --- Platform Asset Management ---
+
+export const LlmProviderSchema = z.object({
+    id: z.string(),
+    providerName: z.string(),
+    apiKeyEnvVar: z.string(),
+    apiKeyHelpText: z.string(),
+    models: z.array(z.string()),
+});
+export type LlmProvider = z.infer<typeof LlmProviderSchema>;
 
 export const LlmConnectionSchema = z.object({
   id: z.string(),
