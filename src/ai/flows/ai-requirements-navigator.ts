@@ -23,15 +23,16 @@ async function getGeneralTextLlmConnection(): Promise<LlmConnection | null> {
         const snapshot = await db.collection('llm_connections')
             .where('scope', '==', '通用')
             .where('status', '==', '活跃')
-            .where('category', 'in', ['文本', '多模态']) // Text or Multimodal models are fine for this
             .get();
             
         if (snapshot.empty) {
-            console.warn("No active, general-purpose Text/Multimodal LLM connection found in database.");
+            console.warn("No active, general-purpose LLM connection found in database.");
             return null;
         }
         
         const connections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
+        
+        // Sort by priority in the code to ensure correct ordering, as Firestore's multi-field ordering requires specific indexes.
         connections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
         return connections[0];
@@ -81,11 +82,8 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
     // Find the highest priority, available, general-purpose text LLM.
     const llmConnection = await getGeneralTextLlmConnection();
     if (!llmConnection) {
-        // Gracefully handle no available model
-        return {
-            response: "抱歉，当前平台没有配置可用的AI对话模型。请联系管理员进行配置后重试。",
-            isFinished: true, // End the conversation as no action can be taken.
-        };
+        // Gracefully handle no available model. Throw an error to be caught by the client UI.
+        throw new Error("抱歉，当前平台没有配置可用的AI对话模型。请联系管理员进行配置后重试。");
     }
     
     const messages: Message[] = [
@@ -107,10 +105,17 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         if (responseText.includes("我的理解对吗") || responseText.includes("为您推荐")) {
             const lastUserMessage = input.conversationHistory[input.conversationHistory.length - 1];
             if(lastUserMessage.content.toLowerCase().includes("确认")){
+                 // A more robust solution would have the AI select the ID.
+                 const suggestedId = responseText.includes("招聘") ? 'recruitment-expert' 
+                                   : responseText.includes("营销") ? 'marketing-expert'
+                                   : responseText.includes("销售") ? 'sales-expert'
+                                   : responseText.includes("代码") ? 'code-expert'
+                                   : 'copywriting-expert';
+
                  return {
                     response: result.response,
                     isFinished: true,
-                    suggestedPromptId: 'recruitment-expert' // Default to one for demonstration.
+                    suggestedPromptId: suggestedId
                 };
             }
         }
@@ -121,9 +126,7 @@ export async function aiRequirementsNavigator(input: RequirementsNavigatorInput)
         };
     } catch (error: any) {
         console.error("Error in aiRequirementsNavigator:", error);
-        return {
-            response: `抱歉，我在与AI沟通时遇到了一个问题：${error.message}`,
-            isFinished: true, // End conversation on error
-        };
+        // Re-throw the error so the client-side can display a toast.
+        throw new Error(`抱歉，我在与AI沟通时遇到了一个问题：${error.message}`);
     }
 }
