@@ -20,20 +20,25 @@ import type { LlmConnection } from '@/lib/data-types';
 async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
     const db = admin.firestore();
      try {
+        // Firestore composite indexes can be tricky. A more robust way is to fetch all active,
+        // general-purpose models and then sort them in code. This avoids needing to create
+        // a specific index in the Firebase console for the query.
         const snapshot = await db.collection('llm_connections')
             .where('scope', '==', '通用')
             .where('status', '==', '活跃')
-            .orderBy('priority', 'asc')
-            .limit(1)
             .get();
             
         if (snapshot.empty) {
             console.warn("No active, general-purpose LLM connection found in database.");
             return null;
         }
+        
+        const connections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LlmConnection));
+        
+        // Sort by priority in ascending order (lower number is higher priority)
+        connections.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 
-        const doc = snapshot.docs[0];
-        return { id: doc.id, ...doc.data() } as LlmConnection;
+        return connections[0];
 
     } catch (error) {
         console.error("Error fetching highest priority LLM connection from database:", error);
