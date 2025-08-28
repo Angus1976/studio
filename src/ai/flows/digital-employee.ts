@@ -6,11 +6,9 @@
  * - digitalEmployee - A function that handles the execution of a prompt by ID.
  */
 
-import { z } from "zod";
 import { executePrompt, type PromptExecutionOutput } from "./prompt-execution-flow";
 import { getPrompts } from "./get-prompts-flow";
 import { 
-    DigitalEmployeeInputSchema,
     type DigitalEmployeeInput,
 } from "@/lib/data-types";
 
@@ -18,12 +16,10 @@ import {
 export async function digitalEmployee(
   input: DigitalEmployeeInput
 ): Promise<PromptExecutionOutput> {
-  const { modelId, promptId, variables, temperature, systemPrompt, userPrompt, context, negativePrompt } = input;
+  const { modelId, promptId, variables, temperature, userPrompt } = input;
 
-    let finalSystemPrompt: string | undefined = systemPrompt;
     let finalUserPrompt: string | undefined = userPrompt;
-    let finalContext: string | undefined = context;
-    let finalNegativePrompt: string | undefined = negativePrompt;
+    let finalSystemPrompt: string | undefined;
 
     if (promptId) {
         // Fetch all prompts and find the one with the matching ID
@@ -36,8 +32,6 @@ export async function digitalEmployee(
         
         finalUserPrompt = scenario.userPrompt;
         finalSystemPrompt = scenario.systemPrompt;
-        finalContext = scenario.context;
-        finalNegativePrompt = scenario.negativePrompt;
     }
     
     if(!finalUserPrompt) {
@@ -52,8 +46,6 @@ export async function digitalEmployee(
         modelId,
         systemPrompt: finalSystemPrompt,
         userPrompt: finalUserPrompt,
-        context: finalContext,
-        negativePrompt: finalNegativePrompt,
         variables,
         temperature
     });

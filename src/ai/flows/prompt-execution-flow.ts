@@ -10,11 +10,8 @@
  * - executePrompt - A function that takes prompt components and variables to generate a response.
  */
 
-import Handlebars from 'handlebars';
 import admin from '@/lib/firebase-admin';
 import { 
-    PromptExecutionInputSchema,
-    PromptExecutionOutputSchema,
     type PromptExecutionInput,
     type PromptExecutionOutput,
     LlmConnectionSchema,
@@ -65,15 +62,14 @@ export async function executePrompt(
         const modelDetails = await getModelDetails(input.modelId);
         const { provider, modelName, apiKey, apiUrl } = modelDetails;
 
-        // 2. Prepare the full prompt by compiling variables with Handlebars.
-        const template = Handlebars.compile(input.userPrompt || '');
-        const finalUserPrompt = template(input.variables || {});
-        
-        let fullPrompt = '';
-        if (input.systemPrompt) { fullPrompt += `System Prompt: ${input.systemPrompt}\n\n`; }
-        if (input.context) { fullPrompt += `Context/Examples:\n${input.context}\n\n---\n\n`; }
-        fullPrompt += `User Instruction:\n${finalUserPrompt}`;
-        if (input.negativePrompt) { fullPrompt += `\n\nIMPORTANT: Do not include any of the following in your response: "${input.negativePrompt}"`; }
+        // 2. Interpolate variables into the user prompt.
+        let finalUserPrompt = input.userPrompt || '';
+        if (input.variables) {
+            finalUserPrompt = Object.entries(input.variables).reduce(
+                (prompt, [key, value]) => prompt.replace(new RegExp(`{{${key}}}`, 'g'), value),
+                finalUserPrompt
+            );
+        }
         
         const temperature = input.temperature || 0.7;
         
@@ -87,10 +83,18 @@ export async function executePrompt(
         // To support a new provider, just add a new case here.
         switch (provider.toLowerCase()) {
             case 'google':
-                // Per Google API docs, the model name is part of the URL path, not prefixed with 'models/'.
                 requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
+                const contents = [];
+                if (input.systemPrompt) {
+                     // Google's new format prefers system instructions at the top level
+                     // but for compatibility we can add it as a separate part for some models.
+                     // The most robust way is to prepend it to the user message.
+                     finalUserPrompt = `${input.systemPrompt}\n\n${finalUserPrompt}`;
+                }
+                contents.push({ role: "user", parts: [{ text: finalUserPrompt }] });
+                
                 requestBody = {
-                    contents: [{ parts: [{ text: fullPrompt }] }],
+                    contents: contents,
                     generationConfig: { temperature },
                 };
                  if (input.responseFormat === 'json_object') {
@@ -106,10 +110,13 @@ export async function executePrompt(
                     'x-api-key': apiKey,
                     'anthropic-version': '2023-06-01',
                  };
+                 const anthropicMessages = [{ role: 'user', content: finalUserPrompt }];
+                 
                  requestBody = {
                     model: modelName,
                     max_tokens: 1024,
-                    messages: [{ role: 'user', content: fullPrompt }],
+                    messages: anthropicMessages,
+                    system: input.systemPrompt, // Anthropic has a dedicated system prompt field
                     temperature,
                  };
                  responsePath = ['content', 0, 'text'];
@@ -123,9 +130,16 @@ export async function executePrompt(
             default: // Default to OpenAI compatible structure
                  requestUrl = `${apiUrl}`;
                  requestHeaders['Authorization'] = `Bearer ${apiKey}`;
+                 
+                 const messages = [];
+                 if (input.systemPrompt) {
+                     messages.push({ role: 'system', content: input.systemPrompt });
+                 }
+                 messages.push({ role: 'user', content: finalUserPrompt });
+
                  requestBody = {
                     model: modelName,
-                    messages: [{ role: 'user', content: fullPrompt }],
+                    messages: messages,
                     temperature,
                     stream: false,
                  };
@@ -145,7 +159,7 @@ export async function executePrompt(
         
         if (!response.ok) {
             const errorBody = await response.text();
-            console.error(`Error from ${provider}:`, errorBody);
+            console.error(`Error from ${provider} (${response.status}):`, errorBody);
             throw new Error(`${provider} API 请求失败，状态码 ${response.status}: ${errorBody}`);
         }
 
