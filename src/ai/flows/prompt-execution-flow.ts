@@ -83,23 +83,17 @@ export async function executePrompt(
     switch (provider.toLowerCase()) {
         case 'google':
             requestUrl = `${apiUrl}/${modelName}:generateContent?key=${apiKey}`;
-            const contents = [];
-            let systemInstructionPart;
-            if(input.systemPrompt) {
-                 systemInstructionPart = { text: input.systemPrompt };
-            }
-
-            contents.push({ role: "user", parts: [{ text: finalUserPrompt }] });
+            const contents = [{ role: "user", parts: [{ text: finalUserPrompt }] }];
             
             requestBody = {
                 contents: contents,
                 generationConfig: { temperature },
             };
 
-            if(systemInstructionPart) {
+            if(input.systemPrompt) {
                 requestBody.systemInstruction = {
                     role: "system",
-                    parts: [systemInstructionPart]
+                    parts: [{ text: input.systemPrompt }]
                 }
             }
             
@@ -164,20 +158,20 @@ export async function executePrompt(
           body: JSON.stringify(requestBody),
       });
       
-      if (!response.ok) {
-          const errorBody = await response.text();
-          console.error(`Error from ${provider} (${response.status}):`, errorBody);
-          throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
-      }
+      const responseData = await response.json();
 
-      const data = await response.json();
+      if (!response.ok) {
+          console.error(`Error from ${provider} (${response.status}):`, responseData);
+          const errorMessage = responseData?.error?.message || response.statusText;
+          throw new Error(`API request failed with status ${response.status}: ${errorMessage}`);
+      }
       
       // 5. Extract the response text using the provider-specific path.
-      const responseText = responsePath.reduce((acc, key) => (acc as any)?.[key], data) as string | undefined;
+      const responseText = responsePath.reduce((acc, key) => (acc as any)?.[key], responseData) as string | undefined;
 
       if (typeof responseText !== 'string') {
           console.error('Could not find response text at expected path:', responsePath.join('.'));
-          console.error('Full AI response:', JSON.stringify(data, null, 2));
+          console.error('Full AI response:', JSON.stringify(responseData, null, 2));
           throw new Error(`Failed to extract text from ${provider}'s response.`);
       }
       
