@@ -154,14 +154,15 @@ export async function executePrompt(
           body: JSON.stringify(requestBody),
       });
       
-      const responseData = await response.json();
-
       if (!response.ok) {
-          console.error(`Error from ${provider} (${response.status}):`, responseData);
-          const errorMessage = responseData?.error?.message || response.statusText;
-          // IMPORTANT: Throw an error to be caught by the calling function.
-          throw new Error(`API请求失败，状态码 ${response.status}: ${errorMessage}`);
+          // If the response is not OK, read the body as text, as it could be anything.
+          const errorText = await response.text();
+          console.error(`Error from ${provider} (${response.status}):`, errorText);
+          // IMPORTANT: Throw an error with the raw text to be caught by the calling function.
+          throw new Error(`API请求失败，状态码 ${response.status}: ${errorText}`);
       }
+      
+      const responseData = await response.json();
       
       // 4. Extract the response text using the provider-specific path.
       const responseText = responsePath.reduce((acc, key) => (acc as any)?.[key], responseData) as string | undefined;
