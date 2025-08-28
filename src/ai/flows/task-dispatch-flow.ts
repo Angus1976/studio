@@ -28,13 +28,16 @@ async function getGeneralLlmConnection(): Promise<LlmConnection | null> {
             .limit(1)
             .get();
             
-        if (!snapshot.empty) {
-            const doc = snapshot.docs[0];
-            return { id: doc.id, ...doc.data() } as LlmConnection;
+        if (snapshot.empty) {
+            console.warn("No active, general-purpose LLM connection found in database.");
+            return null;
         }
-        return null;
+        
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as LlmConnection;
+
     } catch (error) {
-        console.error("Error fetching LLM connection from database:", error);
+        console.error("Error fetching highest priority LLM connection from database:", error);
         return null;
     }
 }
