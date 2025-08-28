@@ -74,6 +74,11 @@ export async function executePrompt(
     let requestBody: any;
     let requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
     let responsePath: (string | number)[];
+    
+    // --- Isolate the system prompt and the rest of the conversation ---
+    const systemPromptMessage = messages.find(m => m.role === 'system');
+    const conversationMessages = messages.filter(m => m.role !== 'system');
+
 
     // This is the model-agnostic adapter (The "LiteLLM" logic).
     // It converts the standard OpenAI-like `messages` input into the format
@@ -82,26 +87,20 @@ export async function executePrompt(
         case 'google':
             requestUrl = `${apiBaseUrl}/${modelName}:generateContent?key=${apiKey}`;
             
-            // Correctly separate system prompt from the rest of the conversation.
-            const systemPrompt = messages.find(m => m.role === 'system')?.content;
-            const conversationMessages = messages.filter(m => m.role !== 'system');
-            
-            // Correctly map roles for Google's API. 'assistant' becomes 'model'.
-            const contents = conversationMessages
-                .map(m => ({
-                    role: m.role === 'user' ? 'user' : 'model', 
-                    parts: [{ text: m.content }]
-                }));
+            const contents = conversationMessages.map(m => ({
+                role: m.role === 'user' ? 'user' : 'model',
+                parts: [{ text: m.content }]
+            }));
 
             requestBody = {
                 contents: contents,
                 generationConfig: { temperature },
             };
             
-            if (systemPrompt) {
+            if (systemPromptMessage) {
                  requestBody.systemInstruction = {
-                    role: 'system', // Although the API shows 'system' is not a role for contents, it might be for systemInstruction
-                    parts: [{ text: systemPrompt }]
+                    role: 'system',
+                    parts: [{ text: systemPromptMessage.content }]
                 };
             }
             
@@ -122,10 +121,12 @@ export async function executePrompt(
              requestBody = {
                 model: modelName,
                 max_tokens: 4096, // Anthropic requires max_tokens
-                messages: messages.filter(m => m.role === 'user' || m.role === 'assistant'),
-                system: messages.find(m => m.role === 'system')?.content,
+                messages: conversationMessages,
                 temperature,
              };
+             if(systemPromptMessage){
+                requestBody.system = systemPromptMessage.content;
+             }
              responsePath = ['content', 0, 'text'];
              break;
 
@@ -139,9 +140,15 @@ export async function executePrompt(
              requestUrl = `${apiBaseUrl}/chat/completions`;
              requestHeaders['Authorization'] = `Bearer ${apiKey}`;
              
+             // For OpenAI-compatible APIs, the standard way to provide a system prompt
+             // is to make it the first message in the 'messages' array.
+             const finalMessages = systemPromptMessage 
+                ? [systemPromptMessage, ...conversationMessages] 
+                : conversationMessages;
+
              requestBody = {
                 model: modelName,
-                messages: messages,
+                messages: finalMessages,
                 temperature,
                 stream: false,
              };
