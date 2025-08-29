@@ -4,6 +4,37 @@
 
 ---
 
+## 2025-08-26 (续): Invalid Model ID 与 400 Bad Request
+
+### 1. 问题描述
+在管理员后台测试与各大模型厂商（OpenAI, DeepSeek等）的API连接时，部分或全部模型测试失败，HTTP状态码为`400 Bad Request`，返回的错误信息通常包含`Invalid model ID`或`The model does not exist`。
+
+### 2. 根本原因分析
+这是一个由多种因素叠加导致的、典型的系统性配置错误，其根源在于**数据源头的不一致**和**请求体构建逻辑的疏忽**。
+
+*   **阶段一：无效的模型名称**: 最初，管理员在后台配置LLM连接时，在“模型名称”字段中输入的是自定义的别名（如 "My Deepseek V2"）而非官方指定的API模型ID（如 `deepseek-chat`）。我们的后端`executePrompt`流程错误地将这个别名作为请求体中的`model`字段值发送给了API服务商，导致服务商因不认识该模型而返回`Invalid model ID`错误。
+
+*   **阶段二：不正确的System Prompt处理**: 在修复上述问题的过程中，我们引入了另一个bug。为了处理Google Gemini的`systemInstruction`，我们在`executePrompt`流程中添加了`switch`语句。但对于OpenAI、DeepSeek等兼容API，我们**忘记了正确处理`system`角色的消息**。根据这些API的规范，`system`消息应该作为`messages`数组的第一个元素，但我们的代码未能正确地将`system`消息插入到这个位置，导致了不规范的请求体，同样引发`400 Bad Request`。
+
+### 3. 解决方案与规避措施
+
+1.  **约束数据源头**:
+    *   在`src/components/app/admin-dashboard.tsx`中，**彻底移除了“模型名称”的自由文本输入框**。
+    *   取而代之的是一个与“厂商”下拉框联动的**动态模型选择框**。当管理员选择一个厂商后，该选择框会自动从一个硬编码在后端的、权威的列表中加载该厂商所有受支持的官方模型ID。
+    *   这从根本上杜绝了任何无效或自定义的模型名称被输入和保存的可能性。
+
+2.  **加固后端API网关**:
+    *   在`src/ai/flows/prompt-execution-flow.ts`的`executePrompt`函数中，重构了`system`消息的处理逻辑。
+    *   函数现在会先将`system`消息从主`messages`数组中分离出来。
+    *   然后，根据目标`provider`，以符合其规范的方式重新组合请求：
+        *   **Google**: 将系统消息放入独立的`systemInstruction`字段。
+        *   **OpenAI/DeepSeek等**: 将系统消息作为第一个元素，重新插入到`messages`数组中。
+
+3.  **集中化模型配置**:
+    *   为了确保数据的一致性和易维护性，我们将所有支持的厂商及其模型列表，硬编码到了后端的`admin-management-flows.ts`流程中。前端通过调用`getPlatformAssets`来获取这些权威数据，而不是自己在本地维护一份列表。
+
+---
+
 ## 2025-08-26: `ReferenceError: Component is not defined`
 
 ### 1. 问题描述
