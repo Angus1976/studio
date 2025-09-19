@@ -16,7 +16,7 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: '提示词宇宙',
+  title: 'AI织网平台',
   description: '下一代提示词管理与优化平台',
 };
 

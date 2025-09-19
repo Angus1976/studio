@@ -99,7 +99,7 @@ export default function Home() {
     return (
          <div className="flex flex-col h-full items-center justify-center bg-background p-8 text-center">
             <AppLogo className="h-20 w-20 text-accent mb-6" />
-            <h1 className="text-4xl lg:text-5xl font-bold font-headline text-foreground mb-4">欢迎来到提示词宇宙</h1>
+            <h1 className="text-4xl lg:text-5xl font-bold font-headline text-foreground mb-4">欢迎来到AI织网平台</h1>
             <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
                一个面向企业和开发者的下一代、多租户SaaS平台，旨在提供集中化、结构化、可版本化的提示词管理与优化解决方案。
             </p>

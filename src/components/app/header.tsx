@@ -19,7 +19,7 @@ export function AppHeader({ userRole, onLogout }: { userRole: string | null, onL
       <div className="flex items-center gap-2">
         <AppLogo className="h-8 w-8 text-accent" />
         <h1 className="text-xl font-bold font-headline text-foreground tracking-tight">
-          提示词宇宙
+          AI织网平台
         </h1>
       </div>
       <div className="flex items-center gap-3">
